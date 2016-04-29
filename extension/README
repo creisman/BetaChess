@@ -1,0 +1,1 @@
+BetaChess is a chess service that interfaces with an external system using an HTTP server. Also included is a Chrome extension that can interface with online chess systems to play games automatically.
