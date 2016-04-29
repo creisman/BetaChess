@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+
+  "name": "ChessExtension",
+  "description": "This extension communicates with a web server to play games of chess on LiChess",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "icon.png"
+  },
+  "background" : {
+    "scripts" : ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://lichess.org/*", "*://*.lichess.org/*"],
+      "js": ["jquery-2.2.3.js", "mover.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
