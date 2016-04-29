@@ -1,16 +1,15 @@
-console.log('loaded');
-window.chessex = {};
+window.betachess = {};
 
 chrome.runtime.sendMessage({greeting: 'hello'}, function(response) {
-  chessex.move(response.src, response.dest);
+  betachess.move(response.src, response.dest);
 });
 
-chessex.move = function(src, dest) {
+betachess.move = function(src, dest) {
     var board = $('.cg-board');
 
-    var start = chessex.createMouseEvent('mousedown', chessex.findSquare(src.x, src.y));
-    var middle = chessex.createMouseEvent('mousemove', chessex.findSquare(dest.x, dest.y));
-    var end = chessex.createMouseEvent('mouseup', chessex.findSquare(dest.x, dest.y));
+    var start = betachess.createMouseEvent('mousedown', betachess.findSquare(src.x, src.y));
+    var middle = betachess.createMouseEvent('mousemove', betachess.findSquare(dest.x, dest.y));
+    var end = betachess.createMouseEvent('mouseup', betachess.findSquare(dest.x, dest.y));
 
     board.get(0).dispatchEvent(start);
     window.setTimeout(function() {
@@ -21,7 +20,7 @@ chessex.move = function(src, dest) {
     }, 100);
 }
 
-chessex.findSquare = function(x, y) {
+betachess.findSquare = function(x, y) {
     var board = $('.cg-board');
     var isWhite = board.hasClass('orientation-white');
     var index = (8 - x) + y * 8;
@@ -33,7 +32,7 @@ chessex.findSquare = function(x, y) {
     return square;
 }
 
-chessex.createMouseEvent = function(type, square) {
+betachess.createMouseEvent = function(type, square) {
     return new MouseEvent(type, {
         bubbles: true,
         cancelable: true,
