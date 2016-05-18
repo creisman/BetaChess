@@ -11,9 +11,9 @@ class Board:
 
   MOVEMENTS = {
       KNIGHT : ((1,-2), (2,-1), (2,1), (1,2), (-1,2), (-2,1), (-2,-1), (-1,-2)),
-      BISHOP : ((1,1), (1, -1)),
-      ROOK : ((1,0), (0, 1)),
-      QUEEN : ((1,0), (0, 1), (1,1), (1, -1)),
+      BISHOP : ((1,-1), (1, 1), (-1,1), (-1,-1)),
+      ROOK : ((0,-1), (1, 0), (0,1), (-1,0)),
+      QUEEN : ((1,-1), (1, 1), (-1,1), (-1,-1), (0,-1), (1, 0), (0,1), (-1,0)),
       KING : ((0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,1), (-1,0), (-1, -1))
     }
 
@@ -28,9 +28,11 @@ class Board:
     self.whitePieces = [p for p in white]
     self.blackPieces = [p for p in black]
 
+    self.opp = Board.BLACK if self.turn == Board.WHITE else Board.WHITE
 
   def resetBoard(self):
     self.turn = Board.WHITE
+    self.opp = Board.BLACK
     self.state = [[None for i in range(8)] for j in range(8)]
     self.whitePieces = []
     self.blackPieces = []
@@ -76,38 +78,67 @@ class Board:
       pieceType = abs(piece)
       color = Board.pieceColor(piece)
 
-      # if pawn move can't capture
+      # CASTLING, CHECKS (CHECKMATES)
+
       if pieceType == Board.PAWN:
-        # TODO: double first move, enpassant, and promotion
-        
+        # TODO: enpassant, and promotion
+
         onBoard, destColor = self.attemptMove(y + color, x)
+        # if next space is empty.
         if onBoard and destColor == None:
           c = self.copy()
-          c.makeMove(y,x,    y + color, x)
-          yield c
+          move = c.makeMove(y,x,    y + color, x)
+          yield (move, c)
 
+          # double move (only if nothing in the way for single move)
+          if (self.turn == Board.WHITE and y == 1) or \
+             (self.turn == Board.BLACK and y == 6):
+
+            onBoard, destColor = self.attemptMove(y + 2 * color, x)
+            if onBoard and destColor == None:
+              c = self.copy()
+              move = c.makeMove(y,x,    y + 2 * color, x)
+              yield (move, c)
+
+        # pawn capture
         for lr in (-1, 1):
           onBoard, destColor = self.attemptMove(y + color, x + lr)
-          if onBoard and destColor != color:
+          if onBoard and destColor == self.opp:
             c = self.copy()
-            c.makeMove(y,x,    y + color, x + lr)
-            yield c
+            move = c.makeMove(y,x,    y + color, x + lr)
+            yield (move, c)
 
-      if pieceType in (Board.KNIGHT, Board.KING):
+      elif pieceType in (Board.KNIGHT, Board.KING):
         for deltaY, deltaX in Board.MOVEMENTS[pieceType]:
           onBoard, destColor = self.attemptMove(y + deltaY, x + deltaX)
           if onBoard and destColor != color:
             c = self.copy()
-            c.makeMove(y, x,   y + deltaY, x + deltaX)
-            yield c
+            move = c.makeMove(y,x,   y + deltaY, x + deltaX)
+            yield (move, c)
 
+      
+      else:
+        # slidy pieces = BISHOPS, ROOKS, QUEENS
+        for deltaY, deltaX in Board.MOVEMENTS[pieceType]:
+          newY = y
+          newX = x
+          while True:
+            newY += deltaY
+            newX += deltaX
+            onBoard, destColor = self.attemptMove(newY, newX)
+            if not onBoard or destColor == color:
+              break
+
+            c = self.copy()
+            move = c.makeMove(y, x,   newY, newX)
+            yield (move, c)
+      #'''
 
   def attemptMove(self, a,b):
     # prep for moving piece to state[c][d]
     # returns on board, piece on [c][d]
     if 0 <= a <= 7 and 0 <= b <= 7:
       destPiece = self.state[a][b]
-      
       return True, Board.pieceColor(destPiece) if destPiece else None
     else:
       return False, None
@@ -119,10 +150,12 @@ class Board:
 
     assert color == self.turn
     if removed:
-      assert color != Board.pieceColor(removed)
+      assert Board.pieceColor(removed) == self.opp
 
     self.state[a][b] = None
     self.state[c][d] = moving
+
+    self.opp = self.turn
     self.turn = Board.BLACK if self.turn == self.WHITE else Board.WHITE
 
     if color == Board.WHITE:
@@ -136,10 +169,14 @@ class Board:
       if removed:
         self.whitePieces.remove((removed, (c, d)))
 
+    return ((a,b), (c,d), moving, removed)
+
 
   def pieceColor(piece):
     return Board.WHITE if piece > 0 else Board.BLACK
 
+  def squareNamePair(yx):
+    return "abcdefgh"[yx[1]] + str(yx[0] + 1)
 
   def copy(self):
     copy = Board()
@@ -194,3 +231,49 @@ class Board:
   def getPieceDifference(self, findPiece):
     return self.getPieceCount(findPiece, Board.WHITE) - self.getPieceCount(findPiece, Board.BLACK)
 
+
+if __name__ == "__main__":
+  from collections import defaultdict
+
+  count = 0
+  caps = 0
+  capsDict = defaultdict(int)
+  firstMove = defaultdict(int)
+
+  patterns = defaultdict(int)
+
+  b = Board()
+  for mb, c in b.getChildren(): 
+    for mc, d in c.getChildren():
+      for md, e in d.getChildren():
+  #      for me, f in e.getChildren():
+  #        for mf, g in f.getChildren():
+
+            count += 1
+            firstMove[(mb[2], Board.squareNamePair(mb[1]))] += 1
+            patterns[(Board.squareNamePair(mc[1]),
+                      Board.squareNamePair(md[1]))] += -1 if mb[1][1] == 0 else 1
+
+            test = caps
+  #        caps += (mb[-1] != None)
+  #        caps += (mc[-1] != None)
+  #        caps += (md[-1] != None)
+  #        caps += (me[-1] != None)
+
+  #        if test != caps:
+  #          capsDict[(md[-2], md[-1])] += 1
+  #          e.printBoard()
+
+
+
+  #print (capsDict)
+  #for k,v in sorted(firstMove.items()):
+  #  print (k,v)
+
+  '''
+  print ()
+  for k,v in sorted(patterns.items()):
+    if v != 0:
+      print (k,v)
+  '''
+  print (count, caps)
