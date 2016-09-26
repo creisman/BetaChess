@@ -9,7 +9,7 @@
     "default_icon": "icon.png"
   },
   "background" : {
-    "scripts" : ["background.js"]
+    "scripts" : ["jquery-2.2.3.js", "background.js"]
   },
   "content_scripts": [
     {
@@ -17,5 +17,6 @@
       "js": ["jquery-2.2.3.js", "mover.js"],
       "run_at": "document_end"
     }
-  ]
+  ],
+  "permissions": ["http://localhost/*"]
 }
