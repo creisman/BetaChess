@@ -1,45 +1,52 @@
 window.betachess = {};
 
-chrome.runtime.sendMessage({greeting: 'hello'}, function(response) {
-  betachess.move(response.src, response.dest);
-});
+betachess.SQUARE_SIZE = 64;
 
 betachess.move = function(src, dest) {
     var board = $('.cg-board');
 
-    var start = betachess.createMouseEvent('mousedown', betachess.findSquare(src.x, src.y));
-    var middle = betachess.createMouseEvent('mousemove', betachess.findSquare(dest.x, dest.y));
-    var end = betachess.createMouseEvent('mouseup', betachess.findSquare(dest.x, dest.y));
+    var start = betachess.createMouseEvent('mousedown', betachess.findCoordinates(src.x, src.y));
+    var middle = betachess.createMouseEvent('mousemove', betachess.findCoordinates(dest.x, dest.y));
+    //var end = betachess.createMouseEvent('mouseup', betachess.findCoordinates(dest.x, dest.y));
 
     board.get(0).dispatchEvent(start);
     window.setTimeout(function() {
         board.get(0).dispatchEvent(middle);
         window.setTimeout(function() {
-            board.get(0).dispatchEvent(end);
+            //board.get(0).dispatchEvent(end);
         }, 100);
     }, 100);
 }
 
-betachess.findSquare = function(x, y) {
+betachess.findCoordinates = function(x, y) {
     var board = $('.cg-board');
     var isWhite = board.hasClass('orientation-white');
-    var index = (8 - x) + y * 8;
-    if (isWhite) {
-        index = 64 - index + 1;
+    y = 8 - y;
+    if (!isWhite) {
+        // Use 7 and 9 because the offsets below will push it over one square.
+        x = 7 - x;
+        y = 9 - y
     }
-    var square = board.find(' > square:nth-child(' + index + ')');
-    console.log(square.get(0));
-    return square;
+    // Places it into the bottom left corner of the piece.
+    return {
+      x: x * betachess.SQUARE_SIZE + board.offset().left + 2,
+      y: y * betachess.SQUARE_SIZE + board.offset().top - 2
+    };
 }
 
-betachess.createMouseEvent = function(type, square) {
+betachess.createMouseEvent = function(type, coordinates) {
     return new MouseEvent(type, {
         bubbles: true,
         cancelable: true,
-        clientX: $(square).offset().left + 2,
-        clientY: $(square).offset().top + 2,
+        clientX: coordinates.x,
+        clientY: coordinates.y,
         button: 0,
         buttons: 1,
         view: window,
     });
 }
+
+chrome.runtime.sendMessage({greeting: 'hello'}, function(response) {
+  betachess.move(response.src, response.dest);
+});
+
