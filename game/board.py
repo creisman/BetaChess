@@ -71,7 +71,7 @@ class Board:
 
 
   def getChildren(self):
-    # returns tuple(tuple(move, BOARD), ...)
+    # returns generator of tuple(tuple(move, board), ...)
     pieces = self.whitePieces if self.turn == Board.WHITE else self.blackPieces
 
     for piece, (y,x) in pieces:
@@ -116,7 +116,6 @@ class Board:
             move = c.makeMove(y,x,   y + deltaY, x + deltaX)
             yield (move, c)
 
-      
       else:
         # slidy pieces = BISHOPS, ROOKS, QUEENS
         for deltaY, deltaX in Board.MOVEMENTS[pieceType]:
@@ -135,8 +134,8 @@ class Board:
       #'''
 
   def attemptMove(self, a,b):
-    # prep for moving piece to state[c][d]
-    # returns on board, piece on [c][d]
+    # prep for moving piece to state[a][b]
+    # returns on board, piece on [a][b]
     if 0 <= a <= 7 and 0 <= b <= 7:
       destPiece = self.state[a][b]
       return True, Board.pieceColor(destPiece) if destPiece else None
@@ -171,9 +170,9 @@ class Board:
 
     return ((a,b), (c,d), moving, removed)
 
-
   def pieceColor(piece):
     return Board.WHITE if piece > 0 else Board.BLACK
+
 
   def squareNamePair(yx):
     return "abcdefgh"[yx[1]] + str(yx[0] + 1)
@@ -205,7 +204,7 @@ class Board:
     blackMobility = 0 # len(list(self.getChildren()))
     self.turn = originalTurn
     #'''
-    print("white: " + str(whiteMobility) + " black: " + str(blackMobility))
+    #print("white: " + str(whiteMobility) + " black: " + str(blackMobility))
     return 200 * self.getPieceDifference(Board.KING) +\
       9 * self.getPieceDifference(Board.QUEEN) +\
       5 * self.getPieceDifference(Board.ROOK) +\
@@ -231,6 +230,9 @@ class Board:
   def getPieceDifference(self, findPiece):
     return self.getPieceCount(findPiece, Board.WHITE) - self.getPieceCount(findPiece, Board.BLACK)
 
+  # -1 Black victory, 0 no mate, 1 White victory
+  def isMate(self):
+    return self.getPieceDifference(Board.KING)
 
 if __name__ == "__main__":
   from collections import defaultdict

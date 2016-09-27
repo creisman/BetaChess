@@ -1,38 +1,60 @@
 from board import *
 
 class Game:
-  DEPTH = 2
+  DEPTH = 4
 
   def __init__(self):
     self.board = Board()
     self.scores = {}
 
   def getNextMove(self):
-    newScores = {}
-    numStates = self.recurse(newScores, self.DEPTH, self.board)
-    print("NumStates: " + str(numStates))
-    whiteMove = self.board.turn = Board.WHITE
+    isWhiteMove = self.board.turn == Board.WHITE
+
     bestMove = None
-    bestScore = float("-inf") if whiteMove else float("inf")
-    for state in newScores.keys():
-      (score, move) = newScores[state]
-      if (whiteMove and score > bestScore) or (not whiteMove and score < bestScore):
+    bestScore = float("-inf") if isWhiteMove else float("inf")
+
+    newScores = {}
+    move, score, totalEvaled = self.recurse(newScores, self.DEPTH, isWhiteMove, self.board)
+
+    print("TotalEvaled: {}".format(totalEvaled))
+    print("Score: {} for move {}".format(score, move))
+    return move, score
+
+  def recurse(self, newScores, depthRemaining, isWhiteMove, board):
+    boardStr = board.boardStr()
+
+    isMate = board.isMate()
+    if isMate != 0:
+      return None, 100 * isMate, 1
+
+    if depthRemaining == 0:
+      return None, board.heuristic(), 1
+
+    totalEvaled = 0
+    bestMove = None
+    bestScore = float("-inf") if isWhiteMove else float("inf")
+
+    for move, nextBoard in board.getChildren():
+      nextMove, score, numEvaled = self.recurse(newScores, depthRemaining - 1, not isWhiteMove, nextBoard)
+      totalEvaled += numEvaled
+
+      if (isWhiteMove and score > bestScore) or (not isWhiteMove and score < bestScore):
         bestScore = score
         bestMove = move
-    return bestScore
 
-  def recurse(self, newScores, depthRemaining, board, move=None):
-    if depthRemaining == 0:
-      newScores[board.boardStr()] = (board.heuristic(), move)
-      return 1
+    return bestMove, bestScore, totalEvaled
 
-    nextStates = board.getChildren()
-    numStates = 0
-    for nextBoard in nextStates:
-      numStates += self.recurse(newScores, depthRemaining - 1, nextBoard)
-    return numStates
+  def makeMove(self, move):
+    self.board.makeMove(move[0][0], move[0][1], move[1][0], move[1][1])
+    self.board.printBoard()
 
 if __name__ == "__main__":
   game = Game()
-  print(game.getNextMove())
+  for ply in range(25):
+    if ply > 0:
+      move, score = game.getNextMove()
+    else:
+      move = ((1,0), (2,0))
+    game.makeMove(move)
+
 
