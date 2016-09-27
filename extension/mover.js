@@ -7,13 +7,13 @@ betachess.move = function(src, dest) {
 
     var start = betachess.createMouseEvent('mousedown', betachess.findCoordinates(src.x, src.y));
     var middle = betachess.createMouseEvent('mousemove', betachess.findCoordinates(dest.x, dest.y));
-    //var end = betachess.createMouseEvent('mouseup', betachess.findCoordinates(dest.x, dest.y));
+    var end = betachess.createMouseEvent('mouseup', betachess.findCoordinates(dest.x, dest.y));
 
     board.get(0).dispatchEvent(start);
     window.setTimeout(function() {
         board.get(0).dispatchEvent(middle);
         window.setTimeout(function() {
-            //board.get(0).dispatchEvent(end);
+            board.get(0).dispatchEvent(end);
         }, 100);
     }, 100);
 }
