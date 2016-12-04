@@ -28,9 +28,9 @@ class Board:
   def setState(self, turn, state, white, black):
     self.turn = turn
     self.opp = -turn
-    self.state = [[p for p in row] for row in state]
-    self.whitePieces = [p for p in white]
-    self.blackPieces = [p for p in black]
+    self.state = [row[:] for row in state]
+    self.whitePieces = white[:]
+    self.blackPieces = black[:]
 
     self.opp = Board.BLACK if self.turn == Board.WHITE else Board.WHITE
 
@@ -136,7 +136,6 @@ class Board:
             c = self.copy()
             move = c.makeMove(y, x,   newY, newX)
             yield (move, c)
-      #'''
 
   def attemptMove(self, a,b):
     # prep for moving piece to state[a][b]
