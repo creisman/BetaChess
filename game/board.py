@@ -20,12 +20,14 @@ class Board:
     }
 
 
-  def __init__(self):
-    self.resetBoard()
+  def __init__(self, initState = True):
+    if initState:
+      self.resetBoard()
 
 
   def setState(self, turn, state, white, black):
     self.turn = turn
+    self.opp = -turn
     self.state = [[p for p in row] for row in state]
     self.whitePieces = [p for p in white]
     self.blackPieces = [p for p in black]
@@ -35,6 +37,7 @@ class Board:
   def resetBoard(self):
     self.turn = Board.WHITE
     self.opp = Board.BLACK
+
     self.state = [[None for i in range(8)] for j in range(8)]
     self.whitePieces = []
     self.blackPieces = []
@@ -175,12 +178,11 @@ class Board:
   def pieceColor(piece):
     return Board.WHITE if piece > 0 else Board.BLACK
 
-
   def squareNamePair(yx):
     return "abcdefgh"[yx[1]] + str(yx[0] + 1)
 
   def copy(self):
-    copy = Board()
+    copy = Board(initState = False)
     copy.setState(self.turn, self.state, self.whitePieces, self.blackPieces)
     return copy
 
