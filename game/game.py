@@ -1,3 +1,4 @@
+import time
 from board import *
 
 class Game:
@@ -51,10 +52,11 @@ class Game:
 if __name__ == "__main__":
   game = Game()
   for ply in range(25):
-    if ply > 0:
-      move, score = game.getNextMove()
-    else:
-      move = ((1,0), (2,0))
+    T0 = time.time()
+    move, score = game.getNextMove()
+    T1 = time.time()
+    print ("\t{:.3f}".format(T1 - T0))
+
     game.makeMove(move)
 
 

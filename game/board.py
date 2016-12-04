@@ -1,3 +1,5 @@
+import math
+
 class Board:
   WHITE = 1
   BLACK = -1
@@ -51,7 +53,7 @@ class Board:
 
       self.state[7][i] = -piece
       self.blackPieces.append( (-piece, (7, i)) )
-      
+
   def boardStr(self):
     rep = ""
     for row in range(7, -1, -1):
@@ -59,7 +61,7 @@ class Board:
         symbol = "?pkbrqk"[abs(piece)] if piece else "."
         if piece and piece > 0:
           symbol = symbol.upper()
-        
+
         rep += symbol
       rep += "\n"
     return rep
@@ -195,7 +197,7 @@ class Board:
 
     whiteMobility = 0
     blackMobility = 0
-    #'''
+    '''
     #TODO enable when fast enough to handle extra recursion
     originalTurn = self.turn
     self.turn = Board.WHITE
@@ -205,34 +207,29 @@ class Board:
     self.turn = originalTurn
     #'''
     #print("white: " + str(whiteMobility) + " black: " + str(blackMobility))
-    return 200 * self.getPieceDifference(Board.KING) +\
-      9 * self.getPieceDifference(Board.QUEEN) +\
-      5 * self.getPieceDifference(Board.ROOK) +\
-      3 * self.getPieceDifference(Board.BISHOP) +\
-      3 * self.getPieceDifference(Board.KNIGHT) +\
-      1 * self.getPieceDifference(Board.PAWN) +\
-      .1 * (whiteMobility - blackMobility)
-      # TODO Determine doubled, blocked, and isolated pawns
 
-  def getPieceCount(self, findPiece, side):
-    if side == Board.WHITE:
-      pieces = self.whitePieces
-    else:
-      pieces = self.blackPieces
-      findPiece = findPiece * -1
+    pieceValue = {
+      Board.KING : 200,
+      Board.QUEEN : 9,
+      Board.ROOK : 5,
+      Board.BISHOP: 3,
+      Board.KNIGHT: 3,
+      Board.PAWN: 1,
+    }
 
-    count = 0;
-    for (piece, pos) in pieces:
-      if piece == findPiece:
-        count += 1
-    return count
+    sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
+    sumValueBlack = sum(pieceValue[-piece[0]] for piece in self.blackPieces)
 
-  def getPieceDifference(self, findPiece):
-    return self.getPieceCount(findPiece, Board.WHITE) - self.getPieceCount(findPiece, Board.BLACK)
+    mobilityBonus = 0.1 * (whiteMobility - blackMobility)
+    # TODO Determine doubled, blocked, and isolated pawns
+
+    return sumValueWhite - sumValueBlack + mobilityBonus
 
   # -1 Black victory, 0 no mate, 1 White victory
   def isMate(self):
-    return self.getPieceDifference(Board.KING)
+    whiteK = len([1 for piece in self.whitePieces if piece[0] == Board.KING])
+    blackK = len([1 for piece in self.blackPieces if piece[0] == -Board.KING])
+    return whiteK - blackK
 
 if __name__ == "__main__":
   from collections import defaultdict
@@ -245,7 +242,7 @@ if __name__ == "__main__":
   patterns = defaultdict(int)
 
   b = Board()
-  for mb, c in b.getChildren(): 
+  for mb, c in b.getChildren():
     for mc, d in c.getChildren():
       for md, e in d.getChildren():
   #      for me, f in e.getChildren():
