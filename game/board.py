@@ -57,6 +57,7 @@ class Board:
       self.state[7][i] = -piece
       self.blackPieces.append( (-piece, (7, i)) )
 
+
   def boardStr(self):
     rep = ""
     for row in range(7, -1, -1):
@@ -69,10 +70,9 @@ class Board:
       rep += "\n"
     return rep
 
+
   def printBoard(self):
     print (self.boardStr())
-#    print (self.whitePieces)
-#    print (self.blackPieces)
 
 
   def getChildren(self):
