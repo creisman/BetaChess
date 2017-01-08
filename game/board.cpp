@@ -1,49 +1,60 @@
-#include <utility>
-#include <tuple>
+#include <cassert>
+#include <iostream>
 #include <map>
-#include <vector>
 #include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include "board.h"
 
 using namespace std;
 
 Board::Board(bool initState) {
   if (initState) {
-      self.resetBoard();
+      resetBoard();
   }
 }
 
 
-void Board::Board setState(int plyP, board_t stateP) {
+Board Board::copy() {
+  Board copy = Board(false);
+  copy.setState(ply, state);
+  return copy;
+}
+
+
+void Board::setState(int plyP, board_t stateP) {
     ply = plyP;
-    isWhite = (plyP+1) % 2;
-    self.opp = -turnP % 2
+    isWhiteTurn = (plyP % 2) == 0;
     // TODO memcopy
     //self.state = [row[:] for row in state]
 }
 
 
-void resetBoard(void) {
-    turn = 0;
-    isWhite = true;
+void Board::resetBoard(void) {
+  ply = 0;
+  isWhiteTurn = true;
 
-    // TODO memcopy
-    //self.state = [[None for i in range(8)] for j in range(8)]
-    /*
-    for i in range(8):
-      self.state[1][i] = Board.PAWN
-      self.whitePieces.append( (Board.PAWN, (1, i)) )
+  // TODO memcopy
+  //self.state = [[None for i in range(8)] for j in range(8)]
+  /*
+  for i in range(8):
+    self.state[1][i] = Board.PAWN
+    self.whitePieces.append( (Board.PAWN, (1, i)) )
 
-      self.state[6][i] = -Board.PAWN
-      self.blackPieces.append( (-Board.PAWN, (6, i)) )
+    self.state[6][i] = -Board.PAWN
+    self.blackPieces.append( (-Board.PAWN, (6, i)) )
 
-    backRow = [Board.ROOK, Board.KNIGHT, Board.BISHOP, Board.QUEEN, Board.KING, Board.BISHOP, Board.KNIGHT, Board.ROOK]
-    for i, piece in enumerate(backRow):
-      self.state[0][i] = piece
-      self.whitePieces.append( (piece, (0, i)) )
+  backRow = [Board.ROOK, Board.KNIGHT, Board.BISHOP, Board.QUEEN, Board.KING, Board.BISHOP, Board.KNIGHT, Board.ROOK]
+  for i, piece in enumerate(backRow):
+    self.state[0][i] = piece
+    self.whitePieces.append( (piece, (0, i)) )
 
-      self.state[7][i] = -piece
-      self.blackPieces.append( (-piece, (7, i)) )
-    */
+    self.state[7][i] = -piece
+    self.blackPieces.append( (-piece, (7, i)) )
+  */
+}
 
 string Board::boardStr(void) {
   string rep = "";
@@ -58,15 +69,16 @@ string Board::boardStr(void) {
   return rep;
 }
 
-string Board::printBoard(void) {
-  cout << self.boardStr() << endl;
+void Board::printBoard(void) {
+  cout << boardStr() << endl;
 }
 
 
 vector<pair<move_t, Board>> getChildren(void) {
     // Because we are doing anti-chess first.
-    non_captures = []
-    captures = []
+    vector<pair<move_t, Board>> non_captures;
+    vector<pair<move_t, Board>> captures;
+
     /*
     for piece, (y,x) in pieces:
       pieceType = abs(piece)
@@ -133,7 +145,7 @@ vector<pair<move_t, Board>> getChildren(void) {
             move = c.makeMove(y, x,   newY, newX)
             yield (move, c)
   */
-  return null;
+  return captures;
 }
 
 pair<bool, char> attemptMove(char a, char b) {
@@ -146,56 +158,39 @@ pair<bool, char> attemptMove(char a, char b) {
   else:
     return False, None
   */
-  return null;
+  return make_pair(false, 0);
 }
 
-move_t Board::makeMove(self, char a, char b, char c, char d) {
-  /*
-  moving = self.state[a][b]
-  color = Board.pieceColor(moving)
-  removed = self.state[c][d]
+move_t Board::makeMove(char a, char b, char c, char d) {
+  char moving = state[a][b];
+  bool isWhite = isWhitePiece(moving);
+  char removed = state[c][d];
 
-  assert color == self.turn
-  if removed:
-    assert Board.pieceColor(removed) == self.opp
+  // TODO figure out asserts.
+  //assert(isWhite == isWhiteTurn );
+  //if (removed) {
+  //  assert( isWhitePiece(remove) != isWhiteTurn, "test" );
+  //}
 
-  self.state[a][b] = None
-  self.state[c][d] = moving
+  state[a][b] = 0;
+  state[c][d] = moving;
 
-  self.opp = self.turn
-  self.turn = Board.BLACK if self.turn == self.WHITE else Board.WHITE
+  // update turn state
+  ply++;
+  isWhiteTurn = !isWhiteTurn;
 
-  if color == Board.WHITE:
-    self.whitePieces.remove((moving, (a, b)))
-    self.whitePieces.append((moving, (c, d)))
-    if removed:
-      self.blackPieces.remove((removed, (c, d)))
-  else:
-    self.blackPieces.remove((moving, (a, b)))
-    self.blackPieces.append((moving, (c, d)))
-    if removed:
-      self.whitePieces.remove((removed, (c, d)))
-
-  return ((a,b), (c,d), moving, removed)
-  */
-  return null;
+  return make_tuple(a, b, c, d, moving, removed);
 }
 
 // TODO change signature;
-void Board::pieceColor(piece) {
+bool Board::isWhitePiece(char piece) {
   //return WHITE if piece > 0 else Board.BLACK
-  return;
+  return true;
 }
 
-string Board::squareNamePair(yx) {
+string Board::squareNamePair(move_t move) {
   return "a4";
 //    return "abcdefgh"[yx[1]] + str(yx[0] + 1)
-}
-
-Board Board::copy() {
-  Board copy = Board(false);
-  copy.setState(ply, state);
-  return copy;
 }
 
 double Board::heuristic() {
@@ -241,14 +236,15 @@ double Board::heuristic() {
     return sumValueWhite - sumValueBlack + mobilityBonus
     */
     return 0.0;
+}
 
   // -1 Black victory, 0 no mate, 1 White victory
-char Board::mateResult() {
+char Board::mateResult(void) {
     //whiteK = len([1 for piece in self.whitePieces if piece[0] == Board.KING])
     //blackK = len([1 for piece in self.blackPieces if piece[0] == -Board.KING])
     //return whiteK - blackK
     return 0;
-
+}
 
 bool Board::test() {
   int count = 0;
