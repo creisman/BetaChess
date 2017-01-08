@@ -2,9 +2,8 @@
 #define BOARD_H
 
 #include <map>
-#include <utility>
-#include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace std;
@@ -17,24 +16,34 @@ typedef char board_t[BOARD_SIZE][BOARD_SIZE];
 class Board {
   // a, b, c, d,  moving, removing
 
+  static const char WHITE = 1;
+  static const char BLACK = -1;
 
-  const char WHITE = 1;
-  const char BLACK = -1;
+  static const char PAWN = 1;
+  static const char KNIGHT = 2;
+  static const char BISHOP = 3;
+  static const char ROOK = 4;
+  static const char QUEEN = 5;
+  static const char KING = 6;
 
-  const char PAWN = 1;
-  const char KNIGHT = 2;
-  const char BISHOP = 3;
-  const char ROOK = 4;
-  const char QUEEN = 5;
-  const char KING = 6;
+  static constexpr const char* PIECE_SYMBOL = "?pkbrqk";
 
+  // TODO investigate making this static?
   const map<char, vector<pair<char, char>>> MOVEMENTS = {
       {KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -1}, {-1, 2}, {-1, -2}}},
-      {BISHOP : {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
-      {ROOK : {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
-      {QUEEN : {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
-      {KING : {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}}
-    };
+      {BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
+      {ROOK, {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
+      {QUEEN, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
+      {KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}}
+  };
+
+  const map<char, int> PIECE_VALUE = {
+      {KING, 200}
+      {QUEEN, 9 }
+      {ROOK, 5 }
+      {BISHOP, 3 }
+      {KNIGHT, 3 }
+  }
 
   public:
     Board(bool initState);

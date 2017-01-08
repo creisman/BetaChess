@@ -1,7 +1,9 @@
 #include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstring>
 #include <iostream>
 #include <map>
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -27,8 +29,7 @@ Board Board::copy() {
 void Board::setState(int plyP, board_t stateP) {
     ply = plyP;
     isWhiteTurn = (plyP % 2) == 0;
-    // TODO memcopy
-    //self.state = [row[:] for row in state]
+    memcpy(&state, &stateP, sizeof(state));
 }
 
 
@@ -36,36 +37,40 @@ void Board::resetBoard(void) {
   ply = 0;
   isWhiteTurn = true;
 
-  // TODO memcopy
-  //self.state = [[None for i in range(8)] for j in range(8)]
-  /*
-  for i in range(8):
-    self.state[1][i] = Board.PAWN
-    self.whitePieces.append( (Board.PAWN, (1, i)) )
+  memset(&state, sizeof(state), 0);
 
-    self.state[6][i] = -Board.PAWN
-    self.blackPieces.append( (-Board.PAWN, (6, i)) )
+  for (int i = 0; i < 8; i++) {
+    state[1][i] = PAWN;
+    state[6][i] = -PAWN;
+  }
 
-  backRow = [Board.ROOK, Board.KNIGHT, Board.BISHOP, Board.QUEEN, Board.KING, Board.BISHOP, Board.KNIGHT, Board.ROOK]
-  for i, piece in enumerate(backRow):
-    self.state[0][i] = piece
-    self.whitePieces.append( (piece, (0, i)) )
+  state[0][0] = state[0][7] = ROOK;
+  state[0][1] = state[0][6] = KNIGHT;
+  state[0][2] = state[0][5] = BISHOP;
+  state[0][3] = QUEEN;
+  state[0][4] = KING;
 
-    self.state[7][i] = -piece
-    self.blackPieces.append( (-piece, (7, i)) )
-  */
+  state[7][0] = state[7][7] = -ROOK;
+  state[7][1] = state[7][6] = -KNIGHT;
+  state[7][2] = state[7][5] = -BISHOP;
+  state[7][3] = -QUEEN;
+  state[7][4] = -KING;
 }
 
 string Board::boardStr(void) {
   string rep = "";
-  //for row in range(7, -1, -1):
-  //  for piece in self.state[row]:
-  //    symbol = "?pkbrqk"[abs(piece)] if piece else "."
-  //    if piece and piece > 0:
-  //      symbol = symbol.upper()
+  for (int row = 7; row >= 0; row--) {
+    for (int col = 0; col < 8; col++) {
+      char piece = state[row][col];
+      char symbol = (piece != 0) ? PIECE_SYMBOL[abs(piece)] : '.';
+      if (piece > 0) {
+        symbol = toupper(symbol);
+      }
+      rep += symbol;
+      } 
+    rep += "\n";
+  }
 
-  //    rep += symbol
-  //  rep += "\n"
   return rep;
 }
 
@@ -148,18 +153,20 @@ vector<pair<move_t, Board>> getChildren(void) {
   return captures;
 }
 
-pair<bool, char> attemptMove(char a, char b) {
+
+pair<bool, bool> attemptMove(char a, char b) {
   // prep for moving piece to state[a][b]
   // returns on board, piece on [a][b]
-  /*
-  if 0 <= a <= 7 and 0 <= b <= 7:
-    destPiece = self.state[a][b]
-    return True, Board.pieceColor(destPiece) if destPiece else None
-  else:
-    return False, None
-  */
-  return make_pair(false, 0);
+
+  if (0 <= a <= 7 && 0 <= b <= 7) {
+    char destPiece = state[a][b];
+    if (destPiece) {
+      return make_pair(true, isWhitePiece(destPiece));
+    }
+  }
+  return make_pair(false, false);
 }
+
 
 move_t Board::makeMove(char a, char b, char c, char d) {
   char moving = state[a][b];
@@ -189,8 +196,9 @@ bool Board::isWhitePiece(char piece) {
 }
 
 string Board::squareNamePair(move_t move) {
+  assert(false);
+  //return "abcdefgh"[yx[1]] + str(yx[0] + 1)
   return "a4";
-//    return "abcdefgh"[yx[1]] + str(yx[0] + 1)
 }
 
 double Board::heuristic() {
@@ -204,38 +212,28 @@ double Board::heuristic() {
     + 0.1(M-M')
     */
 
-    /*
-    whiteMobility = 0
-    blackMobility = 0
-    '''
-    #TODO enable when fast enough to handle extra recursion
-    originalTurn = self.turn
-    self.turn = Board.WHITE
-    whiteMobility = 0 # len(list(self.getChildren()))
-    self.turn = Board.BLACK
-    blackMobility = 0 # len(list(self.getChildren()))
-    self.turn = originalTurn
-    #'''
-    #print("white: " + str(whiteMobility) + " black: " + str(blackMobility))
+  //int whiteMobility = 0
+  //int blackMobility = 0
 
-    pieceValue = {
-      Board.KING : 200,
-      Board.QUEEN : 9,
-      Board.ROOK : 5,
-      Board.BISHOP: 3,
-      Board.KNIGHT: 3,
-      Board.PAWN: 1,
+  int pieceValue = 0;
+  for (int r = 0; r < 8; r++) {
+    for (int c = 0; c < 8; c++) {
+      char piece = state[r][c];
+      if (piece) {
+        // TODO(seth) to be made faster later.
+        pieceValue += ((x < 0) ? -1: 1) * PIECE_VALUE[piece];
+      }
     }
+  }
 
-    sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
-    sumValueBlack = sum(pieceValue[-piece[0]] for piece in self.blackPieces)
+  //sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
+  //sumValueBlack = sum(pieceValue[-piece[0]] for piece in self.blackPieces)
 
-    mobilityBonus = 0.1 * (whiteMobility - blackMobility)
-    # TODO Determine doubled, blocked, and isolated pawns
+  //mobilityBonus = 0.1 * (whiteMobility - blackMobility)
+  //# TODO Determine doubled, blocked, and isolated pawns
 
-    return sumValueWhite - sumValueBlack + mobilityBonus
-    */
-    return 0.0;
+  //return sumValueWhite - sumValueBlack + mobilityBonus
+  return pieceValue;
 }
 
   // -1 Black victory, 0 no mate, 1 White victory
