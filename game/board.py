@@ -79,6 +79,9 @@ class Board:
     # returns generator of tuple(tuple(move, board), ...)
     pieces = self.whitePieces if self.turn == Board.WHITE else self.blackPieces
 
+    non_captures = []
+    captures = []
+
     for piece, (y,x) in pieces:
       pieceType = abs(piece)
       color = Board.pieceColor(piece)
@@ -90,10 +93,10 @@ class Board:
 
         onBoard, destColor = self.attemptMove(y + color, x)
         # if next space is empty.
-        if onBoard and destColor == None:
+        if len(captures) == 0 and onBoard and destColor == None:
           c = self.copy()
           move = c.makeMove(y,x,    y + color, x)
-          yield (move, c)
+          non_captures.append( (move, c) )
 
           # double move (only if nothing in the way for single move)
           if (self.turn == Board.WHITE and y == 1) or \
@@ -103,7 +106,7 @@ class Board:
             if onBoard and destColor == None:
               c = self.copy()
               move = c.makeMove(y,x,    y + 2 * color, x)
-              yield (move, c)
+              non_captures.append( (move, c) )
 
         # pawn capture
         for lr in (-1, 1):
@@ -111,15 +114,22 @@ class Board:
           if onBoard and destColor == self.opp:
             c = self.copy()
             move = c.makeMove(y,x,    y + color, x + lr)
-            yield (move, c)
+            captures.append( (move, c) )
 
       elif pieceType in (Board.KNIGHT, Board.KING):
         for deltaY, deltaX in Board.MOVEMENTS[pieceType]:
           onBoard, destColor = self.attemptMove(y + deltaY, x + deltaX)
           if onBoard and destColor != color:
+            if len(captures) > 0 and destColor == None:
+              continue
+
             c = self.copy()
             move = c.makeMove(y,x,   y + deltaY, x + deltaX)
-            yield (move, c)
+
+            if destColor == None:
+              non_captures.append( (move, c) )
+            else
+              captures.append( (move, c) )
 
       else:
         # slidy pieces = BISHOPS, ROOKS, QUEENS
