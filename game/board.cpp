@@ -1,47 +1,34 @@
-import math
+#include <utility>
+#include <tuple>
+#include <map>
+#include <vector>
+#include <string>
 
-class Board:
-  WHITE = 1
-  BLACK = -1
+using namespace std;
 
-  PAWN = 1
-  KNIGHT = 2
-  BISHOP = 3
-  ROOK = 4
-  QUEEN = 5
-  KING = 6
-
-  MOVEMENTS = {
-      KNIGHT : ((1,-2), (2,-1), (2,1), (1,2), (-1,2), (-2,1), (-2,-1), (-1,-2)),
-      BISHOP : ((1,-1), (1, 1), (-1,1), (-1,-1)),
-      ROOK : ((0,-1), (1, 0), (0,1), (-1,0)),
-      QUEEN : ((1,-1), (1, 1), (-1,1), (-1,-1), (0,-1), (1, 0), (0,1), (-1,0)),
-      KING : ((0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,1), (-1,0), (-1, -1))
-    }
+Board::Board(bool initState) {
+  if (initState) {
+      self.resetBoard();
+  }
+}
 
 
-  def __init__(self, initState = True):
-    if initState:
-      self.resetBoard()
+void Board::Board setState(int plyP, board_t stateP) {
+    ply = plyP;
+    isWhite = (plyP+1) % 2;
+    self.opp = -turnP % 2
+    // TODO memcopy
+    //self.state = [row[:] for row in state]
+}
 
 
-  def setState(self, turn, state, white, black):
-    self.turn = turn
-    self.opp = -turn
-    self.state = [row[:] for row in state]
-    self.whitePieces = white[:]
-    self.blackPieces = black[:]
+void resetBoard(void) {
+    turn = 0;
+    isWhite = true;
 
-    self.opp = Board.BLACK if self.turn == Board.WHITE else Board.WHITE
-
-  def resetBoard(self):
-    self.turn = Board.WHITE
-    self.opp = Board.BLACK
-
-    self.state = [[None for i in range(8)] for j in range(8)]
-    self.whitePieces = []
-    self.blackPieces = []
-
+    // TODO memcopy
+    //self.state = [[None for i in range(8)] for j in range(8)]
+    /*
     for i in range(8):
       self.state[1][i] = Board.PAWN
       self.whitePieces.append( (Board.PAWN, (1, i)) )
@@ -56,32 +43,31 @@ class Board:
 
       self.state[7][i] = -piece
       self.blackPieces.append( (-piece, (7, i)) )
+    */
+
+string Board::boardStr(void) {
+  string rep = "";
+  //for row in range(7, -1, -1):
+  //  for piece in self.state[row]:
+  //    symbol = "?pkbrqk"[abs(piece)] if piece else "."
+  //    if piece and piece > 0:
+  //      symbol = symbol.upper()
+
+  //    rep += symbol
+  //  rep += "\n"
+  return rep;
+}
+
+string Board::printBoard(void) {
+  cout << self.boardStr() << endl;
+}
 
 
-  def boardStr(self):
-    rep = ""
-    for row in range(7, -1, -1):
-      for piece in self.state[row]:
-        symbol = "?pkbrqk"[abs(piece)] if piece else "."
-        if piece and piece > 0:
-          symbol = symbol.upper()
-
-        rep += symbol
-      rep += "\n"
-    return rep
-
-
-  def printBoard(self):
-    print (self.boardStr())
-
-
-  def getChildren(self):
-    # returns generator of tuple(tuple(move, board), ...)
-    pieces = self.whitePieces if self.turn == Board.WHITE else self.blackPieces
-
+vector<pair<move_t, Board>> getChildren(void) {
+    // Because we are doing anti-chess first.
     non_captures = []
     captures = []
-
+    /*
     for piece, (y,x) in pieces:
       pieceType = abs(piece)
       color = Board.pieceColor(piece)
@@ -146,57 +132,74 @@ class Board:
             c = self.copy()
             move = c.makeMove(y, x,   newY, newX)
             yield (move, c)
+  */
+  return null;
+}
 
-  def attemptMove(self, a,b):
-    # prep for moving piece to state[a][b]
-    # returns on board, piece on [a][b]
-    if 0 <= a <= 7 and 0 <= b <= 7:
-      destPiece = self.state[a][b]
-      return True, Board.pieceColor(destPiece) if destPiece else None
-    else:
-      return False, None
+pair<bool, char> attemptMove(char a, char b) {
+  // prep for moving piece to state[a][b]
+  // returns on board, piece on [a][b]
+  /*
+  if 0 <= a <= 7 and 0 <= b <= 7:
+    destPiece = self.state[a][b]
+    return True, Board.pieceColor(destPiece) if destPiece else None
+  else:
+    return False, None
+  */
+  return null;
+}
 
-  def makeMove(self, a,b, c,d):
-    moving = self.state[a][b]
-    color = Board.pieceColor(moving)
-    removed = self.state[c][d]
+move_t Board::makeMove(self, char a, char b, char c, char d) {
+  /*
+  moving = self.state[a][b]
+  color = Board.pieceColor(moving)
+  removed = self.state[c][d]
 
-    assert color == self.turn
+  assert color == self.turn
+  if removed:
+    assert Board.pieceColor(removed) == self.opp
+
+  self.state[a][b] = None
+  self.state[c][d] = moving
+
+  self.opp = self.turn
+  self.turn = Board.BLACK if self.turn == self.WHITE else Board.WHITE
+
+  if color == Board.WHITE:
+    self.whitePieces.remove((moving, (a, b)))
+    self.whitePieces.append((moving, (c, d)))
     if removed:
-      assert Board.pieceColor(removed) == self.opp
+      self.blackPieces.remove((removed, (c, d)))
+  else:
+    self.blackPieces.remove((moving, (a, b)))
+    self.blackPieces.append((moving, (c, d)))
+    if removed:
+      self.whitePieces.remove((removed, (c, d)))
 
-    self.state[a][b] = None
-    self.state[c][d] = moving
+  return ((a,b), (c,d), moving, removed)
+  */
+  return null;
+}
 
-    self.opp = self.turn
-    self.turn = Board.BLACK if self.turn == self.WHITE else Board.WHITE
+// TODO change signature;
+void Board::pieceColor(piece) {
+  //return WHITE if piece > 0 else Board.BLACK
+  return;
+}
 
-    if color == Board.WHITE:
-      self.whitePieces.remove((moving, (a, b)))
-      self.whitePieces.append((moving, (c, d)))
-      if removed:
-        self.blackPieces.remove((removed, (c, d)))
-    else:
-      self.blackPieces.remove((moving, (a, b)))
-      self.blackPieces.append((moving, (c, d)))
-      if removed:
-        self.whitePieces.remove((removed, (c, d)))
+string Board::squareNamePair(yx) {
+  return "a4";
+//    return "abcdefgh"[yx[1]] + str(yx[0] + 1)
+}
 
-    return ((a,b), (c,d), moving, removed)
+Board Board::copy() {
+  Board copy = Board(false);
+  copy.setState(ply, state);
+  return copy;
+}
 
-  def pieceColor(piece):
-    return Board.WHITE if piece > 0 else Board.BLACK
-
-  def squareNamePair(yx):
-    return "abcdefgh"[yx[1]] + str(yx[0] + 1)
-
-  def copy(self):
-    copy = Board(initState = False)
-    copy.setState(self.turn, self.state, self.whitePieces, self.blackPieces)
-    return copy
-
-  def heuristic(self):
-    '''
+double Board::heuristic() {
+    /*
     200(K-K')
     + 9(Q-Q')
     + 5(R-R')
@@ -204,8 +207,9 @@ class Board:
     + 1(P-P')
     - 0.5(D-D' + S-S' + I-I')
     + 0.1(M-M')
-    '''
+    */
 
+    /*
     whiteMobility = 0
     blackMobility = 0
     '''
@@ -235,24 +239,26 @@ class Board:
     # TODO Determine doubled, blocked, and isolated pawns
 
     return sumValueWhite - sumValueBlack + mobilityBonus
+    */
+    return 0.0;
 
-  # -1 Black victory, 0 no mate, 1 White victory
-  def isMate(self):
-    whiteK = len([1 for piece in self.whitePieces if piece[0] == Board.KING])
-    blackK = len([1 for piece in self.blackPieces if piece[0] == -Board.KING])
-    return whiteK - blackK
+  // -1 Black victory, 0 no mate, 1 White victory
+char Board::mateResult() {
+    //whiteK = len([1 for piece in self.whitePieces if piece[0] == Board.KING])
+    //blackK = len([1 for piece in self.blackPieces if piece[0] == -Board.KING])
+    //return whiteK - blackK
+    return 0;
 
-if __name__ == "__main__":
-  from collections import defaultdict
 
-  count = 0
-  caps = 0
-  capsDict = defaultdict(int)
-  firstMove = defaultdict(int)
+bool Board::test() {
+  int count = 0;
+  int caps = 0;
+  // capsDict = defaultdict(int)
 
-  patterns = defaultdict(int)
+  //patterns = defaultdict(int)
 
-  b = Board()
+  Board b(true /* init */);
+  /*
   for mb, c in b.getChildren():
     for mc, d in c.getChildren():
       for md, e in d.getChildren():
@@ -260,9 +266,9 @@ if __name__ == "__main__":
   #        for mf, g in f.getChildren():
 
             count += 1
-            firstMove[(mb[2], Board.squareNamePair(mb[1]))] += 1
-            patterns[(Board.squareNamePair(mc[1]),
-                      Board.squareNamePair(md[1]))] += -1 if mb[1][1] == 0 else 1
+            //firstMove[(mb[2], Board.squareNamePair(mb[1]))] += 1
+            //patterns[(Board.squareNamePair(mc[1]),
+            //          Board.squareNamePair(md[1]))] += -1 if mb[1][1] == 0 else 1
 
             test = caps
   #        caps += (mb[-1] != None)
@@ -287,3 +293,7 @@ if __name__ == "__main__":
       print (k,v)
   '''
   print (count, caps)
+  */
+
+  return true;
+}
