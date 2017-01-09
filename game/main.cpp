@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
     cout << "Called with " << argc << " args" << endl;
   }
 
-  Board b(true /* init */);
+  board::Board b(true /* init */);
   int ply = 4;
 
   int count = 0;
@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
   cout << "\tcount: " << count << 
           "\tcaptures: " << captures << 
           "\tmates: " << mates << endl;
-
 
   return 0;
 }

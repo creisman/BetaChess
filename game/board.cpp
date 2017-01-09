@@ -11,6 +11,15 @@
 #include "board.h"
 
 using namespace std;
+using namespace board;
+
+const map<board_s, movements_t> Board::MOVEMENTS = {
+  {Board::KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -1}, {-1, 2}, {-1, -2}}},
+  {Board::BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
+  {Board::ROOK, {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
+  {Board::QUEEN, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
+  {Board::KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
+};
 
 Board::Board(bool initState) {
   if (initState) {
