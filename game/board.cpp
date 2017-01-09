@@ -13,6 +13,7 @@
 using namespace std;
 using namespace board;
 
+
 const map<board_s, movements_t> Board::MOVEMENTS = {
   {Board::KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -1}, {-1, 2}, {-1, -2}}},
   {Board::BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
@@ -21,6 +22,7 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
   {Board::KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
 };
 
+
 Board::Board(bool initState) {
   if (initState) {
       resetBoard();
@@ -28,21 +30,18 @@ Board::Board(bool initState) {
 }
 
 
-// Does this work better as equality assignment?
-Board Board::copy() {
-  Board copy = Board(false);
-  copy.setState(ply, state);
-  return copy;
+// Do I need to copy of hasKing status?
+Board::Board(int plyP, board_t stateP) {
+  ply = plyP;
+  isWhiteTurn = (plyP % 2) == 0;
+  memcpy(state, stateP, sizeof(state));
 }
 
 
-// Does this work better as a constructor?
-void Board::setState(int plyP, board_t stateP) {
-    ply = plyP;
-    isWhiteTurn = (plyP % 2) == 0;
-    memcpy(state, stateP, sizeof(state));
-
-    // Do I need to copy of hasKing status?
+// Does this work better as equality assignment?
+Board Board::copy() {
+  Board copy(ply, state);
+  return copy;
 }
 
 

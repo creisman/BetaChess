@@ -45,19 +45,19 @@ namespace board {
       };
 
       Board(bool initState);
-
-      vector<pair<move_t, Board>> getChildren(void);
-
-      void setState(int plyP, board_t stateP);
-      void resetBoard(void);
-
-      string boardStr(void);
-      void printBoard(void);
+      Board(int plyP, board_t stateP);
 
       Board copy(void);
 
+      void resetBoard(void);
+
+      vector<pair<move_t, Board>> getChildren(void);
+
       double heuristic(void);
       board_s mateResult(void);
+
+      string boardStr(void);
+      void printBoard(void);
 
       void perft(int ply, int *count, int *captures, int* mates);
 
