@@ -64,7 +64,7 @@ class Board {
     double heuristic(void);
     board_s mateResult(void);
 
-    void perft(int depth, int *count, int *captures, int* mates);
+    void perft(int ply, int *count, int *captures, int* mates);
 
   private:
     pair<bool, board_s> attemptMove(board_s a, board_s b);

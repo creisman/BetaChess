@@ -19,6 +19,7 @@ Board::Board(bool initState) {
 }
 
 
+// Does this work better as equality assignment?
 Board Board::copy() {
   Board copy = Board(false);
   copy.setState(ply, state);
@@ -26,10 +27,11 @@ Board Board::copy() {
 }
 
 
+// Does this work better as a constructor?
 void Board::setState(int plyP, board_t stateP) {
     ply = plyP;
     isWhiteTurn = (plyP % 2) == 0;
-    memcpy(&state, &stateP, sizeof(state));
+    memcpy(state, stateP, sizeof(state));
 
     // Do I need to copy of hasKing status?
 }
@@ -67,8 +69,9 @@ void Board::resetBoard(void) {
 }
 
 string Board::boardStr(void) {
-  string rep = "";
+  string rep = "----------\n";
   for (int row = 7; row >= 0; row--) {
+    rep += "|";
     for (int col = 0; col < 8; col++) {
       board_s piece = state[row][col];
       board_s absPiece = (piece >= 0) ? piece : -piece;
@@ -78,9 +81,9 @@ string Board::boardStr(void) {
       }
       rep += symbol;
       } 
-    cout << endl;
-    rep += "\n";
+    rep += "|\n";
   }
+  rep += "----------\n";
 
   return rep;
 }
@@ -98,6 +101,7 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
   vector<pair<move_t, Board>> captures;
 
   board_s pawnDirection = isWhiteTurn ? 1 : -1;
+  board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s oppColor = isWhiteTurn ? BLACK : WHITE;
 
   pair<bool, board_s> moveTest;
@@ -106,35 +110,13 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
       board_s piece = state[y][x];
-      if (isWhiteTurn != isWhitePiece(piece)) {
+      if (piece == 0 || isWhiteTurn != isWhitePiece(piece)) {
         continue;
       }
 
       // TODO CASTLING, CHECKS (CHECKMATES)
 
-      if (piece == PAWN || piece == -PAWN) {
-        // TODO: enpassant, and promotion
-
-        moveTest = attemptMove(y + pawnDirection, x);
-        // if next space is empty.
-        if (captures.size() == 0 && moveTest.first && moveTest.second == 0) {
-          Board c = copy();
-          move = c.makeMove(y,x,    y + pawnDirection, x);
-          //non_captures.push_back( make_pair(move, c) )
-          all_moves.push_back( make_pair(move, c) );
-
-          // double move (only if nothing in the way for single move)
-          if ((isWhiteTurn && y == 1) || (!isWhiteTurn && y == 6)) {
-            moveTest = attemptMove(y + 2 * pawnDirection, x);
-            if (moveTest.first && moveTest.second == 0) {
-              Board c = copy();
-              move = c.makeMove(y,x,    y + 2 * pawnDirection, x);
-              //non_captures.append( (move, c) )
-              all_moves.push_back( make_pair(move, c) );
-            }
-          }
-        }
-
+      if (abs(piece) == PAWN) {
         // pawn capture
         for (board_s lr = -1; lr <= 1; lr += 2) {
           moveTest = attemptMove(y + pawnDirection, x + lr);
@@ -144,38 +126,82 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             all_moves.push_back( make_pair(move, c) );
           }
         }
-      } /*else if (abs(piece) == KNIGHT || abs(piece) == KING) {
+
+        // TODO: enpassant, and promotion
+
+        moveTest = attemptMove(y + pawnDirection, x);
+        // pawn move: if next space is empty.
+        if (moveTest.first && moveTest.second == 0) {
+          // Antichess
+          //if (captures.size() > 0) { continue; }
+
+          Board c = copy();
+          move = c.makeMove(y,x,    y + pawnDirection, x);
+          all_moves.push_back( make_pair(move, c) );
+
+          // double move (only if nothing in the way for single move)
+          if ((isWhiteTurn && y == 1) || (!isWhiteTurn && y == 6)) {
+            moveTest = attemptMove(y + 2 * pawnDirection, x);
+            if (moveTest.first && moveTest.second == 0) {
+              Board c = copy();
+              move = c.makeMove(y,x,    y + 2 * pawnDirection, x);
+              all_moves.push_back( make_pair(move, c) );
+            }
+          }
+        }
+      } else if (abs(piece) == KNIGHT || abs(piece) == KING) {
         // "jumpy" pieces = KNIGHT, KING
-        for deltaY, deltaX in Board.MOVEMENTS[pieceType]:
-          onBoard, destColor = self.attemptMove(y + deltaY, x + deltaX)
-          if onBoard and destColor != color:
-            if len(captures) > 0 and destColor == None:
-              continue
+        for (auto iter = MOVEMENTS.at(abs(piece)).begin();
+                  iter != MOVEMENTS.at(abs(piece)).end();
+                  iter++) {
+          moveTest = attemptMove(y + iter->first, x + iter->second);
+          if (moveTest.first && moveTest.second != selfColor) {
+            // AntiChess 
+            //if (captures.size() > 0) { continue; }
 
-            c = self.copy()
-            move = c.makeMove(y,x,   y + deltaY, x + deltaX)
+            Board c = copy();
+            move = c.makeMove(y,x,   y + iter->first, x + iter->second);
+            all_moves.push_back( make_pair(move, c) );
 
-            if destColor == None:
-              non_captures.append( (move, c) )
-            else
-              captures.append( (move, c) )
+            // AntiChess
+            //if (destColor == oppColor) {
+            //  non_captures.append( (move, c) )
+            //else
+            //  captures.append( (move, c) )
+          }
+        }
       } else {
         // slidy pieces = BISHOPS, ROOKS, QUEENS
-        for deltaY, deltaX in Board.MOVEMENTS[pieceType]:
-          newY = y
-          newX = x
-          while True:
-            newY += deltaY
-            newX += deltaX
-            onBoard, destColor = self.attemptMove(newY, newX)
-            if not onBoard or destColor == color:
-              break
+        assert( abs(piece) == BISHOP || abs(piece) == ROOK || abs(piece) == QUEEN );
+        for (auto iter = MOVEMENTS.at(abs(piece)).begin();
+                  iter != MOVEMENTS.at(abs(piece)).end();
+                  iter++) {
+          board_s deltaY = iter->first;
+          board_s deltaX = iter->second;
+          board_s newY = y;
+          board_s newX = x;
+          while (true) {
+            newY += deltaY;
+            newX += deltaX;
 
-            c = self.copy()
-            move = c.makeMove(y, x,   newY, newX)
-            yield (move, c)
+            moveTest = attemptMove(newY, newX);
+
+            if (!moveTest.first || moveTest.second == selfColor) {
+              break;
+            }
+
+            // TODO antiChess 
+
+            Board c = copy();
+            move = c.makeMove(y, x,   newY, newX);
+            all_moves.push_back( make_pair(move, c) );
+
+            if (moveTest.second == oppColor) {
+              break;
+            }
+          }
+        }
       }
-    */
     }
   }
   return all_moves;
@@ -186,7 +212,7 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   // prep for moving piece to state[a][b]
   // returns on board, piece on [a][b]
 
-  if (0 <= a <= 7 && 0 <= b <= 7) {
+  if (0 <= a && a <= 7 && 0 <= b && b <= 7) {
     board_s destPiece = state[a][b];
     if (destPiece) {
       return make_pair(true, peaceSign(destPiece));
@@ -203,10 +229,10 @@ move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s removed = state[c][d];
 
   // TODO figure out asserts.
-  //assert(isWhite == isWhiteTurn );
-  //if (removed) {
-  //  assert( isWhitePiece(remove) != isWhiteTurn, "test" );
-  //}
+  assert( isWhite == isWhiteTurn );
+  if (removed != 0) {
+    assert( isWhitePiece(removed) != isWhiteTurn );
+  }
 
   state[a][b] = 0;
   state[c][d] = moving;
@@ -227,7 +253,7 @@ board_s Board::peaceSign(board_s piece) {
   if (piece == 0) {
     return 0;
   }
-  return  (piece > 0) ? 1 : -1;
+  return  (piece > 0) ? WHITE : BLACK;
 }
 
 string Board::squareNamePair(move_t move) {
@@ -291,9 +317,11 @@ board_s Board::mateResult(void) {
     return mateStatus;
 }
 
-void Board::perft(int depth, int* count, int* captures, int* mates) {
-  if (depth == 0) {
+void Board::perft(int ply, int* count, int* captures, int* mates) {
+  if (ply == 0) {
     *count += 1;
+
+    //printBoard();
 
     if (mateResult() != 0) {
       *mates += 1;
@@ -303,6 +331,6 @@ void Board::perft(int depth, int* count, int* captures, int* mates) {
 
   vector<pair<move_t, Board>> children = getChildren();
   for (auto c = children.begin(); c != children.end(); c++) {
-    c->second.perft(depth - 1, count, captures, mates);
+    c->second.perft(ply - 1, count, captures, mates);
   }
 }
