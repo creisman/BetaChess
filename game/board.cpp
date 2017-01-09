@@ -97,8 +97,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
   vector<pair<move_t, Board>> all_moves;
  
   // Because we are doing anti-chess first.
-  vector<pair<move_t, Board>> non_captures;
-  vector<pair<move_t, Board>> captures;
+  //vector<pair<move_t, Board>> non_captures;
+  //vector<pair<move_t, Board>> captures;
 
   board_s pawnDirection = isWhiteTurn ? 1 : -1;
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
@@ -277,17 +277,15 @@ double Board::heuristic() {
   //int blackMobility = 0
 
   int pieceValue = 0;
-  /*
   for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
       board_s piece = state[r][c];
-      if (piece) {
+      if (piece != 0) {
         // TODO(seth) to be made faster later.
-        pieceValue += peaceSign(piece) * PIECE_VALUE.at(piece);
+        pieceValue += peaceSign(piece) * PIECE_VALUE.at(abs(piece));
       }
     }
   }
-  */
 
   if (pieceValue > 100) {
     // black is missing king.
@@ -331,6 +329,10 @@ void Board::perft(int ply, int* count, int* captures, int* mates) {
 
   vector<pair<move_t, Board>> children = getChildren();
   for (auto c = children.begin(); c != children.end(); c++) {
+    if (get<5>(c->first) != 0) {
+      *captures += 1;
+    }
+
     c->second.perft(ply - 1, count, captures, mates);
   }
 }

@@ -47,6 +47,7 @@ class Board {
       {ROOK, 5 },
       {BISHOP, 3 },
       {KNIGHT, 3 },
+      {PAWN, 1},
   };
 
   public:
@@ -61,6 +62,7 @@ class Board {
     void printBoard(void);
 
     Board copy(void);
+
     double heuristic(void);
     board_s mateResult(void);
 
