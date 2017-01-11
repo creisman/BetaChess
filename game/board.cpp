@@ -323,24 +323,26 @@ board_s Board::mateResult(void) {
     return mateStatus;
 }
 
-void Board::perft(int ply, int* count, int* captures, int* mates) {
+void Board::perft(int ply, atomic<int> *count, atomic<int> *captures, atomic<int> *mates) {
   if (ply == 0) {
-    *count += 1;
+    count->fetch_add(1);
 
     //printBoard();
 
     if (mateResult() != 0) {
-      *mates += 1;
+      mates->fetch_add(1);
     }
     return;
   }
 
   vector<pair<move_t, Board>> children = getChildren();
-  for (auto c = children.begin(); c != children.end(); c++) {
-    if (get<5>(c->first) != 0) {
-      *captures += 1;
+  //for (auto c = children.begin(); c != children.end(); c++) {
+  #pragma omp parallel for
+  for (int ci = 0; ci < children.size(); ci++) {
+    if (get<5>(children[ci].first) != 0) {
+      captures->fetch_add(1);
     }
 
-    c->second.perft(ply - 1, count, captures, mates);
+    children[ci].second.perft(ply - 1, count, captures, mates);
   }
 }

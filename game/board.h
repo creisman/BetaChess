@@ -1,6 +1,7 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <atomic>
 #include <map>
 #include <tuple>
 #include <utility>
@@ -59,7 +60,7 @@ namespace board {
       string boardStr(void);
       void printBoard(void);
 
-      void perft(int ply, int *count, int *captures, int* mates);
+      void perft(int ply, atomic<int> *count, atomic<int> *captures, atomic<int> *mates);
 
     private:
       pair<bool, board_s> attemptMove(board_s a, board_s b);

@@ -1,3 +1,4 @@
+#include <atomic>
 #include <iostream>
 
 #include "board.h"
@@ -10,11 +11,11 @@ int main(int argc, char *argv[]) {
   }
 
   board::Board b(true /* init */);
-  int ply = 4;
+  int ply = 5;
 
-  int count = 0;
-  int captures = 0;
-  int mates = 0;
+  atomic<int> count(0);
+  atomic<int> captures(0);
+  atomic<int> mates(0);
   b.perft(ply, &count, &captures, &mates);
 
   cout << "Perft results for" <<
