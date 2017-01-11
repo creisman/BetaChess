@@ -46,7 +46,7 @@ namespace board {
       };
 
       Board(bool initState);
-      Board(int plyP, board_t stateP);
+      Board(const Board *copy);
 
       Board copy(void);
 

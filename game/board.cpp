@@ -31,16 +31,17 @@ Board::Board(bool initState) {
 
 
 // Do I need to copy of hasKing status?
-Board::Board(int plyP, board_t stateP) {
-  ply = plyP;
-  isWhiteTurn = (plyP % 2) == 0;
-  memcpy(state, stateP, sizeof(state));
+Board::Board(const Board *copy) {
+  ply = copy->ply;
+  isWhiteTurn = (copy->ply % 2) == 0;
+
+  memcpy(state, copy->state, sizeof(state));
 }
 
 
 // Does this work better as equality assignment?
 Board Board::copy() {
-  Board copy(ply, state);
+  Board copy(this);
   return copy;
 }
 
