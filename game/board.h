@@ -37,8 +37,8 @@ namespace board {
       static const map<board_s, movements_t> MOVEMENTS;
       static const map<board_s, int> PIECE_VALUE;
 
+      // Constructor (including the hidden copy constructor).
       Board(bool initState);
-      Board(const Board *copy);
 
       Board copy(void);
 
@@ -64,10 +64,11 @@ namespace board {
       // TODO investigate usage of this.
       static string squareNamePair(move_t move);
 
-      int ply;
+      // 2 + 1 + 64 + 1 = 76 bytes.
+      short ply;
       bool isWhiteTurn;
       board_t state;
-      int mateStatus = -2;
+      board_s mateStatus = -2;
   };
 }
 #endif // BOARD_H

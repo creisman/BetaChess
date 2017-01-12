@@ -15,20 +15,20 @@ using namespace board;
 
 
 const map<board_s, movements_t> Board::MOVEMENTS = {
-  {Board::KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -1}, {-1, 2}, {-1, -2}}},
-  {Board::BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
-  {Board::ROOK, {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
-  {Board::QUEEN, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
-  {Board::KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
+  {KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -1}, {-1, 2}, {-1, -2}}},
+  {BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
+  {ROOK, {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
+  {QUEEN, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
+  {KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
 };
 
 const map<board_s, int> Board::PIECE_VALUE = {
-  {Board::KING, 200},
-  {Board::QUEEN, 9 },
-  {Board::ROOK, 5 },
-  {Board::BISHOP, 3 },
-  {Board::KNIGHT, 3 },
-  {Board::PAWN, 1},
+  {KING, 200},
+  {QUEEN, 9 },
+  {ROOK, 5 },
+  {BISHOP, 3 },
+  {KNIGHT, 3 },
+  {PAWN, 1},
 };
 
 
@@ -39,17 +39,9 @@ Board::Board(bool initState) {
 }
 
 
-// Do I need to copy of hasKing status?
-Board::Board(const Board *copy) {
-  ply = copy->ply;
-  isWhiteTurn = (copy->ply % 2) == 0;
-  memcpy(state, copy->state, sizeof(state));
-}
-
-
-// Does this work better as equality assignment?
 Board Board::copy() {
-  Board copy(this);
+  // Call "copy" constructor.
+  Board copy = *this;
   return copy;
 }
 
@@ -245,7 +237,6 @@ move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   bool isWhite = isWhitePiece(moving);
   board_s removed = state[c][d];
 
-  // TODO figure out asserts.
   assert( isWhite == isWhiteTurn );
   if (removed != 0) {
     assert( isWhitePiece(removed) != isWhiteTurn );
