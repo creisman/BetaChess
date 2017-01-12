@@ -5,15 +5,17 @@
 
 using namespace std;
 
-int main(int argc, char *argv[]) {
-  if (argc > 1){
-    cout << "Called with " << argc << " args" << endl;
+void perft(string fen) {
+  board::Board b(true /* init */);
+  if (!fen.empty()) {
+    b = board::Board(fen);
+    cout << "Loaded from fen: \"" << fen << "\"" << endl;
   }
 
-  board::Board b(true /* init */);
-  cout << "Size of Board: " << sizeof(b) << endl;
+  b.printBoard();
+  cout << "Size of Board class: " << sizeof(b) << endl;
 
-  int ply = 6;
+  int ply = 3;
 
   atomic<int> count(0);
   atomic<int> captures(0);
@@ -26,7 +28,18 @@ int main(int argc, char *argv[]) {
           "\tcaptures: " << captures << 
           "\tmates: " << mates << endl;
   cout << endl << endl;
+}
 
-  b.printBoard();
+
+int main(int argc, char *argv[]) {
+  if (argc > 1){
+    cout << "Called with " << argc << " args" << endl;
+  }
+
+  //perft("");
+
+  // "Position 2 - Kiwipete"
+  perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w kQkq -");
+
   return 0;
 }

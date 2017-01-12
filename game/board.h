@@ -32,13 +32,13 @@ namespace board {
       static const board_s QUEEN = 5;
       static const board_s KING = 6;
 
-      static constexpr const char* PIECE_SYMBOL = "?pnbrqk";
-
+      static const string PIECE_SYMBOL;
       static const map<board_s, movements_t> MOVEMENTS;
       static const map<board_s, int> PIECE_VALUE;
 
       // Constructor (including the hidden copy constructor).
       Board(bool initState);
+      Board(string fen);
 
       Board copy(void);
 
@@ -68,7 +68,7 @@ namespace board {
       short ply;
       bool isWhiteTurn;
       board_t state;
-      board_s mateStatus = -2;
+      board_s mateStatus;
   };
 }
 #endif // BOARD_H

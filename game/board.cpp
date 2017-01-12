@@ -14,8 +14,10 @@ using namespace std;
 using namespace board;
 
 
+const string Board::PIECE_SYMBOL = "?pnbrqk";
+
 const map<board_s, movements_t> Board::MOVEMENTS = {
-  {KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -1}, {-1, 2}, {-1, -2}}},
+  {KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}},
   {BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
   {ROOK, {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
   {QUEEN, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}},
@@ -38,6 +40,70 @@ Board::Board(bool initState) {
   }
 }
 
+Board::Board(string fen) {
+  // Fen is "easy" they said
+
+  memset(&state, '\0', sizeof(state));
+
+  int y = 7;
+  int x = 0;
+  int fi;
+  for (fi = 0; fi < fen.size(); fi++) {
+    if (y == 0 && x == 8) {
+      break;
+    };
+
+    char c = fen[fi];
+
+    if (c == '/') {
+      assert(x == 8);
+      y -= 1;
+      x = 0;
+    } else if (c >= '1' && c <= '8') {
+      x += c - '0';
+    } else {
+      // c should be in PIECE_SYMBOL
+      int color = isupper(c) ? WHITE : BLACK;
+      size_t piece = PIECE_SYMBOL.find(tolower(c));
+
+      assert(piece >= PAWN && piece <= KING);
+      board_s insert = color * piece;
+      state[y][x] = insert;
+      x += 1;
+    }
+  }
+
+  // Next is who to play.
+  assert(fen[fi] == ' ');
+  fi++;
+  assert(fen[fi] == 'b' || fen[fi] == 'w');
+  ply = (fen[fi] == 'w') ? 0 : 1;
+  isWhiteTurn = ply % 2 == 0;
+  fi++;
+
+  // Next is castling
+  assert(fen[fi] == ' ');
+  fi++;
+  /*
+  whiteOO = whiteOOO = false;
+  blackOO = blackOOO = false;
+  while (fen[fi] != ' ') {
+    if (fen[fi] == 'K') { whiteOO = true; }
+    if (fen[fi] == 'Q') { whiteOOO = true; }
+    if (fen[fi] == 'k') { blackOO = true; }
+    if (fen[fi] == 'q') { blackOOO = true; }
+    fi++;
+  }  
+  */
+  // TODO Next is En passant
+  // TODO Next is halfmove clock
+  // TODO Next is fullmove clock
+
+  // TODO matestatus
+  mateStatus = -2;
+
+}
+
 
 Board Board::copy() {
   // Call "copy" constructor.
@@ -49,7 +115,7 @@ Board Board::copy() {
 void Board::resetBoard(void) {
   ply = 0;
   isWhiteTurn = true;
-  mateStatus = 0;
+  mateStatus = -2;
 
   memset(&state, '\0', sizeof(state));
 
@@ -336,7 +402,7 @@ void Board::perft(int ply, atomic<int> *count, atomic<int> *captures, atomic<int
   }
 
   vector<pair<move_t, Board>> children = getChildren();
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     if (get<5>(children[ci].first) != 0) {
       captures->fetch_add(1);
