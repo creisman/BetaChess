@@ -11,6 +11,9 @@ int main(int argc, char *argv[]) {
   }
 
   board::Board b(true /* init */);
+
+  cout << "Size of Board: " << sizeof(b) << endl;
+
   int ply = 5;
 
   atomic<int> count(0);
@@ -23,6 +26,9 @@ int main(int argc, char *argv[]) {
   cout << "\tcount: " << count << 
           "\tcaptures: " << captures << 
           "\tmates: " << mates << endl;
+  cout << endl << endl;
+
+  b.printBoard();
 
   return 0;
 }

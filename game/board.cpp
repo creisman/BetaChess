@@ -22,6 +22,15 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
   {Board::KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
 };
 
+const map<board_s, int> Board::PIECE_VALUE = {
+  {Board::KING, 200},
+  {Board::QUEEN, 9 },
+  {Board::ROOK, 5 },
+  {Board::BISHOP, 3 },
+  {Board::KNIGHT, 3 },
+  {Board::PAWN, 1},
+};
+
 
 Board::Board(bool initState) {
   if (initState) {
@@ -34,7 +43,6 @@ Board::Board(bool initState) {
 Board::Board(const Board *copy) {
   ply = copy->ply;
   isWhiteTurn = (copy->ply % 2) == 0;
-
   memcpy(state, copy->state, sizeof(state));
 }
 
@@ -337,7 +345,6 @@ void Board::perft(int ply, atomic<int> *count, atomic<int> *captures, atomic<int
   }
 
   vector<pair<move_t, Board>> children = getChildren();
-  //for (auto c = children.begin(); c != children.end(); c++) {
   #pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     if (get<5>(children[ci].first) != 0) {

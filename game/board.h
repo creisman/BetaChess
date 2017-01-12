@@ -35,15 +35,7 @@ namespace board {
       static constexpr const char* PIECE_SYMBOL = "?pnbrqk";
 
       static const map<board_s, movements_t> MOVEMENTS;
-
-      const map<board_s, int> PIECE_VALUE = {
-          {KING, 200},
-          {QUEEN, 9 },
-          {ROOK, 5 },
-          {BISHOP, 3 },
-          {KNIGHT, 3 },
-          {PAWN, 1},
-      };
+      static const map<board_s, int> PIECE_VALUE;
 
       Board(bool initState);
       Board(const Board *copy);
