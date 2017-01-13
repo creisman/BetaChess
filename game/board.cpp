@@ -84,13 +84,12 @@ Board::Board(string fen) {
   // Next is castling
   assert(fen[fi] == ' ');
   fi++;
-  whiteOO = whiteOOO = false;
-  blackOO = blackOOO = false;
+  castleStatus = 0;
   while (fen[fi] != ' ') {
-    if (fen[fi] == 'K') { whiteOO = true; }
-    if (fen[fi] == 'Q') { whiteOOO = true; }
-    if (fen[fi] == 'k') { blackOO = true; }
-    if (fen[fi] == 'q') { blackOOO = true; }
+    if (fen[fi] == 'K') { castleStatus |= 8; }; // whiteOO = true
+    if (fen[fi] == 'Q') { castleStatus |= 4; }; // whiteOOO = true
+    if (fen[fi] == 'k') { castleStatus |= 2; }; // blackOO = true
+    if (fen[fi] == 'q') { castleStatus |= 1; }; // blackOOO = true
     fi++;
   }  
 
@@ -116,8 +115,9 @@ void Board::resetBoard(void) {
   isWhiteTurn = true;
   mateStatus = -2;
 
-  whiteOO = whiteOOO = true;
-  blackOO = blackOOO = true;
+  // whiteOO = whiteOOO = true;
+  // blackOO = blackOOO = true;
+  castleStatus = 15;
 
   memset(&state, '\0', sizeof(state));
 
@@ -173,10 +173,6 @@ void Board::printBoard(void) {
 vector<pair<move_t, Board>> Board::getChildren(void) {
   vector<pair<move_t, Board>> all_moves;
  
-  // Because we are doing anti-chess first.
-  //vector<pair<move_t, Board>> non_captures;
-  //vector<pair<move_t, Board>> captures;
-
   board_s pawnDirection = isWhiteTurn ? 1 : -1;
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s oppColor = isWhiteTurn ? BLACK : WHITE;
@@ -207,9 +203,6 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
         moveTest = attemptMove(y + pawnDirection, x);
         // pawn move: if next space is empty.
         if (moveTest.first && moveTest.second == 0) {
-          // Antichess
-          //if (captures.size() > 0) { continue; }
-
           // Normal move forward && promo    
           promoHelper(&all_moves, isWhiteTurn, selfColor, pawnDirection, x, y, x);
 
@@ -230,19 +223,9 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
                   iter++) {
           moveTest = attemptMove(y + iter->first, x + iter->second);
           if (moveTest.first && moveTest.second != selfColor) {
-            // AntiChess 
-            //if (captures.size() > 0) { continue; }
-
             Board c = copy();
             move = c.makeMove(y,x,   y + iter->first, x + iter->second);
             all_moves.push_back( make_pair(move, c) );
-
-            // AntiChess
-            //if (destColor == oppColor) {
-            //  non_captures.append( (move, c) )
-            //} else {
-            //  captures.append( (move, c) )
-            //}
           }
         }
       } else {
@@ -265,8 +248,6 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
               break;
             }
 
-            // TODO antiChess 
-
             Board c = copy();
             move = c.makeMove(y, x,   newY, newX);
             all_moves.push_back( make_pair(move, c) );
@@ -285,8 +266,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {
-      bool canOOO = isWhiteTurn ? whiteOOO : blackOOO;
-      bool canOO = isWhiteTurn ? whiteOO : blackOO;
+      bool canOO = castleStatus & (isWhiteTurn ? 8 : 2); // isWhiteTurn ? whiteOO : blackOO;
+      bool canOOO = castleStatus & (isWhiteTurn ? 4 : 1); // isWhiteTurn ? whiteOOO : blackOOO;
       // OOO
       if (canOOO && (state[y][0] == selfColor * ROOK)) {
         // Check empty squares.
@@ -318,7 +299,7 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
     }
   }
 
-  // TODO: enpassant
+  // if
 
   return all_moves;
 }
@@ -435,18 +416,18 @@ move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   // update castling.
   if (isWhite) {
     // if king moves (king can't be captured so if it leaves square it moves)
-    if (a == 0 && b == 4 && moving == KING) { whiteOO = whiteOOO = false; }
+    if (a == 0 && b == 4 && moving == KING) { castleStatus &= 3; } // whiteOO = 0, whiteOOO = 0
 
     // rook moving back doesn't count.
-    if (c == 0 && d == 0 && moving == ROOK) { whiteOO = false; }
-    if (c == 0 && d == 7 && moving == ROOK) { whiteOOO = false; }
+    if (c == 0 && d == 0 && moving == ROOK) { castleStatus &= 7; } // whiteOO = 0
+    if (c == 0 && d == 7 && moving == ROOK) { castleStatus &= 11; } // whiteOOO =0
   } else { 
     // if king moves (king can't be captured so if it leaves square it moves)
-    if (a == 7 && b == 4 && moving == -KING) { blackOO = blackOOO = false; }
+    if (a == 7 && b == 4 && moving == -KING) { castleStatus &= 12; } // blackOO = 0, blackOOO = 0
 
     // rook moving back doesn't count.
-    if (c == 7 && d == 0 && moving == -ROOK) { blackOO = false; }
-    if (c == 7 && d == 7 && moving == -ROOK) { blackOOO = false; }
+    if (c == 7 && d == 0 && moving == -ROOK) { castleStatus &= 13; } // blackOO = 0
+    if (c == 7 && d == 7 && moving == -ROOK) { castleStatus &= 14; } // blackOOO = 0;
   }
 
   return make_tuple(a, b, c, d, moving, removed);

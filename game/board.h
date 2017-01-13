@@ -58,6 +58,7 @@ namespace board {
     private:
       void promoHelper(vector<pair<move_t, Board>> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
+
       board_s checkAttack(board_s a, board_s b);
       board_s getPiece(board_s a, board_s b);
       pair<bool, board_s> attemptMove(board_s a, board_s b);
@@ -69,17 +70,16 @@ namespace board {
       // TODO investigate usage of this.
       static string squareNamePair(move_t move);
 
-      // 2 + 1 + 64 + 1   +   4 + 4  = 76 bytes.
+      // 2 + 1 + 64 + 1   +   6+1  = 76 bytes.
       short ply;
       bool isWhiteTurn;
       board_t state;
       board_s mateStatus;
 
-      move_t lastMove;
-      bool whiteOO;
-      bool whiteOOO;
-      bool blackOO;
-      bool blackOOO;
+      //move_t lastMove;
+
+      // whiteOO, whiteOOO, blackOO, blackOOO
+      char castleStatus;
   };
 }
 #endif // BOARD_H
