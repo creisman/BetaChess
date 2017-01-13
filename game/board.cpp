@@ -84,7 +84,6 @@ Board::Board(string fen) {
   // Next is castling
   assert(fen[fi] == ' ');
   fi++;
-  /*
   whiteOO = whiteOOO = false;
   blackOO = blackOOO = false;
   while (fen[fi] != ' ') {
@@ -94,7 +93,7 @@ Board::Board(string fen) {
     if (fen[fi] == 'q') { blackOOO = true; }
     fi++;
   }  
-  */
+
   // TODO Next is En passant
   // TODO Next is halfmove clock
   // TODO Next is fullmove clock
@@ -116,6 +115,9 @@ void Board::resetBoard(void) {
   ply = 0;
   isWhiteTurn = true;
   mateStatus = -2;
+
+  whiteOO = whiteOOO = true;
+  blackOO = blackOOO = true;
 
   memset(&state, '\0', sizeof(state));
 
@@ -188,10 +190,11 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
       if (piece == 0 || isWhiteTurn != isWhitePiece(piece)) {
         continue;
       }
+      board_s absPiece = abs(piece);
 
       // TODO CASTLING, CHECKS (CHECKMATES)
 
-      if (abs(piece) == PAWN) {
+      if (absPiece == PAWN) {
         // pawn capture
         for (board_s lr = -1; lr <= 1; lr += 2) {
           moveTest = attemptMove(y + pawnDirection, x + lr);
@@ -224,10 +227,10 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             }
           }
         }
-      } else if (abs(piece) == KNIGHT || abs(piece) == KING) {
+      } else if (absPiece == KNIGHT || absPiece == KING) {
         // "jumpy" pieces = KNIGHT, KING
-        for (auto iter = MOVEMENTS.at(abs(piece)).begin();
-                  iter != MOVEMENTS.at(abs(piece)).end();
+        for (auto iter = MOVEMENTS.at(absPiece).begin();
+                  iter != MOVEMENTS.at(absPiece).end();
                   iter++) {
           moveTest = attemptMove(y + iter->first, x + iter->second);
           if (moveTest.first && moveTest.second != selfColor) {
@@ -241,15 +244,16 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             // AntiChess
             //if (destColor == oppColor) {
             //  non_captures.append( (move, c) )
-            //else
+            //} else {
             //  captures.append( (move, c) )
+            //}
           }
         }
       } else {
         // slidy pieces = BISHOPS, ROOKS, QUEENS
-        assert( abs(piece) == BISHOP || abs(piece) == ROOK || abs(piece) == QUEEN );
-        for (auto iter = MOVEMENTS.at(abs(piece)).begin();
-                  iter != MOVEMENTS.at(abs(piece)).end();
+        assert( absPiece == BISHOP || absPiece == ROOK || absPiece == QUEEN );
+        for (auto iter = MOVEMENTS.at(absPiece).begin();
+                  iter != MOVEMENTS.at(absPiece).end();
                   iter++) {
           board_s deltaY = iter->first;
           board_s deltaX = iter->second;
@@ -279,7 +283,89 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
       }
     }
   }
+
+  // Castling 
+  {
+    int y = isWhiteTurn ? 0 : 7;
+    int x = 4;
+    if (state[y][x] == selfColor * KING) {
+      bool canOOO = isWhiteTurn ? whiteOOO : blackOOO;
+      bool canOO = isWhiteTurn ? whiteOO : blackOO;
+      // OOO
+      if (canOOO && (state[y][0] == selfColor * ROOK)) {
+        // Check empty squares.
+        if (state[y][1] == 0 && state[y][2] == 0 && state[y][3] == 0) {
+          // chek for attack on [4] [3] and [2]
+          if ((checkAttack(y, 4) == 0) && (checkAttack(y, 3) == 0) && (checkAttack(y, 2) == 0)) {
+            Board c = copy();
+            c.state[y][3] = c.state[y][0]; // Rook over three.
+            c.state[y][0] = 0;
+            move = c.makeMove(y, 4,   y, 2); // Record king over two as the move.
+            all_moves.push_back( make_pair(move, c) );
+          }
+        }
+      }
+      if (canOO && (state[y][7] == selfColor * ROOK)) {
+        // Check empty squares.
+        if (state[y][5] == 0 && state[y][6] == 0) {
+          // chek for attack on [4] [5] and [6]
+          if ((checkAttack(y, 4) == 0) && (checkAttack(y, 5) == 0) && (checkAttack(y, 6) == 0)) {
+            Board c = copy();
+            c.state[y][5] = c.state[y][7]; // Rook over three.
+            c.state[y][7] = 0;
+            move = c.makeMove(y, 4,   y, 6); // Record king over two as the move.
+            all_moves.push_back( make_pair(move, c) );
+          }
+        }
+        // Have to check for attack and empty squares.
+      }
+    }
+  }
+
   return all_moves;
+}
+
+
+board_s Board::checkAttack(board_s a, board_s b) {
+  // TODO consider pre calculating for each square in getChildrenMove of parent.
+  // returns piece or 0 for no
+
+  board_s selfColor = isWhiteTurn ? WHITE : BLACK;
+  board_s oppKnight = isWhiteTurn ? -KNIGHT: KNIGHT;
+
+  // Check if knight is attacking square.
+  for (auto iter = MOVEMENTS.at(KNIGHT).begin();
+            iter != MOVEMENTS.at(KNIGHT).end();
+            iter++) {
+    board_s attackingKnight = getPiece(a + iter->first, b + iter->second);
+    if (attackingKnight ==  oppKnight) {
+      return attackingKnight;
+    }
+  }
+
+  pair<bool, board_s> moveTest;
+  // check if slidy piece is attacking square.
+  for (auto iter = MOVEMENTS.at(QUEEN).begin();
+            iter != MOVEMENTS.at(QUEEN).end();
+            iter++) {
+    board_s deltaY = iter->first;
+    board_s deltaX = iter->second;
+    board_s newY = a;
+    board_s newX = b;
+    while (true) {
+      newY += deltaY;
+      newX += deltaX;
+
+      moveTest = attemptMove(newY, newX);
+      if (!moveTest.first || moveTest.second == selfColor) {
+        break;
+      }
+
+      if (moveTest.second != 0) {
+        return state[newY][newX];
+      }
+    }
+  }
 }
 
 
@@ -297,6 +383,11 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   return make_pair(false, 0);
 }
 
+// TODO inline?
+board_s Board::getPiece(board_s a, board_s b) {
+  return (0 <= a && a <= 7 && 0 <= b && b <= 7) ?
+    state[a][b] : 0;
+}
 
 move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
@@ -314,6 +405,23 @@ move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   // update turn state
   ply++;
   isWhiteTurn = !isWhiteTurn;
+
+  // update castling.
+  if (isWhite) {
+    // if king moves (king can't be captured so if it leaves square it moves)
+    if (a == 0 && b == 4 && moving == KING) { whiteOO = whiteOOO = false; }
+
+    // rook moving back doesn't count.
+    if (c == 0 && d == 0 && moving == ROOK) { whiteOO = false; }
+    if (c == 0 && d == 7 && moving == ROOK) { whiteOOO = false; }
+  } else { 
+    // if king moves (king can't be captured so if it leaves square it moves)
+    if (a == 7 && b == 4 && moving == -KING) { blackOO = blackOOO = false; }
+
+    // rook moving back doesn't count.
+    if (c == 7 && d == 0 && moving == -ROOK) { blackOO = false; }
+    if (c == 7 && d == 7 && moving == -ROOK) { blackOOO = false; }
+  }
 
   return make_tuple(a, b, c, d, moving, removed);
 }
@@ -389,7 +497,8 @@ board_s Board::mateResult(void) {
     return mateStatus;
 }
 
-void Board::perft(int ply, atomic<int> *count, atomic<int> *captures, atomic<int> *mates) {
+void Board::perft(int ply, atomic<int> *count,
+    atomic<int> *captures, atomic<int> *castles, atomic<int> *mates) {
   if (ply == 0) {
     count->fetch_add(1);
 
@@ -404,10 +513,16 @@ void Board::perft(int ply, atomic<int> *count, atomic<int> *captures, atomic<int
   vector<pair<move_t, Board>> children = getChildren();
   //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
-    if (get<5>(children[ci].first) != 0) {
+    move_t move = children[ci].first;
+    if (get<5>(move) != 0) {
       captures->fetch_add(1);
     }
 
-    children[ci].second.perft(ply - 1, count, captures, mates);
+    // If the KING moves horizonatally 2, that's a Castle.
+    if (abs(get<4>(move)) == KING && abs(get<1>(move) - get<3>(move)) == 2) {
+      castles->fetch_add(1);
+    }
+
+    children[ci].second.perft(ply - 1, count, captures, castles, mates);
   }
 }
