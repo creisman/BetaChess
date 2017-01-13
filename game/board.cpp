@@ -199,13 +199,10 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
         for (board_s lr = -1; lr <= 1; lr += 2) {
           moveTest = attemptMove(y + pawnDirection, x + lr);
           if (moveTest.first && moveTest.second == oppColor) {
-            Board c = copy();
-            move = c.makeMove(y,x,    y + pawnDirection, x + lr);
-            all_moves.push_back( make_pair(move, c) );
+            // Pawn Capture (plus potential promotion)
+            promoHelper(&all_moves, isWhiteTurn, selfColor, pawnDirection, x, y, x + lr);
           }
         }
-
-        // TODO: enpassant, and promotion
 
         moveTest = attemptMove(y + pawnDirection, x);
         // pawn move: if next space is empty.
@@ -213,9 +210,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
           // Antichess
           //if (captures.size() > 0) { continue; }
 
-          Board c = copy();
-          move = c.makeMove(y,x,    y + pawnDirection, x);
-          all_moves.push_back( make_pair(move, c) );
+          // Normal move forward && promo    
+          promoHelper(&all_moves, isWhiteTurn, selfColor, pawnDirection, x, y, x);
 
           // double move (only if nothing in the way for single move)
           if ((isWhiteTurn && y == 1) || (!isWhiteTurn && y == 6)) {
@@ -322,8 +318,38 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
     }
   }
 
+  // TODO: enpassant
+
   return all_moves;
 }
+
+
+// inline
+void Board::promoHelper(
+  vector<pair<move_t, Board>> *all_moves,
+  bool isWhiteTurn, 
+  board_s selfColor,
+  board_s pawnDirection,
+  board_s x,
+  board_s y,
+  board_s x2) {
+  if ((isWhiteTurn && y == 7) || (!isWhiteTurn && y == 1)) {
+    // promotion && underpromotion
+    for (board_s newPiece = KNIGHT; newPiece <= QUEEN; newPiece++) {
+      // "promote" then move piece (TODO how does this affect history?)
+      Board c = copy();
+      c.state[y][x] = selfColor * newPiece;
+      move_t move = c.makeMove(y,x,    y + pawnDirection, x2);
+      all_moves->push_back( make_pair(move, c) );
+    }
+  } else {
+    // Normal move to square.
+    Board c = copy();
+    move_t move = c.makeMove(y,x,    y + pawnDirection, x2);
+    all_moves->push_back( make_pair(move, c) );
+  } 
+}        
+
 
 
 board_s Board::checkAttack(board_s a, board_s b) {
