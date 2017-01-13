@@ -169,17 +169,18 @@ void Board::printBoard(void) {
   cout << boardStr() << endl;
 }
 
+move_t Board::getLastMove(void) {
+  return lastMove;
+}
 
-vector<pair<move_t, Board>> Board::getChildren(void) {
-  vector<pair<move_t, Board>> all_moves;
+vector<Board> Board::getChildren(void) {
+  vector<Board> all_moves;
  
   board_s pawnDirection = isWhiteTurn ? 1 : -1;
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s oppColor = isWhiteTurn ? BLACK : WHITE;
 
   pair<bool, board_s> moveTest;
-  move_t move;
-
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
       board_s piece = state[y][x];
@@ -211,8 +212,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             moveTest = attemptMove(y + 2 * pawnDirection, x);
             if (moveTest.first && moveTest.second == 0) {
               Board c = copy();
-              move = c.makeMove(y,x,    y + 2 * pawnDirection, x);
-              all_moves.push_back( make_pair(move, c) );
+              c.makeMove(y,x,    y + 2 * pawnDirection, x);
+              all_moves.push_back( c );
             }
           }
         }
@@ -224,8 +225,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
           moveTest = attemptMove(y + iter->first, x + iter->second);
           if (moveTest.first && moveTest.second != selfColor) {
             Board c = copy();
-            move = c.makeMove(y,x,   y + iter->first, x + iter->second);
-            all_moves.push_back( make_pair(move, c) );
+            c.makeMove(y,x,   y + iter->first, x + iter->second);
+            all_moves.push_back( c );
           }
         }
       } else {
@@ -249,8 +250,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             }
 
             Board c = copy();
-            move = c.makeMove(y, x,   newY, newX);
-            all_moves.push_back( make_pair(move, c) );
+            c.makeMove(y, x,   newY, newX);
+            all_moves.push_back( c );
 
             if (moveTest.second == oppColor) {
               break;
@@ -277,8 +278,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             Board c = copy();
             c.state[y][3] = c.state[y][0]; // Rook over three.
             c.state[y][0] = 0;
-            move = c.makeMove(y, 4,   y, 2); // Record king over two as the move.
-            all_moves.push_back( make_pair(move, c) );
+            c.makeMove(y, 4,   y, 2); // Record king over two as the move.
+            all_moves.push_back( c );
           }
         }
       }
@@ -290,8 +291,8 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
             Board c = copy();
             c.state[y][5] = c.state[y][7]; // Rook over three.
             c.state[y][7] = 0;
-            move = c.makeMove(y, 4,   y, 6); // Record king over two as the move.
-            all_moves.push_back( make_pair(move, c) );
+            c.makeMove(y, 4,   y, 6); // Record king over two as the move.
+            all_moves.push_back( c );
           }
         }
         // Have to check for attack and empty squares.
@@ -307,7 +308,7 @@ vector<pair<move_t, Board>> Board::getChildren(void) {
 
 // inline
 void Board::promoHelper(
-  vector<pair<move_t, Board>> *all_moves,
+  vector<Board> *all_moves,
   bool isWhiteTurn, 
   board_s selfColor,
   board_s pawnDirection,
@@ -320,14 +321,14 @@ void Board::promoHelper(
       // "promote" then move piece (TODO how does this affect history?)
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
-      move_t move = c.makeMove(y,x,    y + pawnDirection, x2);
-      all_moves->push_back( make_pair(move, c) );
+      c.makeMove(y,x,    y + pawnDirection, x2);
+      all_moves->push_back(c);
     }
   } else {
     // Normal move to square.
     Board c = copy();
-    move_t move = c.makeMove(y,x,    y + pawnDirection, x2);
-    all_moves->push_back( make_pair(move, c) );
+    c.makeMove(y,x,    y + pawnDirection, x2);
+    all_moves->push_back(c);
   } 
 }        
 
@@ -396,7 +397,7 @@ board_s Board::getPiece(board_s a, board_s b) {
     state[a][b] : 0;
 }
 
-move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
+void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
   bool isWhite = isWhitePiece(moving);
   board_s removed = state[c][d];
@@ -412,6 +413,7 @@ move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   // update turn state
   ply++;
   isWhiteTurn = !isWhiteTurn;
+  lastMove = make_tuple(a, b, c, d, moving, removed);
 
   // update castling.
   if (isWhite) {
@@ -429,8 +431,6 @@ move_t Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
     if (c == 7 && d == 0 && moving == -ROOK) { castleStatus &= 13; } // blackOO = 0
     if (c == 7 && d == 7 && moving == -ROOK) { castleStatus &= 14; } // blackOOO = 0;
   }
-
-  return make_tuple(a, b, c, d, moving, removed);
 }
 
 bool Board::isWhitePiece(board_s piece) {
@@ -517,10 +517,10 @@ void Board::perft(int ply, atomic<int> *count,
     return;
   }
 
-  vector<pair<move_t, Board>> children = getChildren();
+  vector<Board> children = getChildren();
   //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
-    move_t move = children[ci].first;
+    move_t move = children[ci].getLastMove();
     if (get<5>(move) != 0) {
       captures->fetch_add(1);
     }
@@ -530,6 +530,6 @@ void Board::perft(int ply, atomic<int> *count,
       castles->fetch_add(1);
     }
 
-    children[ci].second.perft(ply - 1, count, captures, castles, mates);
+    children[ci].perft(ply - 1, count, captures, castles, mates);
   }
 }

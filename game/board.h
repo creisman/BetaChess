@@ -44,7 +44,8 @@ namespace board {
 
       void resetBoard(void);
 
-      vector<pair<move_t, Board>> getChildren(void);
+      move_t getLastMove(void);
+      vector<Board> getChildren(void);
 
       double heuristic(void);
       board_s mateResult(void);
@@ -56,13 +57,13 @@ namespace board {
           atomic<int> *captures, atomic<int> *castles, atomic<int> *mates);
 
     private:
-      void promoHelper(vector<pair<move_t, Board>> *all_moves,
+      void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
 
       board_s checkAttack(board_s a, board_s b);
       board_s getPiece(board_s a, board_s b);
       pair<bool, board_s> attemptMove(board_s a, board_s b);
-      move_t makeMove(board_s a, board_s b, board_s c, board_s d);
+      void makeMove(board_s a, board_s b, board_s c, board_s d);
 
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
@@ -76,7 +77,7 @@ namespace board {
       board_t state;
       board_s mateStatus;
 
-      //move_t lastMove;
+      move_t lastMove;
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
