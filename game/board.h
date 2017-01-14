@@ -18,9 +18,16 @@ namespace board {
 
   // (a, b) to (c, d), piece that moving, piece that was captured removing
   typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s> move_t;
+
+  // score concatonated to end of move_t
+  typedef pair<double, move_t> scored_move_t;
+
   typedef vector<pair<board_s, board_s>> movements_t;
+
   typedef board_s board_t[BOARD_SIZE][BOARD_SIZE];
 
+
+  // Board Class
   class Board {
     public:
       static const board_s WHITE = 1;
@@ -64,10 +71,12 @@ namespace board {
       vector<Board> getLegalChildren(void);
 
       double heuristic(void);
-      board_s mateResult(void);
 
       string boardStr(void);
       void printBoard(void);
+
+      scored_move_t findMove(int ply);
+      void makeMove(board_s a, board_s b, board_s c, board_s d);
 
       void perft(int ply,
           atomic<int> *count,
@@ -76,22 +85,28 @@ namespace board {
           atomic<int> *castles,
           atomic<int> *mates);
 
+      // TODO investigate usage of this.
+      static string moveNotation(move_t move);
+
     private:
       void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
 
+      // 1-arg version is public.
+      scored_move_t findMove(int ply, double alpha, double beta);
+
       board_s checkAttack(bool fromWhite, board_s a, board_s b);
       board_s getPiece(board_s a, board_s b);
       pair<bool, board_s> attemptMove(board_s a, board_s b);
-      void makeMove(board_s a, board_s b, board_s c, board_s d);
 
       // Helper methods.
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
 
-      // TODO investigate usage of this.
-      static string squareNamePair(move_t move);
+      // Used for counting moves in findMove
+      static int dbgCounter;
+
 
       // 2 + 1 + 64 + 1   +   6+1  = 76 bytes.
       short ply;

@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -146,7 +147,7 @@ void Board::resetBoard(void) {
 }
 
 string Board::boardStr(void) {
-  string rep = "----------\n";
+  string rep = "";
   for (int row = 7; row >= 0; row--) {
     rep += "|";
     for (int col = 0; col < 8; col++) {
@@ -160,7 +161,6 @@ string Board::boardStr(void) {
       } 
     rep += "|\n";
   }
-  rep += "----------\n";
 
   return rep;
 }
@@ -283,7 +283,7 @@ vector<Board> Board::getChildren(void) {
   }
 
   // Castling 
-  if (hasCapture || !IS_ANTICHESS) {
+  if (!hasCapture || !IS_ANTICHESS) {
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {
@@ -374,6 +374,7 @@ vector<Board> Board::getLegalChildren(void) {
         test--;
       }
     }
+    
     // Verify remaining items are all captures.
     for (; test != all_moves.end(); test++) {
       bool isCapture = get<5>(test->getLastMove()) != 0;
@@ -619,22 +620,43 @@ board_s Board::peaceSign(board_s piece) {
   return  (piece > 0) ? WHITE : BLACK;
 }
 
-string Board::squareNamePair(move_t move) {
-  assert(false);
-  //return "abcdefgh"[yx[1]] + str(yx[0] + 1)
-  return "a4";
+string Board::moveNotation(move_t move) {
+  string rows[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
+  string start = rows[get<1>(move)] + to_string(1 + get<0>(move));
+  string end = rows[get<3>(move)] + to_string(1 + get<2>(move));
+  return start + " - " + end;
 }
 
 double Board::heuristic() {
-    /*
-    200(K-K')
-    + 9(Q-Q')
-    + 5(R-R')
-    + 3(B-B' + N-N')
-    + 1(P-P')
-    - 0.5(D-D' + S-S' + I-I')
-    + 0.1(M-M')
-    */
+  if (IS_ANTICHESS) {
+    int pieceValue = 0;
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        board_s piece = state[r][c];
+        if (piece != 0) {
+          pieceValue += peaceSign(piece) * (abs(piece) == PAWN ? 1 : 2);
+        }
+      }
+    }
+
+    // Was lastmove a capture? 
+    int heuristicSign = isWhiteTurn ? 1 : -1;
+    double haveTempo = heuristicSign * 6.0 * (get<5>(lastMove) != 0);
+
+    // TODO check if we also have to capture.
+
+    return haveTempo + pieceValue;
+  }
+
+  /*
+  200(K-K')
+  + 9(Q-Q')
+  + 5(R-R')
+  + 3(B-B' + N-N')
+  + 1(P-P')
+  - 0.5(D-D' + S-S' + I-I')
+  + 0.1(M-M')
+  */
 
   //int whiteMobility = 0
   //int blackMobility = 0
@@ -669,15 +691,57 @@ double Board::heuristic() {
   return pieceValue;
 }
 
-// -1 Black victory, 0 no mate, 1 White victory
-board_s Board::mateResult(void) {
-//    TODO fix this up.
-//    if (mateStatus == -2) {
-//      heuristic();
-//    }
-//    assert ( mateStatus != -2 );
-//    return mateStatus;
+int Board::dbgCounter = 0;
+scored_move_t Board::findMove(int plyR) {
+  Board::dbgCounter = 0;
+  auto scoredMove = findMove(plyR, -1000.0, 1000);
+  cout << "findMove: " << Board::dbgCounter << endl;
+  return scoredMove;
 }
+
+
+scored_move_t Board::findMove(int plyR, double alpha, double beta) {
+  Board::dbgCounter += 1;
+  if (plyR == 0) {
+    return make_pair(heuristic(), lastMove);
+  }
+  double bestInGen = isWhiteTurn ? -1000.0 : 1000.0 ;
+  move_t suggestion;
+  vector<Board> children = getLegalChildren();
+
+  if (children.empty()) {
+    // Node is a winner!
+    double score = isWhiteTurn ? 500 : -500;
+    return make_pair(score, lastMove);
+  }
+
+  for (int ci = 0; ci < children.size(); ci++) {
+    auto suggest = children[ci].findMove(plyR - 1, alpha, beta);
+    double value = suggest.first;
+
+    if (isWhiteTurn) {
+     if (value > bestInGen) {
+        suggestion = children[ci].getLastMove();
+        bestInGen = value;
+        alpha = max(alpha, bestInGen);
+        if (beta <= alpha) {
+          break; // Beta cut-off  (Opp won't pick this brach because we can do too well)
+        }
+      }
+    } else {
+     if (value < bestInGen) {
+        suggestion = children[ci].getLastMove();
+        bestInGen = value;
+        beta = min(beta, bestInGen);
+        if (beta <= alpha) {
+          break; // alpha cut-off  (We have a strong defense so opp will play older better branch)
+        }
+      }
+    }
+  }
+  return make_pair(bestInGen, suggestion);
+};
+
 
 void Board::perft(int ply,
     atomic<int> *count,
@@ -700,6 +764,7 @@ void Board::perft(int ply,
   }
 
   vector<Board> children = getLegalChildren();
+  // TODO This incorrectly counts stalemates.
   if (children.size() == 0) { mates->fetch_add(1); }
 
   #pragma omp parallel for
