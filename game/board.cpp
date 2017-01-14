@@ -322,8 +322,11 @@ vector<Board> Board::getChildren(void) {
       // Capturing pawn is adjacent after double move.
       if (0 <= testX && testX <= 7 && state[lastY][testX] == selfColor * PAWN) {
         Board c = copy();
-        c.state[lastY][lastX] = 0;
+        // Move our pawn
         c.makeMove(lastY, testX, lastY + pawnDirection, lastX);
+        // Remove the pawn (beceause we didn't move onto it).
+        c.state[lastY][lastX] = 0;
+        get<5>(c.lastMove) = oppColor * PAWN;
         c.lastMoveSpecial = SPECIAL_EN_PASSANT;
         all_moves.push_back( c );
       }
@@ -638,13 +641,14 @@ double Board::heuristic() {
   return pieceValue;
 }
 
-  // -1 Black victory, 0 no mate, 1 White victory
+// -1 Black victory, 0 no mate, 1 White victory
 board_s Board::mateResult(void) {
-    if (mateStatus == -2) {
-      heuristic();
-    }
-    assert ( mateStatus != -2 );
-    return mateStatus;
+//    TODO fix this up.
+//    if (mateStatus == -2) {
+//      heuristic();
+//    }
+//    assert ( mateStatus != -2 );
+//    return mateStatus;
 }
 
 void Board::perft(int ply,
@@ -653,36 +657,25 @@ void Board::perft(int ply,
     atomic<int> *ep,
     atomic<int> *castles,
     atomic<int> *mates) {
+
   if (ply == 0) {
+    move_t move = getLastMove();
+    board_s moveSpecial = getLastMoveSpecial();
+
     count->fetch_add(1);
 
-    //move_t move = getLastMove();
-    //printBoard();
+    if (get<5>(move) != 0) { captures->fetch_add(1); }
+    if (moveSpecial == SPECIAL_EN_PASSANT) { ep->fetch_add(1); }
+    if (moveSpecial == SPECIAL_CASTLE) { castles->fetch_add(1); }
 
     return;
   }
 
   vector<Board> children = getLegalChildren();
+  if (children.size() == 0) { mates->fetch_add(1); }
+
   //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
-    move_t move = children[ci].getLastMove();
-    board_s moveSpecial = children[ci].getLastMoveSpecial();
-    if (get<5>(move) != 0) {
-      captures->fetch_add(1);
-    }
-
-    if (moveSpecial == SPECIAL_EN_PASSANT) {
-      ep->fetch_add(1);
-    }
-
-    if (moveSpecial == SPECIAL_CASTLE) {
-      castles->fetch_add(1);
-    }
-
-    if (mateResult() != 0) {
-      mates->fetch_add(1);
-    }
-
     children[ci].perft(ply - 1, count, captures, ep, castles, mates);
   }
 }
