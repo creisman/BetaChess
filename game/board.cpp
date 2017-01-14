@@ -178,6 +178,7 @@ board_s Board::getLastMoveSpecial(void) {
 }
 
 vector<Board> Board::getChildren(void) {
+  bool hasCapture = false;
   vector<Board> all_moves;
  
   board_s pawnDirection = isWhiteTurn ? 1 : -1;
@@ -200,7 +201,12 @@ vector<Board> Board::getChildren(void) {
           if (moveTest.first && moveTest.second == oppColor) {
             // Pawn Capture (plus potential promotion)
             promoHelper(&all_moves, isWhiteTurn, selfColor, pawnDirection, x, y, x + lr);
+            hasCapture = true;
           }
+        }
+
+        if (IS_ANTICHESS && hasCapture) {
+          continue;
         }
 
         moveTest = attemptMove(y + pawnDirection, x);
@@ -226,6 +232,12 @@ vector<Board> Board::getChildren(void) {
                   iter++) {
           moveTest = attemptMove(y + iter->first, x + iter->second);
           if (moveTest.first && moveTest.second != selfColor) {
+            bool isCapture = moveTest.second != 0;
+            hasCapture |= isCapture;
+            if (IS_ANTICHESS && !isCapture && hasCapture) {
+              continue;
+            }
+
             Board c = copy();
             c.makeMove(y,x,   y + iter->first, x + iter->second);
             all_moves.push_back( c );
@@ -251,6 +263,12 @@ vector<Board> Board::getChildren(void) {
               break;
             }
 
+            bool isCapture = moveTest.second != 0;
+            hasCapture |= isCapture;
+            if (IS_ANTICHESS && !isCapture && hasCapture) {
+              continue;
+            }
+
             Board c = copy();
             c.makeMove(y, x,   newY, newX);
             all_moves.push_back( c );
@@ -265,7 +283,7 @@ vector<Board> Board::getChildren(void) {
   }
 
   // Castling 
-  {
+  if (hasCapture || !IS_ANTICHESS) {
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {
@@ -336,6 +354,35 @@ vector<Board> Board::getChildren(void) {
 }
 
 vector<Board> Board::getLegalChildren(void) {
+  if (IS_ANTICHESS) {
+    // TODO this is the simple version, could be partially moved into getChildren.
+    vector<Board> all_moves = getChildren();
+
+    if (all_moves.size() == 0) {
+      return all_moves;
+    }
+
+    bool hasCapture = get<5>(all_moves.back().getLastMove()) != 0;
+    auto test = all_moves.begin();
+    for (; test != all_moves.end(); test++) {
+      bool isCapture = get<5>(test->getLastMove()) != 0;
+      if (isCapture) {
+        break;
+      }
+      if (hasCapture) {
+        all_moves.erase(test);
+        test--;
+      }
+    }
+    // Verify remaining items are all captures.
+    for (; test != all_moves.end(); test++) {
+      bool isCapture = get<5>(test->getLastMove()) != 0;
+      assert( isCapture );
+    }
+
+    return all_moves;
+  } 
+
 
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s selfKing = selfColor * KING;
@@ -364,12 +411,7 @@ vector<Board> Board::getLegalChildren(void) {
   //        last move must be in way of single attack.
 
   vector<Board> all_moves = getChildren();
-  vector<Board> filtered;
-  auto test = all_moves.begin();
-  int testCount = 0;
-  for (; test != all_moves.end(); test++) {
-    //cout << "hi : " << testCount++ << " rem: " << all_moves.size() << endl;
-
+  for (auto test = all_moves.begin(); test != all_moves.end(); test++) {
     board_s testY = kingY;
     board_s testX = kingX;
 
@@ -383,25 +425,11 @@ vector<Board> Board::getLegalChildren(void) {
 
     assert( test->state[testY][testX] == selfKing );
     if (test->checkAttack(isWhiteTurn, testY, testX) != 0) {
-      //cout << (int) testY << ", " << (int) testX << "  Not allowed " << 
-      //  (int) test->checkAttack(isWhiteTurn, testX, testY) << endl;
-      //test->printBoard();
-      //all_moves.erase(test);
-      //test--;
-      continue;
+      all_moves.erase(test);
+      test--;
     }
-
-    //cout << "allowed this move" << endl;
-    //test->printBoard();
-    filtered.push_back(*test);
   }
-
-  // TODO scary that "R    RK " was marked NOT under attack.
-
-  //cout << "input " << all_moves.size() << " length " << endl;
-  //cout << "returned " << filtered.size() << " length " << endl;
-
-  return filtered;
+  return all_moves;
 }
 
 // inline
