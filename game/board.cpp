@@ -380,9 +380,9 @@ vector<Board> Board::getLegalChildren(void) {
 
     assert( test->state[testY][testX] == selfKing );
     if (test->checkAttack(isWhiteTurn, testY, testX) != 0) {
-      cout << (int) testY << ", " << (int) testX << "  Not allowed " << 
-        (int) test->checkAttack(isWhiteTurn, testX, testY) << endl;
-      test->printBoard();
+      //cout << (int) testY << ", " << (int) testX << "  Not allowed " << 
+      //  (int) test->checkAttack(isWhiteTurn, testX, testY) << endl;
+      //test->printBoard();
       //all_moves.erase(test);
       //test--;
       continue;
@@ -436,7 +436,7 @@ board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
 
   board_s selfColor = forWhite ? WHITE : BLACK;
   board_s oppKnight = forWhite ? -KNIGHT: KNIGHT;
-  board_s oppPawnDirection = forWhite ? -1 : 1;
+  board_s selfPawnDirection = forWhite ? 1 : -1;
 
   // Check if knight is attacking square.
   for (auto iter = MOVEMENTS.at(KNIGHT).begin();
@@ -481,7 +481,10 @@ board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
           if (distance == 1 && pieceType == KING) {
             return oppPiece;
           }
-          return pieceType == ROOK ? oppPiece : 0;
+          if (pieceType == ROOK) {
+            return oppPiece;
+          }
+          break;
         }
 
         bool isDiagonal = iter->first != 0 && iter->second != 0;
@@ -496,7 +499,9 @@ board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
           if (pieceType == KING) {
             return oppPiece;
           }
-          if (deltaY == oppPawnDirection && pieceType == PAWN) {
+
+          // vector from king to piece so inverted pawn direction.
+          if (deltaY == selfPawnDirection && pieceType == PAWN) {
             return oppPiece;
           }
         }
@@ -651,11 +656,9 @@ void Board::perft(int ply,
   if (ply == 0) {
     count->fetch_add(1);
 
+    //move_t move = getLastMove();
     //printBoard();
 
-    if (mateResult() != 0) {
-      mates->fetch_add(1);
-    }
     return;
   }
 
@@ -674,6 +677,10 @@ void Board::perft(int ply,
 
     if (moveSpecial == SPECIAL_CASTLE) {
       castles->fetch_add(1);
+    }
+
+    if (mateResult() != 0) {
+      mates->fetch_add(1);
     }
 
     children[ci].perft(ply - 1, count, captures, ep, castles, mates);

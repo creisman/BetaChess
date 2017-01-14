@@ -15,7 +15,7 @@ void perft(string fen) {
   b.printBoard();
   cout << "Size of Board class: " << sizeof(b) << endl;
 
-  int ply = 2;
+  int ply = 4;
 
   atomic<int> count(0);
   atomic<int> captures(0);
@@ -43,7 +43,10 @@ int main(int argc, char *argv[]) {
   //perft("");
 
   // "Position 2 - Kiwipete"
-  perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+  //perft("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+
+  // "Position 3"
+  perft("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
 
   return 0;
 }
