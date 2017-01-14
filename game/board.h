@@ -10,7 +10,7 @@
 using namespace std;
 
 #define BOARD_SIZE 8
-#define IS_ANTICHESS true
+#define IS_ANTICHESS false
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
@@ -30,6 +30,8 @@ namespace board {
   // Board Class
   class Board {
     public:
+      // NOTE(sethtroisi): Converting to constexpr slows -O2 by ~10%.
+      // NOTE(sethtroisi): Requires -O2 to compile (maybe move to cpp?
       static const board_s WHITE = 1;
       static const board_s BLACK = -1;
 
