@@ -35,6 +35,16 @@ const map<board_s, int> Board::PIECE_VALUE = {
 };
 
 
+const map<board_s, int> Board::ANTICHESS_PIECE_VALUE = {
+  {KING, 5},
+  {QUEEN, 9 },
+  {ROOK, 2 },
+  {BISHOP, 2 },
+  {KNIGHT, 4 },
+  {PAWN, 1},
+};
+
+
 Board::Board(bool initState) {
   if (initState) {
       resetBoard();
@@ -629,12 +639,14 @@ string Board::moveNotation(move_t move) {
 
 double Board::heuristic() {
   if (IS_ANTICHESS) {
+    // TODO cache between boards.
     int pieceValue = 0;
     for (int r = 0; r < 8; r++) {
       for (int c = 0; c < 8; c++) {
         board_s piece = state[r][c];
         if (piece != 0) {
-          pieceValue += peaceSign(piece) * (abs(piece) == PAWN ? 1 : 2);
+          // you DO NOT want pieces.
+          pieceValue += -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(abs(piece));;
         }
       }
     }
@@ -694,9 +706,16 @@ double Board::heuristic() {
 int Board::dbgCounter = 0;
 scored_move_t Board::findMove(int plyR) {
   Board::dbgCounter = 0;
-  auto scoredMove = findMove(plyR, -1000.0, 1000);
-  cout << "findMove: " << Board::dbgCounter << endl;
-  return scoredMove;
+
+  int addedPly = 0;
+  while (true) {
+    auto scoredMove = findMove(plyR + addedPly, -1000.0, 1000);
+    cout << "plyR " << plyR + addedPly << "=> " << Board::dbgCounter << " moves" << endl;
+    if (abs(scoredMove.first) > 400 || dbgCounter > 300000) {
+      return scoredMove;
+    }
+    addedPly += 1;
+  }
 }
 
 

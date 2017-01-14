@@ -56,6 +56,7 @@ namespace board {
       static const string PIECE_SYMBOL;
       static const map<board_s, movements_t> MOVEMENTS;
       static const map<board_s, int> PIECE_VALUE;
+      static const map<board_s, int> ANTICHESS_PIECE_VALUE;
 
       // Constructor (including the hidden copy constructor).
       Board(bool initState);

@@ -43,11 +43,52 @@ void playGame(int ply, string fen) {
 
   b.printBoard();
 
-  for (int t = 0; t < 50; t++) {
-    auto scoredMove = b.findMove(ply);
-    move_t m = scoredMove.second;
 
-    cout << "iter: " << t << "\tScore: " << scoredMove.first << endl;
+  bool weAreWhite;
+  cout << "[W]hite or [B]lack?" << endl;
+  {
+    string test;
+    cin >> test;
+    weAreWhite = (test == "w" || test == "W" ||
+                  test == "White" || test == "white");
+  }
+
+  cout << "We are playing white: " << weAreWhite << endl;
+
+  // white start with c4.
+  if (weAreWhite) {
+    b.makeMove(1, 2, 3, 2);
+    b.printBoard();
+  }
+
+  for (int halfCount = weAreWhite ? 1 : 0; halfCount < 50; halfCount++) {
+    move_t m;
+
+    // Make the move.
+    if (weAreWhite == (halfCount % 2 == 0)) {
+      auto scoredMove = b.findMove(ply);
+      m = scoredMove.second;
+      cout << "iter: " << halfCount << "\tScore: " << scoredMove.first << endl;
+    } else {
+      // read move from input.
+      string oldS, newS;
+      while (true) {
+        cout << "What move did they play?" << endl;
+        cin >> oldS;
+        cin >> newS;
+
+        cout << "confirm [" << oldS << "] to [" << newS << "]" <<endl;
+        string confirm;
+        cin >> confirm; 
+        if (confirm == "y" || confirm == "t") {
+          break;
+        }
+      }
+      m = make_tuple(oldS[1] - '1', oldS[0] - 'a',
+                     newS[1] - '1', newS[0] - 'a',
+                     1 /* moving */, 0 /* removing */);
+    }
+
     cout << Board::moveNotation(m) <<
          "\t("   << (int)get<0>(m) << ", " << (int)get<1>(m) <<
          " to " << (int)get<2>(m) << ", " << (int)get<3>(m) <<
@@ -58,7 +99,7 @@ void playGame(int ply, string fen) {
       break;
     }
 
-    // Make the move.
+
     b.makeMove(get<0>(m), get<1>(m), get<2>(m), get<3>(m));
     b.printBoard();
   }
@@ -70,7 +111,7 @@ int main(int argc, char *argv[]) {
     cout << "Called with " << argc << " args" << endl;
   }
 
-  playGame(10, "");
+  playGame(8, "");
   //playGame(10, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 
 
