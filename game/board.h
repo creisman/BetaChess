@@ -25,12 +25,24 @@ namespace board {
       static const board_s WHITE = 1;
       static const board_s BLACK = -1;
 
+      // Pieces.
       static const board_s PAWN = 1;
       static const board_s KNIGHT = 2;
       static const board_s BISHOP = 3;
       static const board_s ROOK = 4;
       static const board_s QUEEN = 5;
       static const board_s KING = 6;
+
+      // Castle status.
+      static const board_s WHITE_OO = 8;
+      static const board_s WHITE_OOO = 4;
+      static const board_s BLACK_OO = 2;
+      static const board_s BLACK_OOO = 1;
+
+      // Last Move Special
+      static const board_s SPECIAL_EN_PASSANT = 1;
+      static const board_s SPECIAL_CASTLE = 2;
+
 
       static const string PIECE_SYMBOL;
       static const map<board_s, movements_t> MOVEMENTS;
@@ -45,6 +57,7 @@ namespace board {
       void resetBoard(void);
 
       move_t getLastMove(void);
+      board_s getLastMoveSpecial(void);
       vector<Board> getChildren(void);
 
       double heuristic(void);
@@ -53,8 +66,12 @@ namespace board {
       string boardStr(void);
       void printBoard(void);
 
-      void perft(int ply, atomic<int> *count,
-          atomic<int> *captures, atomic<int> *castles, atomic<int> *mates);
+      void perft(int ply,
+          atomic<int> *count,
+          atomic<int> *captures,
+          atomic<int> *ep,
+          atomic<int> *castles,
+          atomic<int> *mates);
 
     private:
       void promoHelper(vector<Board> *all_moves,
@@ -78,6 +95,7 @@ namespace board {
       board_s mateStatus;
 
       move_t lastMove;
+      char lastMoveSpecial; // used for castle, en passant, check, checkmate.
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;

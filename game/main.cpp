@@ -15,18 +15,20 @@ void perft(string fen) {
   b.printBoard();
   cout << "Size of Board class: " << sizeof(b) << endl;
 
-  int ply = 4;
+  int ply = 2;
 
   atomic<int> count(0);
   atomic<int> captures(0);
+  atomic<int> ep(0);
   atomic<int> castles(0);
   atomic<int> mates(0);
-  b.perft(ply, &count, &captures, &castles, &mates);
+  b.perft(ply, &count, &captures, &ep, &castles, &mates);
 
   cout << "Perft results for" <<
           " depth (ply): " << ply << endl;
   cout << "\tcount: " << count << 
           "\tcaptures: " << captures << 
+          "\tEn Passant: " << ep << 
           "\tcastles: " << castles << 
           "\tmates: " << mates << endl;
   cout << endl << endl;

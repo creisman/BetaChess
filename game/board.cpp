@@ -86,10 +86,10 @@ Board::Board(string fen) {
   fi++;
   castleStatus = 0;
   while (fen[fi] != ' ') {
-    if (fen[fi] == 'K') { castleStatus |= 8; }; // whiteOO = true
-    if (fen[fi] == 'Q') { castleStatus |= 4; }; // whiteOOO = true
-    if (fen[fi] == 'k') { castleStatus |= 2; }; // blackOO = true
-    if (fen[fi] == 'q') { castleStatus |= 1; }; // blackOOO = true
+    if (fen[fi] == 'K') { castleStatus |= WHITE_OO; }; // whiteOO = true
+    if (fen[fi] == 'Q') { castleStatus |= WHITE_OOO; }; // whiteOOO = true
+    if (fen[fi] == 'k') { castleStatus |= BLACK_OO; }; // blackOO = true
+    if (fen[fi] == 'q') { castleStatus |= BLACK_OOO; }; // blackOOO = true
     fi++;
   }  
 
@@ -171,6 +171,10 @@ void Board::printBoard(void) {
 
 move_t Board::getLastMove(void) {
   return lastMove;
+}
+
+board_s Board::getLastMoveSpecial(void) {
+  return lastMoveSpecial;
 }
 
 vector<Board> Board::getChildren(void) {
@@ -267,8 +271,8 @@ vector<Board> Board::getChildren(void) {
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {
-      bool canOO = castleStatus & (isWhiteTurn ? 8 : 2); // isWhiteTurn ? whiteOO : blackOO;
-      bool canOOO = castleStatus & (isWhiteTurn ? 4 : 1); // isWhiteTurn ? whiteOOO : blackOOO;
+      bool canOO = castleStatus & (isWhiteTurn ? WHITE_OO : BLACK_OO);
+      bool canOOO = castleStatus & (isWhiteTurn ? WHITE_OOO : BLACK_OOO);
       // OOO
       if (canOOO && (state[y][0] == selfColor * ROOK)) {
         // Check empty squares.
@@ -279,6 +283,7 @@ vector<Board> Board::getChildren(void) {
             c.state[y][3] = c.state[y][0]; // Rook over three.
             c.state[y][0] = 0;
             c.makeMove(y, 4,   y, 2); // Record king over two as the move.
+            c.lastMoveSpecial = SPECIAL_CASTLE;
             all_moves.push_back( c );
           }
         }
@@ -292,6 +297,7 @@ vector<Board> Board::getChildren(void) {
             c.state[y][5] = c.state[y][7]; // Rook over three.
             c.state[y][7] = 0;
             c.makeMove(y, 4,   y, 6); // Record king over two as the move.
+            c.lastMoveSpecial = SPECIAL_CASTLE;
             all_moves.push_back( c );
           }
         }
@@ -300,8 +306,27 @@ vector<Board> Board::getChildren(void) {
     }
   }
 
-  // if
+  // En passant
+  // Pawn moving two spaces forward! (lastMove = (a, b), (c, d) moving, removing)
+  if (get<4>(lastMove) == oppColor * PAWN && abs(get<0>(lastMove) - get<2>(lastMove)) == 2) {
+    assert( get<1>(lastMove) == get<3>(lastMove) );
+    // pawn moved to c so en passant can only happen from c - pawnDirection;
+    board_s lastY = get<2>(lastMove);
+    board_s lastX = get<3>(lastMove);
 
+    for (board_s lr = -1; lr <= 1; lr += 2) {
+      board_s testX = lastX + lr;
+
+      // Capturing pawn is adjacent after double move.
+      if (0 <= testX && testX <= 8 && state[lastY][testX] == selfColor * PAWN) {
+        Board c = copy();
+        c.state[lastY][lastX] = 0;
+        c.makeMove(lastY, testX, lastY + pawnDirection, lastX);
+        c.lastMoveSpecial = SPECIAL_EN_PASSANT;
+        all_moves.push_back( c );
+      }
+    } 
+  } 
   return all_moves;
 }
 
@@ -414,6 +439,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   ply++;
   isWhiteTurn = !isWhiteTurn;
   lastMove = make_tuple(a, b, c, d, moving, removed);
+  lastMoveSpecial = 0;
 
   // update castling.
   if (isWhite) {
@@ -504,8 +530,12 @@ board_s Board::mateResult(void) {
     return mateStatus;
 }
 
-void Board::perft(int ply, atomic<int> *count,
-    atomic<int> *captures, atomic<int> *castles, atomic<int> *mates) {
+void Board::perft(int ply,
+    atomic<int> *count,
+    atomic<int> *captures,
+    atomic<int> *ep,
+    atomic<int> *castles,
+    atomic<int> *mates) {
   if (ply == 0) {
     count->fetch_add(1);
 
@@ -521,15 +551,19 @@ void Board::perft(int ply, atomic<int> *count,
   //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     move_t move = children[ci].getLastMove();
+    board_s moveSpecial = children[ci].getLastMoveSpecial();
     if (get<5>(move) != 0) {
       captures->fetch_add(1);
     }
 
-    // If the KING moves horizonatally 2, that's a Castle.
-    if (abs(get<4>(move)) == KING && abs(get<1>(move) - get<3>(move)) == 2) {
+    if (moveSpecial == SPECIAL_EN_PASSANT) {
+      ep->fetch_add(1);
+    }
+
+    if (moveSpecial == SPECIAL_CASTLE) {
       castles->fetch_add(1);
     }
 
-    children[ci].perft(ply - 1, count, captures, castles, mates);
+    children[ci].perft(ply - 1, count, captures, ep, castles, mates);
   }
 }
