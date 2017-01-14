@@ -1,0 +1,11 @@
+I'd enjoy trying to generate a large perf.
+
+it seems like it's a classic map reduce problem based around how much you can increase the reduce step.
+
+first stage
+  expand positons
+    combine any duplicates
+
+the trick is duplicates can be from different generations (if you "undo" a move) seems like I might be able to store this.
+
+
