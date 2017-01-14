@@ -193,8 +193,6 @@ vector<Board> Board::getChildren(void) {
       }
       board_s absPiece = abs(piece);
 
-      // TODO CASTLING, CHECKS (CHECKMATES)
-
       if (absPiece == PAWN) {
         // pawn capture
         for (board_s lr = -1; lr <= 1; lr += 2) {
@@ -278,7 +276,9 @@ vector<Board> Board::getChildren(void) {
         // Check empty squares.
         if (state[y][1] == 0 && state[y][2] == 0 && state[y][3] == 0) {
           // chek for attack on [4] [3] and [2]
-          if ((checkAttack(y, 4) == 0) && (checkAttack(y, 3) == 0) && (checkAttack(y, 2) == 0)) {
+          if ((checkAttack(isWhiteTurn, y, 4) == 0) &&
+              (checkAttack(isWhiteTurn, y, 3) == 0) &&
+              (checkAttack(isWhiteTurn, y, 2) == 0)) {
             Board c = copy();
             c.state[y][3] = c.state[y][0]; // Rook over three.
             c.state[y][0] = 0;
@@ -292,7 +292,9 @@ vector<Board> Board::getChildren(void) {
         // Check empty squares.
         if (state[y][5] == 0 && state[y][6] == 0) {
           // chek for attack on [4] [5] and [6]
-          if ((checkAttack(y, 4) == 0) && (checkAttack(y, 5) == 0) && (checkAttack(y, 6) == 0)) {
+          if ((checkAttack(isWhiteTurn, y, 4) == 0) &&
+              (checkAttack(isWhiteTurn, y, 5) == 0) &&
+              (checkAttack(isWhiteTurn, y, 6) == 0)) {
             Board c = copy();
             c.state[y][5] = c.state[y][7]; // Rook over three.
             c.state[y][7] = 0;
@@ -318,7 +320,7 @@ vector<Board> Board::getChildren(void) {
       board_s testX = lastX + lr;
 
       // Capturing pawn is adjacent after double move.
-      if (0 <= testX && testX <= 8 && state[lastY][testX] == selfColor * PAWN) {
+      if (0 <= testX && testX <= 7 && state[lastY][testX] == selfColor * PAWN) {
         Board c = copy();
         c.state[lastY][lastX] = 0;
         c.makeMove(lastY, testX, lastY + pawnDirection, lastX);
@@ -330,6 +332,74 @@ vector<Board> Board::getChildren(void) {
   return all_moves;
 }
 
+vector<Board> Board::getLegalChildren(void) {
+
+  board_s selfColor = isWhiteTurn ? WHITE : BLACK;
+  board_s selfKing = selfColor * KING;
+  // A guess where king will be (or nearby).
+  board_s kingY = -1, kingX;
+
+  for (int y = 0; kingY == -1 && y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      board_s piece = state[y][x];
+      if (piece == selfKing) {
+        kingY = y;
+        kingX = x;
+        break;
+      }
+    }
+  }
+
+  assert( onBoard(kingY, kingX) );
+
+  // TODO lots of optimizations
+  //    was square under double attack => had to move
+  //    was square under knight attack => had to destroy knight or move
+  //    was attack from adjacent square => had to move or destroy
+  //    was square under slide attack => 
+  //      if king didn't move
+  //        last move must be in way of single attack.
+
+  vector<Board> all_moves = getChildren();
+  vector<Board> filtered;
+  auto test = all_moves.begin();
+  int testCount = 0;
+  for (; test != all_moves.end(); test++) {
+    //cout << "hi : " << testCount++ << " rem: " << all_moves.size() << endl;
+
+    board_s testY = kingY;
+    board_s testX = kingX;
+
+    // Check if king is still in same place.
+    if (test->state[kingY][kingX] != selfKing) {
+      // king must have moved (lookup where it went).
+      testY = get<2>(test->getLastMove());
+      testX = get<3>(test->getLastMove());
+      assert( onBoard(testY, testX) );
+    }
+
+    assert( test->state[testY][testX] == selfKing );
+    if (test->checkAttack(isWhiteTurn, testY, testX) != 0) {
+      cout << (int) testY << ", " << (int) testX << "  Not allowed " << 
+        (int) test->checkAttack(isWhiteTurn, testX, testY) << endl;
+      test->printBoard();
+      //all_moves.erase(test);
+      //test--;
+      continue;
+    }
+
+    //cout << "allowed this move" << endl;
+    //test->printBoard();
+    filtered.push_back(*test);
+  }
+
+  // TODO scary that "R    RK " was marked NOT under attack.
+
+  //cout << "input " << all_moves.size() << " length " << endl;
+  //cout << "returned " << filtered.size() << " length " << endl;
+
+  return filtered;
+}
 
 // inline
 void Board::promoHelper(
@@ -347,6 +417,7 @@ void Board::promoHelper(
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
       c.makeMove(y,x,    y + pawnDirection, x2);
+      c.lastMoveSpecial = SPECIAL_PROMOTION;
       all_moves->push_back(c);
     }
   } else {
@@ -358,13 +429,14 @@ void Board::promoHelper(
 }        
 
 
-
-board_s Board::checkAttack(board_s a, board_s b) {
+// TODO a duplicate version that returns location of attack, count of attack
+board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
   // TODO consider pre calculating for each square in getChildrenMove of parent.
   // returns piece or 0 for no
 
-  board_s selfColor = isWhiteTurn ? WHITE : BLACK;
-  board_s oppKnight = isWhiteTurn ? -KNIGHT: KNIGHT;
+  board_s selfColor = forWhite ? WHITE : BLACK;
+  board_s oppKnight = forWhite ? -KNIGHT: KNIGHT;
+  board_s oppPawnDirection = forWhite ? -1 : 1;
 
   // Check if knight is attacking square.
   for (auto iter = MOVEMENTS.at(KNIGHT).begin();
@@ -395,18 +467,58 @@ board_s Board::checkAttack(board_s a, board_s b) {
       }
 
       if (moveTest.second != 0) {
-        return state[newY][newX];
+        const board_s oppPiece = state[newY][newX];
+        const board_s pieceType = abs(oppPiece);
+        // check if oppPiece can deliver this type of attack
+        if (pieceType == QUEEN) {
+          return oppPiece;
+        }
+
+        board_s distance = abs(a - newY) + abs(b - newX);
+
+        bool isStraight = iter->first == 0 || iter->second == 0;
+        if (isStraight) {
+          if (distance == 1 && pieceType == KING) {
+            return oppPiece;
+          }
+          return pieceType == ROOK ? oppPiece : 0;
+        }
+
+        bool isDiagonal = iter->first != 0 && iter->second != 0;
+        assert( isDiagonal );
+       
+        if (pieceType == BISHOP) {
+          return oppPiece;
+        }
+
+        if (distance == 2) {
+          // KING or PAWN might be attacker
+          if (pieceType == KING) {
+            return oppPiece;
+          }
+          if (deltaY == oppPawnDirection && pieceType == PAWN) {
+            return oppPiece;
+          }
+        }
+
+        // Hit a piece, nothing does x-ray.
+        break;
       }
     }
   }
+  return 0;
 }
 
+// TODO inline
+bool Board::onBoard(board_s a, board_s b) {
+  return 0 <= a && a <= 7 && 0 <= b && b <= 7;
+}
 
 pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   // prep for moving piece to state[a][b]
   // returns on board, piece on [a][b]
 
-  if (0 <= a && a <= 7 && 0 <= b && b <= 7) {
+  if (onBoard(a, b)) {
     board_s destPiece = state[a][b];
     if (destPiece) {
       return make_pair(true, peaceSign(destPiece));
@@ -418,8 +530,8 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
 
 // TODO inline?
 board_s Board::getPiece(board_s a, board_s b) {
-  return (0 <= a && a <= 7 && 0 <= b && b <= 7) ?
-    state[a][b] : 0;
+  // TODO test using &&
+  return onBoard(a, b) ? state[a][b] : 0;
 }
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
@@ -547,7 +659,7 @@ void Board::perft(int ply,
     return;
   }
 
-  vector<Board> children = getChildren();
+  vector<Board> children = getLegalChildren();
   //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     move_t move = children[ci].getLastMove();

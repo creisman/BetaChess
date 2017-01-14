@@ -40,8 +40,9 @@ namespace board {
       static const board_s BLACK_OOO = 1;
 
       // Last Move Special
-      static const board_s SPECIAL_EN_PASSANT = 1;
-      static const board_s SPECIAL_CASTLE = 2;
+      static const board_s SPECIAL_CASTLE = 1;
+      static const board_s SPECIAL_EN_PASSANT = 2;
+      static const board_s SPECIAL_PROMOTION = 3;
 
 
       static const string PIECE_SYMBOL;
@@ -59,6 +60,7 @@ namespace board {
       move_t getLastMove(void);
       board_s getLastMoveSpecial(void);
       vector<Board> getChildren(void);
+      vector<Board> getLegalChildren(void);
 
       double heuristic(void);
       board_s mateResult(void);
@@ -77,13 +79,15 @@ namespace board {
       void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
 
-      board_s checkAttack(board_s a, board_s b);
+      board_s checkAttack(bool fromWhite, board_s a, board_s b);
       board_s getPiece(board_s a, board_s b);
       pair<bool, board_s> attemptMove(board_s a, board_s b);
       void makeMove(board_s a, board_s b, board_s c, board_s d);
 
+      // Helper methods.
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
+      static bool onBoard(board_s a, board_s b);
 
       // TODO investigate usage of this.
       static string squareNamePair(move_t move);
