@@ -1,5 +1,6 @@
 # BetaChess specific files
 betachess
+server
 
 # Python files
 __pycache__/
