@@ -210,7 +210,7 @@ vector<Board> Board::getChildren(void) {
           moveTest = attemptMove(y + pawnDirection, x + lr);
           if (moveTest.first && moveTest.second == oppColor) {
             // Pawn Capture (plus potential promotion)
-            promoHelper(&all_moves, isWhiteTurn, selfColor, pawnDirection, x, y, x + lr);
+            promoHelper(&all_moves, isWhiteTurn, selfColor, x, y, x + lr, y + pawnDirection);
             hasCapture = true;
           }
         }
@@ -223,7 +223,7 @@ vector<Board> Board::getChildren(void) {
         // pawn move: if next space is empty.
         if (moveTest.first && moveTest.second == 0) {
           // Normal move forward && promo    
-          promoHelper(&all_moves, isWhiteTurn, selfColor, pawnDirection, x, y, x);
+          promoHelper(&all_moves, isWhiteTurn, selfColor, x, y, x, y + pawnDirection);
 
           // double move (only if nothing in the way for single move)
           if ((isWhiteTurn && y == 1) || (!isWhiteTurn && y == 6)) {
@@ -448,24 +448,24 @@ void Board::promoHelper(
   vector<Board> *all_moves,
   bool isWhiteTurn, 
   board_s selfColor,
-  board_s pawnDirection,
   board_s x,
   board_s y,
-  board_s x2) {
-  if ((isWhiteTurn && y == 7) || (!isWhiteTurn && y == 1)) {
+  board_s x2,
+  board_s y2) {
+  if ((isWhiteTurn && y2 == 7) || (!isWhiteTurn && y2 == 0)) {
     // promotion && underpromotion
     for (board_s newPiece = KNIGHT; newPiece <= QUEEN; newPiece++) {
       // "promote" then move piece (TODO how does this affect history?)
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
-      c.makeMove(y,x,    y + pawnDirection, x2);
+      c.makeMove(y,x,    y2, x2);
       c.lastMoveSpecial = SPECIAL_PROMOTION;
       all_moves->push_back(c);
     }
   } else {
     // Normal move to square.
     Board c = copy();
-    c.makeMove(y,x,    y + pawnDirection, x2);
+    c.makeMove(y,x,    y2, x2);
     all_moves->push_back(c);
   } 
 }        
@@ -779,7 +779,7 @@ void Board::perft(int ply,
     if (get<5>(move) != 0) { captures->fetch_add(1); }
     if (moveSpecial == SPECIAL_EN_PASSANT) { ep->fetch_add(1); }
     if (moveSpecial == SPECIAL_CASTLE) { castles->fetch_add(1); }
-    if (moveSpecial == SPECIAL_PROMOTION) { castles->fetch_add(1); }
+    if (moveSpecial == SPECIAL_PROMOTION) { promotions->fetch_add(1); }
 
     return;
   }
