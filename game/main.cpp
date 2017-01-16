@@ -88,7 +88,8 @@ void playGame(int ply, string fen) {
       }
       m = make_tuple(oldS[1] - '1', oldS[0] - 'a',
                      newS[1] - '1', newS[0] - 'a',
-                     1 /* moving */, 0 /* removing */);
+                     1 /* moving */, 0 /* removing */,
+                     0 /* special */);
     }
 
     cout << Board::coordinateNotation(m) <<
@@ -117,18 +118,18 @@ int main(int argc, char *argv[]) {
 
   // Initial Position
   // rPi seems to generate ~1.1M nodes / second with pragma on.
-  //perft(5, "");
+  perft(5, "");
 
   // "Position 2 - Kiwipete"
   // rPi seems to generate ~1.5M nodes / second with pragma on.
   // perf 5 had a miss by a couple thousand.
-  //perft(5, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+  perft(4, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 
   // "Position 3"
-  perft(1, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
+  perft(6, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
 
   // "Position 4"
-  //perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -");
+  perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -");
 
   return 0;
 }

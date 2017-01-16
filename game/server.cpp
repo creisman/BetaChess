@@ -15,15 +15,13 @@ Board b(true /* init */);
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply) {
-  // TODO this doesn't pass promotion information.
   scored_move_t suggest = b.findMove(ply);
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
 
   string coords = b.coordinateNotation(move);
   
-  // This fails to pass special info.
-  string alg = b.algebraicNotation(move, 0); 
+  string alg = b.algebraicNotation(move); 
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
   return coords;
@@ -37,7 +35,7 @@ string update(string move) {
 
   bool foundMove = false;
   for (Board c : b.getLegalChildren()) {
-    string moveToGetC = b.algebraicNotation(c.getLastMove(), c.getLastMoveSpecial());
+    string moveToGetC = b.algebraicNotation(c.getLastMove());
     if (moveToGetC == move) {
       cout << "found move(" << move << ")!" << endl;
       foundMove = true;
@@ -49,7 +47,7 @@ string update(string move) {
   if (!foundMove) {
     cout << "Didn't find move: " << move << endl;
     for (Board c : b.getLegalChildren()) {
-      string moveToGetC = b.algebraicNotation(c.getLastMove(), c.getLastMoveSpecial());
+      string moveToGetC = b.algebraicNotation(c.getLastMove());
       cout << "\twasn't " << moveToGetC << endl;
     }
   }

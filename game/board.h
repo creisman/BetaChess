@@ -10,14 +10,14 @@
 using namespace std;
 
 #define BOARD_SIZE 8
-#define IS_ANTICHESS true
+#define IS_ANTICHESS false
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
   typedef signed char board_s;
 
-  // (a, b) to (c, d), piece that moving, piece that was captured removing
-  typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s> move_t;
+  // (a, b) to (c, d), piece that moving, piece that was captured removing, special_status
+  typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s, unsigned char> move_t;
 
   // score concatonated to end of move_t
   typedef pair<double, move_t> scored_move_t;
@@ -50,9 +50,9 @@ namespace board {
       static const board_s BLACK_OOO = 1;
 
       // Last Move Special
-      static const board_s SPECIAL_CASTLE = 1;
-      static const board_s SPECIAL_EN_PASSANT = 2;
-      static const board_s SPECIAL_PROMOTION = 3;
+      static const unsigned char SPECIAL_CASTLE = 1;
+      static const unsigned char SPECIAL_EN_PASSANT = 2;
+      static const unsigned char SPECIAL_PROMOTION = 3;
 
 
       static const string PIECE_SYMBOL;
@@ -69,7 +69,6 @@ namespace board {
       void resetBoard(void);
 
       move_t getLastMove(void);
-      board_s getLastMoveSpecial(void);
       vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
 
@@ -80,6 +79,7 @@ namespace board {
 
       scored_move_t findMove(int ply);
       void makeMove(board_s a, board_s b, board_s c, board_s d);
+      void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       void perft(int ply,
           atomic<int> *count,
@@ -90,7 +90,7 @@ namespace board {
           atomic<int> *mates);
 
       // Algebraic notation of legal move from this board.
-      string algebraicNotation(move_t child_move, board_s child_move_special);
+      string algebraicNotation(move_t child_move);
 
       // ~Coordinate notation.
       static string coordinateNotation(move_t child_move);
@@ -127,7 +127,6 @@ namespace board {
       board_s mateStatus;
 
       move_t lastMove;
-      char lastMoveSpecial; // used for castle, en passant, check, checkmate.
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;

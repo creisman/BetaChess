@@ -54,8 +54,7 @@ Board::Board(bool initState) {
 Board::Board(string fen) {
   // Fen is "easy" they said
 
-  lastMove = make_tuple(0, 0, 0, 0, 0, 0);
-  lastMoveSpecial = 0;
+  lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
 
   memset(&state, '\0', sizeof(state));
 
@@ -136,8 +135,7 @@ void Board::resetBoard(void) {
   memset(&state, '\0', sizeof(state));
 
   // TODO lastMove
-  lastMove = make_tuple(0, 0, 0, 0, 0, 0);
-  lastMoveSpecial = 0;
+  lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
 
   for (int i = 0; i < 8; i++) {
     state[1][i] = PAWN;
@@ -188,10 +186,6 @@ void Board::printBoard(void) {
 
 move_t Board::getLastMove(void) {
   return lastMove;
-}
-
-board_s Board::getLastMoveSpecial(void) {
-  return lastMoveSpecial;
 }
 
 vector<Board> Board::getChildren(void) {
@@ -315,10 +309,7 @@ vector<Board> Board::getChildren(void) {
               (checkAttack(isWhiteTurn, y, 3) == 0) &&
               (checkAttack(isWhiteTurn, y, 2) == 0)) {
             Board c = copy();
-            c.state[y][3] = c.state[y][0]; // Rook over three.
-            c.state[y][0] = 0;
-            c.makeMove(y, 4,   y, 2); // Record king over two as the move.
-            c.lastMoveSpecial = SPECIAL_CASTLE;
+            c.makeMove(y, 4,   y, 2, SPECIAL_CASTLE); // Record king over two as the move.
             all_moves.push_back( c );
           }
         }
@@ -331,10 +322,7 @@ vector<Board> Board::getChildren(void) {
               (checkAttack(isWhiteTurn, y, 5) == 0) &&
               (checkAttack(isWhiteTurn, y, 6) == 0)) {
             Board c = copy();
-            c.state[y][5] = c.state[y][7]; // Rook over three.
-            c.state[y][7] = 0;
-            c.makeMove(y, 4,   y, 6); // Record king over two as the move.
-            c.lastMoveSpecial = SPECIAL_CASTLE;
+            c.makeMove(y, 4,   y, 6, SPECIAL_CASTLE); // Record king over two as the move.
             all_moves.push_back( c );
           }
         }
@@ -358,11 +346,7 @@ vector<Board> Board::getChildren(void) {
       if (0 <= testX && testX <= 7 && state[lastY][testX] == selfColor * PAWN) {
         Board c = copy();
         // Move our pawn
-        c.makeMove(lastY, testX, lastY + pawnDirection, lastX);
-        // Remove the pawn (beceause we didn't move onto it).
-        c.state[lastY][lastX] = 0;
-        get<5>(c.lastMove) = oppColor * PAWN;
-        c.lastMoveSpecial = SPECIAL_EN_PASSANT;
+        c.makeMove(lastY, testX, lastY + pawnDirection, lastX, SPECIAL_EN_PASSANT);
         all_moves.push_back( c );
       }
     } 
@@ -465,8 +449,7 @@ void Board::promoHelper(
       // "promote" then move piece (TODO how does this affect history?)
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
-      c.makeMove(y,x,    y2, x2);
-      c.lastMoveSpecial = SPECIAL_PROMOTION;
+      c.makeMove(y,x,    y2, x2, SPECIAL_PROMOTION);
       all_moves->push_back(c);
     }
   } else {
@@ -588,6 +571,31 @@ board_s Board::getPiece(board_s a, board_s b) {
   return onBoard(a, b) ? state[a][b] : 0;
 }
 
+// inline
+void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
+  if (special == SPECIAL_CASTLE) {
+    if (d == 2) {
+      assert(abs(state[a][0]) == ROOK);
+      state[a][3] = state[a][0];
+      state[a][0] = 0;
+    } else {
+      assert(d == 6);
+      assert(abs(state[a][7]) == ROOK);
+      state[a][5] = state[a][7];
+      state[a][7] = 0;
+    }
+  }
+
+  makeMove(a, b, c, d);
+  get<6>(lastMove) = special;
+
+  if (special == SPECIAL_EN_PASSANT) {
+    get<5>(lastMove) = state[a][d];
+    assert(abs(state[a][d]) == PAWN);
+    state[a][d] = 0;
+  }
+}
+
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
   bool isWhite = isWhitePiece(moving);
@@ -604,8 +612,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   // update turn state
   ply++;
   isWhiteTurn = !isWhiteTurn;
-  lastMove = make_tuple(a, b, c, d, moving, removed);
-  lastMoveSpecial = 0;
+  lastMove = make_tuple(a, b, c, d, moving, removed, 0);
 
   // update castling.
   if (isWhite) {
@@ -641,7 +648,7 @@ board_s Board::peaceSign(board_s piece) {
 
 
 
-string Board::algebraicNotation(move_t child_move, board_s child_move_special) {
+string Board::algebraicNotation(move_t child_move) {
   // e4 = white king pawn double out.
   // e is file.
   // 4 is rank.
@@ -681,13 +688,15 @@ string Board::algebraicNotation(move_t child_move, board_s child_move_special) {
   string disambiguate = (sameRank ? fileName(get<1>(child_move)) : "") +
                         (sameFile ? rankName(get<0>(child_move)) : "");
 
-  // TODO consider adding check status.
+  // TODO consider adding check/mate (+/#) status.
 
-  if (child_move_special == SPECIAL_PROMOTION) {
+  unsigned char special = get<6>(child_move);
+  if (special == SPECIAL_PROMOTION) {
     // Piece handly records what we promoted to!
-    return disambiguate + capture + dest +  "=" + pieceName;
+    string startFile = fileName(get<1>(child_move));
+    return startFile + capture + dest +  "=" + pieceName;
   }
-  if (child_move_special == SPECIAL_CASTLE) {
+  if (special == SPECIAL_CASTLE) {
     return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
   } 
   if (piece == PAWN && !capture.empty()) {
@@ -861,14 +870,9 @@ void Board::perft(int ply,
     atomic<int> *castles,
     atomic<int> *promotions,
     atomic<int> *mates) {
-
-  cout << algebraicNotation(getLastMove(), getLastMoveSpecial()) << endl;
-  printBoard();
-  cout << endl << endl;
-
   if (ply == 0) {
     move_t move = getLastMove();
-    board_s moveSpecial = getLastMoveSpecial();
+    board_s moveSpecial = get<6>(move);
 
     count->fetch_add(1);
 
@@ -884,7 +888,7 @@ void Board::perft(int ply,
   // TODO This incorrectly counts stalemates.
   if (children.size() == 0) { mates->fetch_add(1); }
 
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     children[ci].perft(ply - 1, count, captures, ep, castles, promotions, mates);
   }
