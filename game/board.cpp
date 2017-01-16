@@ -54,6 +54,9 @@ Board::Board(bool initState) {
 Board::Board(string fen) {
   // Fen is "easy" they said
 
+  lastMove = make_tuple(0, 0, 0, 0, 0, 0);
+  lastMoveSpecial = 0;
+
   memset(&state, '\0', sizeof(state));
 
   int y = 7;
@@ -131,6 +134,10 @@ void Board::resetBoard(void) {
   castleStatus = 15;
 
   memset(&state, '\0', sizeof(state));
+
+  // TODO lastMove
+  lastMove = make_tuple(0, 0, 0, 0, 0, 0);
+  lastMoveSpecial = 0;
 
   for (int i = 0; i < 8; i++) {
     state[1][i] = PAWN;
@@ -630,12 +637,86 @@ board_s Board::peaceSign(board_s piece) {
   return  (piece > 0) ? WHITE : BLACK;
 }
 
-string Board::moveNotation(move_t move) {
-  string rows[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
-  string start = rows[get<1>(move)] + to_string(1 + get<0>(move));
-  string end = rows[get<3>(move)] + to_string(1 + get<2>(move));
-  return start + " - " + end;
+
+
+
+
+string Board::algebraicNotation(move_t child_move, board_s child_move_special) {
+  // e4 = white king pawn double out.
+  // e is file.
+  // 4 is rank.
+
+  bool sameFile = false;
+  bool sameRank = false;
+
+  // NOTE(seth): It appears disambigous is only looking at "valid" moves.
+  vector<Board> children = getLegalChildren();
+  for (Board c : children) {
+    // same piece, same destination
+    if ((get<2>(child_move) == get<2>(c.lastMove)) &&
+        (get<3>(child_move) == get<3>(c.lastMove)) &&
+        (get<4>(child_move) == get<4>(c.lastMove))) {
+      bool equalFile = get<1>(child_move) == get<1>(c.lastMove);
+      bool equalRank = get<0>(child_move) == get<0>(c.lastMove);
+
+      if (equalFile && equalRank) {
+        // the move itself.
+        continue;
+      }
+      sameFile |= equalFile;
+      sameRank |= equalRank;
+    }
+  }
+
+  board_s piece = abs(get<4>(child_move));
+  string pieceName = string(1,  toupper(PIECE_SYMBOL[piece]));
+  if (piece == PAWN) {
+    pieceName = "";
+  }
+
+  string capture = get<5>(child_move) == 0 ? "" : "x";
+  string dest = squareName(get<2>(child_move), get<3>(child_move));
+
+  string disambiguate = (sameRank ? fileName(get<1>(child_move)) : "") +
+                        (sameFile ? fileName(get<0>(child_move)) : "");
+
+  // TODO consider adding check status.
+
+  if (child_move_special == SPECIAL_PROMOTION) {
+    // Piece handly records what we promoted to!
+    return disambiguate + capture + dest +  "=" + pieceName;
+  }
+  if (child_move_special == SPECIAL_CASTLE) {
+    return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
+  } 
+  
+  return pieceName + disambiguate + capture + dest;
 }
+
+
+string Board::coordinateNotation(move_t child_move) {
+  // TODO this doesn't support Castling, ep(?), promotion.
+  return squareName(get<0>(child_move), get<1>(child_move)) + " - " +
+         squareName(get<2>(child_move), get<3>(child_move));
+}
+
+
+string Board::squareName(board_s a, board_s b) {
+  assert( onBoard(a, b) );
+  return fileName(b) + rankName(a);
+}
+
+
+string Board::rankName(board_s a) {
+  return to_string(1 + a);
+}
+
+
+string Board::fileName(board_s b) {
+  char file = 'a' + b;
+  return string(1, file);
+}
+
 
 double Board::heuristic() {
   if (IS_ANTICHESS) {
@@ -770,6 +851,10 @@ void Board::perft(int ply,
     atomic<int> *promotions,
     atomic<int> *mates) {
 
+  cout << algebraicNotation(getLastMove(), getLastMoveSpecial()) << endl;
+  printBoard();
+  cout << endl << endl;
+
   if (ply == 0) {
     move_t move = getLastMove();
     board_s moveSpecial = getLastMoveSpecial();
@@ -788,7 +873,7 @@ void Board::perft(int ply,
   // TODO This incorrectly counts stalemates.
   if (children.size() == 0) { mates->fetch_add(1); }
 
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     children[ci].perft(ply - 1, count, captures, ep, castles, promotions, mates);
   }

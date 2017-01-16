@@ -113,32 +113,21 @@ void genericHandler(evhttp_request * req, void *args) {
        << "\t\tmove: \"" << moveHeader << "\"" << endl << endl;
 
 
-  string repResponse = "";
-  /*
+  string moveReply;
   if (!fenHeader.empty()) {
-    repResponse = repLoop(6, fenHeader, "");
+    moveReply = repLoop(6, fenHeader, "");
   } else if (!moveHeader.empty()) {
     // assume we are playing the same game as before.
-    repResponse = "test todo fixme"; //repLoop(6, "", moveHeader);
+    moveReply = repLoop(6, "", moveHeader);
   } else {
-    repResponse = "No fen or move param in args.";
+    moveReply = "No fen or move param in args.";
   }
-  */
 
 
-  /*
-  string replyBody =
-      "<html><body>"
-        "<h1>Hello Chess Fans!</h1>"
-        "<p>Read-Evaled-Play response:" + repResponse + "</p>"
-      "<body><html>";
-  */
-  string replyBody = repResponse;
-
-  cout << "return: \"" << replyBody << "\"" << endl << endl << endl;
+  cout << "return: \"" << moveReply << "\"" << endl << endl << endl;
 
   auto *outBuffer = evhttp_request_get_output_buffer(req);
-  evbuffer_add_printf(outBuffer, replyBody.c_str());
+  evbuffer_add_printf(outBuffer, moveReply.c_str());
   evhttp_add_header(req->output_headers, "Content-Type", "application/json");
 
   evhttp_send_reply(req, HTTP_OK, "", outBuffer);

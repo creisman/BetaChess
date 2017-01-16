@@ -91,9 +91,7 @@ void playGame(int ply, string fen) {
                      1 /* moving */, 0 /* removing */);
     }
 
-    cout << Board::moveNotation(m) <<
-         "\t("   << (int)get<0>(m) << ", " << (int)get<1>(m) <<
-         " to " << (int)get<2>(m) << ", " << (int)get<3>(m) <<
+    cout << Board::coordinateNotation(m) <<
          "\tpiece: " <<(int) get<4>(m) << "\ttakes: " << (int)get<5>(m) << endl;
 
     // signals win.
@@ -119,7 +117,7 @@ int main(int argc, char *argv[]) {
 
   // Initial Position
   // rPi seems to generate ~1.1M nodes / second with pragma on.
-  //perft(6, "");
+  //perft(5, "");
 
   // "Position 2 - Kiwipete"
   // rPi seems to generate ~1.5M nodes / second with pragma on.
@@ -127,7 +125,7 @@ int main(int argc, char *argv[]) {
   //perft(5, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 
   // "Position 3"
-  //perft(6, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
+  perft(1, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
 
   // "Position 4"
   //perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -");

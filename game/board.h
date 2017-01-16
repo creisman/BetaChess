@@ -89,8 +89,16 @@ namespace board {
           atomic<int> *promotions,
           atomic<int> *mates);
 
-      // TODO investigate usage of this.
-      static string moveNotation(move_t move);
+      // Algebraic notation of legal move from this board.
+      string algebraicNotation(move_t child_move, board_s child_move_special);
+
+      // ~Coordinate notation.
+      static string coordinateNotation(move_t child_move);
+
+      // NOTE(seth): a is y 0-7, b is x 0-7
+      static string squareName(board_s a, board_s b);
+      static string rankName(board_s a);
+      static string fileName(board_s b);
 
     private:
       void promoHelper(vector<Board> *all_moves,
