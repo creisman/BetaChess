@@ -15,11 +15,11 @@ Board b(true /* init */);
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply, string fen, string move) {
-  //Board b(true /* init */);
-  if (!fen.empty()) {
-    //b = Board(fen);
-    cout << "Loaded from fen: \"" << fen << "\"" << endl;
-  }
+  return "TODO response to " + move;
+  //if (!fen.empty()) {
+  //  b = Board(fen);
+  //  cout << "Loaded from fen: \"" << fen << "\"" << endl;
+  //}
 /*
   //b.printBoard();
   bool weAreWhite;
@@ -113,17 +113,18 @@ void genericHandler(evhttp_request * req, void *args) {
        << "\t\tmove: \"" << moveHeader << "\"" << endl << endl;
 
 
-  string repResponse;
+  string repResponse = "";
+  /*
   if (!fenHeader.empty()) {
     repResponse = repLoop(6, fenHeader, "");
   } else if (!moveHeader.empty()) {
     // assume we are playing the same game as before.
-    repResponse = repLoop(6, "", moveHeader);
+    repResponse = "test todo fixme"; //repLoop(6, "", moveHeader);
   } else {
     repResponse = "No fen or move param in args.";
   }
+  */
 
-  auto *outBuffer = evhttp_request_get_output_buffer(req);
 
   /*
   string replyBody =
@@ -134,8 +135,9 @@ void genericHandler(evhttp_request * req, void *args) {
   */
   string replyBody = repResponse;
 
-  cout << "return: \"" << replyBody << "\"" << endl;
+  cout << "return: \"" << replyBody << "\"" << endl << endl << endl;
 
+  auto *outBuffer = evhttp_request_get_output_buffer(req);
   evbuffer_add_printf(outBuffer, replyBody.c_str());
   evhttp_add_header(req->output_headers, "Content-Type", "application/json");
 
