@@ -2,6 +2,10 @@
 betachess
 betachess-server
 
+# C++ files
+*.o
+*.h.gch
+
 # Python files
 __pycache__/
 
