@@ -167,6 +167,7 @@ BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
 }
 
 
+/*
 int main(void) {
   cout << "In Book Main!" << endl;
 
@@ -177,3 +178,4 @@ int main(void) {
 
   book.printBook(moves);
 }
+*/

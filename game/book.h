@@ -5,15 +5,12 @@
 #include <vector>
 #include <cstring>
 
-//#include "board.h"
+#include "board.h"
 
 using namespace std;
+using namespace board;
 
 namespace book {
-  // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
-  typedef signed char board_s;
-  typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s, unsigned char> move_t;
-  
   struct BetaChessBookEntry {
     move_t move;
     short played;

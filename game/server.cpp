@@ -7,32 +7,30 @@
 #include <memory>
 
 #include "board.h"
+#include "book.h"
 
 using namespace std;
 using namespace board;
+using namespace book;
 
-// We only can process one game at a time (currently).
-Board b(true /* init */);
-int halfMoveNum = 0;
-vector<move_t> moves = 0;
+Book bookT;
+Board boardT(true /* init */);
+vector<move_t> moves;
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply) {
+  cout << "looking for suggestion (" << moves.size() << ") moves in" << endl;
 
   // Some Book stuff here.
-  if (halfMoveNum == 0) {
-    return "g2 - g3";
-  }
 
-  cout << "looking for suggestion on halfMoveNum: " << halfMoveNum << endl;
 
-  scored_move_t suggest = b.findMove(ply);
+  scored_move_t suggest = boardT.findMove(ply);
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
 
-  string coords = b.coordinateNotation(move);
+  string coords = boardT.coordinateNotation(move);
   
-  string alg = b.algebraicNotation(move); 
+  string alg = boardT.algebraicNotation(move); 
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
   return coords;
@@ -45,27 +43,26 @@ string update(string move) {
   }
 
   bool foundMove = false;
-  for (Board c : b.getLegalChildren()) {
-    string moveToGetC = b.algebraicNotation(c.getLastMove());
+  for (Board c : boardT.getLegalChildren()) {
+    string moveToGetC = boardT.algebraicNotation(c.getLastMove());
     if (moveToGetC == move) {
       cout << "found move(" << move << ")!" << endl;
       foundMove = true;
-      b = c;
-      halfMoveNum += 1;
-      moves.clear();
+      boardT = c;
+      moves.push_back(c.getLastMove());
       break;
     }
   }
 
   if (!foundMove) {
     cout << "Didn't find move: " << move << endl;
-    for (Board c : b.getLegalChildren()) {
-      string moveToGetC = b.algebraicNotation(c.getLastMove());
+    for (Board c : boardT.getLegalChildren()) {
+      string moveToGetC = boardT.algebraicNotation(c.getLastMove());
       cout << "\twasn't " << moveToGetC << endl;
     }
   }
 
-  b.printBoard();
+  boardT.printBoard();
   string reply = foundMove ? "found" : "not found";
   return reply + " " + move;
 }
@@ -103,14 +100,14 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string reply;
   if (!startHeader.empty()) {
-    b = Board(true /* init */);
-    halfMoveNum = 0;
+    boardT = Board(true /* init */);
+    moves.clear();
+
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (moveHeader == "suggest") {
     reply = repLoop(4);
   } else if (!moveHeader.empty()) {
-    // assume we are playing the same game as before.
     reply = update(moveHeader);
   } else {
     reply = "Don't know what you want?";
@@ -142,6 +139,8 @@ int main() {
   }
 
   cout << "Launching Server" << endl << endl;
+  //book.load();
+
   evhttp_set_gencb(server.get(), genericHandler, nullptr);
   if (event_dispatch() == -1) {
     cout << "Failed in message loop" << endl;
