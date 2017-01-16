@@ -653,6 +653,7 @@ string Board::algebraicNotation(move_t child_move) {
   // e is file.
   // 4 is rank.
 
+  bool mult = false;
   bool sameFile = false;
   bool sameRank = false;
 
@@ -670,6 +671,7 @@ string Board::algebraicNotation(move_t child_move) {
         // the move itself.
         continue;
       }
+      mult = true;
       sameFile |= equalFile;
       sameRank |= equalRank;
     }
@@ -681,28 +683,32 @@ string Board::algebraicNotation(move_t child_move) {
   string pieceName = string(1,  toupper(PIECE_SYMBOL[piece]));
   if (piece == PAWN) {
     pieceName = "";
+    if (!capture.empty()) {
+      // a special (generic) case of disambiguate
+      pieceName = fileName(get<1>(child_move));
+    }
   }
 
   string dest = squareName(get<2>(child_move), get<3>(child_move));
 
-  string disambiguate = (sameRank ? fileName(get<1>(child_move)) : "") +
-                        (sameFile ? rankName(get<0>(child_move)) : "");
+  bool fileDisambigs = mult && (!sameFile || sameFile && sameRank);
+  string disambiguate = (fileDisambigs ? fileName(get<1>(child_move)) : "") +
+                        (sameFile      ? rankName(get<0>(child_move)) : "");
 
   // TODO consider adding check/mate (+/#) status.
 
   unsigned char special = get<6>(child_move);
   if (special == SPECIAL_PROMOTION) {
     // Piece handly records what we promoted to!
-    string startFile = fileName(get<1>(child_move));
-    return startFile + capture + dest +  "=" + pieceName;
+    // But it's not a recorded as a pawn move so add capture logic again.
+    if (!capture.empty()) {
+      return fileName(get<1>(child_move)) + capture + dest +  "=" + pieceName;
+    }
+    return dest + "=" + pieceName;
   }
   if (special == SPECIAL_CASTLE) {
     return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
   } 
-  if (piece == PAWN && !capture.empty()) {
-    // a special (generic) case of disambiguate
-    return fileName(get<1>(child_move)) + capture + dest;
-  }
   
   return pieceName + disambiguate + capture + dest;
 }
