@@ -445,7 +445,8 @@ void Board::promoHelper(
   board_s y2) {
   if ((isWhiteTurn && y2 == 7) || (!isWhiteTurn && y2 == 0)) {
     // promotion && underpromotion
-    for (board_s newPiece = KNIGHT; newPiece <= QUEEN; newPiece++) {
+    board_s lastPromoPiece = IS_ANTICHESS ? KING : QUEEN;
+    for (board_s newPiece = KNIGHT; newPiece <= lastPromoPiece; newPiece++) {
       // "promote" then move piece (TODO how does this affect history?)
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
@@ -680,13 +681,9 @@ string Board::algebraicNotation(move_t child_move) {
   string capture = get<5>(child_move) == 0 ? "" : "x";
 
   board_s piece = abs(get<4>(child_move));
-  string pieceName = string(1,  toupper(PIECE_SYMBOL[piece]));
+  string pieceName = string(1, toupper(PIECE_SYMBOL[piece]));
   if (piece == PAWN) {
     pieceName = "";
-    if (!capture.empty()) {
-      // a special (generic) case of disambiguate
-      pieceName = fileName(get<1>(child_move));
-    }
   }
 
   string dest = squareName(get<2>(child_move), get<3>(child_move));
@@ -709,15 +706,31 @@ string Board::algebraicNotation(move_t child_move) {
   if (special == SPECIAL_CASTLE) {
     return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
   } 
-  
+
+  // Pawn captures get file added.
+  if (piece == PAWN && !capture.empty()) {
+    // A special (generic) case of disambiguate.
+    // Can't be disambigous once we know file.
+    pieceName = fileName(get<1>(child_move));
+    return pieceName + capture + dest;
+  }
+
   return pieceName + disambiguate + capture + dest;
 }
 
 
-string Board::coordinateNotation(move_t child_move) {
-  // TODO this doesn't support Castling, ep(?), promotion.
-  return squareName(get<0>(child_move), get<1>(child_move)) + " - " +
-         squareName(get<2>(child_move), get<3>(child_move));
+string Board::coordinateNotation(move_t move) {
+  // TODO this partially (via inference) supports castling, ep
+  // and has explicit promotion.
+
+  string fromTo = squareName(get<0>(move), get<1>(move)) + " - " +
+                  squareName(get<2>(move), get<3>(move));
+
+  if (get<6>(move) == SPECIAL_PROMOTION) {
+    string promotedTo = string(1, toupper(PIECE_SYMBOL[abs(get<4>(move))]));
+    return fromTo + "(" + promotedTo + ")";
+  }
+  return fromTo;
 }
 
 
@@ -818,7 +831,7 @@ scored_move_t Board::findMove(int plyR) {
   while (true) {
     auto scoredMove = findMove(plyR + addedPly, -1000.0, 1000);
     cout << "plyR " << plyR + addedPly << "=> " << Board::dbgCounter << " moves" << endl;
-    if (abs(scoredMove.first) > 400 || dbgCounter > 300000) {
+    if (abs(scoredMove.first) > 400 || dbgCounter > 198000) {
       return scoredMove;
     }
     addedPly += 1;

@@ -3,6 +3,7 @@
 #include <evhttp.h>
 #include <iostream>
 #include <cstring>
+#include <string>
 #include <memory>
 
 #include "board.h"
@@ -21,6 +22,8 @@ string repLoop(int ply) {
   if (halfMoveNum == 0) {
     return "g2 - g3";
   }
+
+  cout << "looking for suggestion on halfMoveNum: " << halfMoveNum << endl;
 
   scored_move_t suggest = b.findMove(ply);
   double score = get<0>(suggest);
@@ -61,7 +64,8 @@ string update(string move) {
   }
 
   b.printBoard();
-  return foundMove ? "found": "not found";
+  string reply = foundMove ? "found" : "not found";
+  return reply + " " + move;
 }
 
 

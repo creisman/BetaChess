@@ -93,7 +93,7 @@ namespace board {
       string algebraicNotation(move_t child_move);
 
       // ~Coordinate notation.
-      static string coordinateNotation(move_t child_move);
+      static string coordinateNotation(move_t move);
 
       // NOTE(seth): a is y 0-7, b is x 0-7
       static string squareName(board_s a, board_s b);
