@@ -14,6 +14,7 @@ using namespace board;
 // We only can process one game at a time (currently).
 Board b(true /* init */);
 int halfMoveNum = 0;
+vector<move_t> moves = 0;
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply) {
@@ -51,6 +52,7 @@ string update(string move) {
       foundMove = true;
       b = c;
       halfMoveNum += 1;
+      moves.clear();
       break;
     }
   }
@@ -102,6 +104,7 @@ void genericHandler(evhttp_request * req, void *args) {
   string reply;
   if (!startHeader.empty()) {
     b = Board(true /* init */);
+    halfMoveNum = 0;
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (moveHeader == "suggest") {
