@@ -14,79 +14,55 @@ using namespace board;
 Board b(true /* init */);
 
 // Read-Evaluate-Play loop.
-string repLoop(int ply, string fen, string move) {
-  return "TODO response to " + move;
-  //if (!fen.empty()) {
-  //  b = Board(fen);
-  //  cout << "Loaded from fen: \"" << fen << "\"" << endl;
-  //}
-/*
-  //b.printBoard();
-  bool weAreWhite;
-  cout << "[W]hite or [B]lack?" << endl;
-  {
-    string test;
-    cin >> test;
-    weAreWhite = (test == "w" || test == "W" ||
-                  test == "White" || test == "white");
+string repLoop(int ply) {
+  // TODO this doesn't pass promotion information.
+  scored_move_t suggest = b.findMove(ply);
+  double score = get<0>(suggest);
+  move_t move = get<1>(suggest);
+
+  string coords = b.coordinateNotation(move);
+  
+  // This fails to pass special info.
+  string alg = b.algebraicNotation(move, 0); 
+
+  cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
+  return coords;
+}
+
+string update(string move) {
+  // TODO fix this (not sure who does it.)
+  if (!move.empty() && move.back() == '+' || move.back() == '#') {
+    move.pop_back();
   }
 
-  cout << "We are playing white: " << weAreWhite << endl;
-
-  // white start with c4.
-  if (weAreWhite) {
-    b.makeMove(1, 2, 3, 2);
-    b.printBoard();
-  }
-
-  for (int halfCount = weAreWhite ? 1 : 0; halfCount < 50; halfCount++) {
-    move_t m;
-
-    // Make the move.
-    if (weAreWhite == (halfCount % 2 == 0)) {
-      auto scoredMove = b.findMove(ply);
-      m = scoredMove.second;
-      cout << "iter: " << halfCount << "\tScore: " << scoredMove.first << endl;
-    } else {
-      // read move from input.
-      string oldS, newS;
-      while (true) {
-        cout << "What move did they play?" << endl;
-        cin >> oldS;
-        cin >> newS;
-
-        cout << "confirm [" << oldS << "] to [" << newS << "]" <<endl;
-        string confirm;
-        cin >> confirm; 
-        if (confirm == "y" || confirm == "t") {
-          break;
-        }
-      }
-      m = make_tuple(oldS[1] - '1', oldS[0] - 'a',
-                     newS[1] - '1', newS[0] - 'a',
-                     1  moving , 0  removing );
-    }
-
-    cout << Board::moveNotation(m) <<
-         "\t("   << (int)get<0>(m) << ", " << (int)get<1>(m) <<
-         " to " << (int)get<2>(m) << ", " << (int)get<3>(m) <<
-         "\tpiece: " <<(int) get<4>(m) << "\ttakes: " << (int)get<5>(m) << endl;
-
-    // signals win.
-    if (get<4>(m) == 0) {
+  bool foundMove = false;
+  for (Board c : b.getLegalChildren()) {
+    string moveToGetC = b.algebraicNotation(c.getLastMove(), c.getLastMoveSpecial());
+    if (moveToGetC == move) {
+      cout << "found move(" << move << ")!" << endl;
+      foundMove = true;
+      b = c;
       break;
     }
-
-
-    b.makeMove(get<0>(m), get<1>(m), get<2>(m), get<3>(m));
-    b.printBoard();
   }
-*/
+
+  if (!foundMove) {
+    cout << "Didn't find move: " << move << endl;
+    for (Board c : b.getLegalChildren()) {
+      string moveToGetC = b.algebraicNotation(c.getLastMove(), c.getLastMoveSpecial());
+      cout << "\twasn't " << moveToGetC << endl;
+    }
+  }
+
+  b.printBoard();
+  return foundMove ? "found": "not found";
 }
+
 
 string null2Empty(const char * cStr) {
   return cStr ? cStr : "";
 }
+
 
 void genericHandler(evhttp_request * req, void *args) {
   auto uri = evhttp_request_get_uri(req);
@@ -105,29 +81,32 @@ void genericHandler(evhttp_request * req, void *args) {
   struct evkeyvalq uriParams;
   evhttp_parse_query_str(evhttp_uri_get_query(uriParsed), &uriParams);
 
-  string fenHeader  = null2Empty( evhttp_find_header(&uriParams, "fen") );
-  string moveHeader = null2Empty( evhttp_find_header(&uriParams, "move") );
+  string startHeader = null2Empty( evhttp_find_header(&uriParams, "start") );
+  string moveHeader  = null2Empty( evhttp_find_header(&uriParams, "move") );
 
   cout << "\tparsed args:" << endl
-       << "\t\tfen: \"" << fenHeader << "\"" << endl
+       << "\t\tstart: \"" << startHeader << "\"" << endl
        << "\t\tmove: \"" << moveHeader << "\"" << endl << endl;
 
 
-  string moveReply;
-  if (!fenHeader.empty()) {
-    moveReply = repLoop(6, fenHeader, "");
+  string reply;
+  if (!startHeader.empty()) {
+    b = Board(true /* init */);
+    cout << "Reloaded board" << endl;;
+    reply = "ack on start-game";
+  } else if (moveHeader == "suggest") {
+    reply = repLoop(6);
   } else if (!moveHeader.empty()) {
     // assume we are playing the same game as before.
-    moveReply = repLoop(6, "", moveHeader);
+    reply = update(moveHeader);
   } else {
-    moveReply = "No fen or move param in args.";
+    reply = "Don't know what you want?";
   }
 
-
-  cout << "return: \"" << moveReply << "\"" << endl << endl << endl;
+  cout << "return: \"" << reply << "\"" << endl << endl << endl;
 
   auto *outBuffer = evhttp_request_get_output_buffer(req);
-  evbuffer_add_printf(outBuffer, moveReply.c_str());
+  evbuffer_add_printf(outBuffer, reply.c_str());
   evhttp_add_header(req->output_headers, "Content-Type", "application/json");
 
   evhttp_send_reply(req, HTTP_OK, "", outBuffer);

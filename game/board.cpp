@@ -668,17 +668,18 @@ string Board::algebraicNotation(move_t child_move, board_s child_move_special) {
     }
   }
 
+  string capture = get<5>(child_move) == 0 ? "" : "x";
+
   board_s piece = abs(get<4>(child_move));
   string pieceName = string(1,  toupper(PIECE_SYMBOL[piece]));
   if (piece == PAWN) {
     pieceName = "";
   }
 
-  string capture = get<5>(child_move) == 0 ? "" : "x";
   string dest = squareName(get<2>(child_move), get<3>(child_move));
 
   string disambiguate = (sameRank ? fileName(get<1>(child_move)) : "") +
-                        (sameFile ? fileName(get<0>(child_move)) : "");
+                        (sameFile ? rankName(get<0>(child_move)) : "");
 
   // TODO consider adding check status.
 
@@ -689,6 +690,10 @@ string Board::algebraicNotation(move_t child_move, board_s child_move_special) {
   if (child_move_special == SPECIAL_CASTLE) {
     return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
   } 
+  if (piece == PAWN && !capture.empty()) {
+    // a special (generic) case of disambiguate
+    return fileName(get<1>(child_move)) + capture + dest;
+  }
   
   return pieceName + disambiguate + capture + dest;
 }
@@ -787,6 +792,12 @@ double Board::heuristic() {
 int Board::dbgCounter = 0;
 scored_move_t Board::findMove(int plyR) {
   Board::dbgCounter = 0;
+
+  // Check if we only have one move (if so no real choice).
+  auto c = getLegalChildren();
+  if (c.size() == 1) {
+    return make_pair(NAN, c[0].getLastMove());
+  }
 
   int addedPly = 0;
   while (true) {
