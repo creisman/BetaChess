@@ -86,6 +86,7 @@ namespace board {
           atomic<int> *captures,
           atomic<int> *ep,
           atomic<int> *castles,
+          atomic<int> *promotions,
           atomic<int> *mates);
 
       // TODO investigate usage of this.

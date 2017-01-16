@@ -20,15 +20,17 @@ void perft(int ply, string fen) {
   atomic<int> captures(0);
   atomic<int> ep(0);
   atomic<int> castles(0);
+  atomic<int> promotions(0);
   atomic<int> mates(0);
-  b.perft(ply, &count, &captures, &ep, &castles, &mates);
+  b.perft(ply, &count, &captures, &ep, &castles, &promotions, &mates);
 
   cout << "Perft results for" <<
           " depth (ply): " << ply << endl;
   cout << "\tcount: " << count << 
           "\tcaptures: " << captures << 
-          "\tEn Passant: " << ep << 
-          "\tcastles: " << castles << 
+          "\ten passant: " << ep <<
+          "\tcastles: " << castles <<
+          "\tpromotions: " << promotions <<
           "\tmates: " << mates << endl;
   cout << endl << endl;
 }

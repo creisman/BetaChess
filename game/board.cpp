@@ -767,6 +767,7 @@ void Board::perft(int ply,
     atomic<int> *captures,
     atomic<int> *ep,
     atomic<int> *castles,
+    atomic<int> *promotions,
     atomic<int> *mates) {
 
   if (ply == 0) {
@@ -778,6 +779,7 @@ void Board::perft(int ply,
     if (get<5>(move) != 0) { captures->fetch_add(1); }
     if (moveSpecial == SPECIAL_EN_PASSANT) { ep->fetch_add(1); }
     if (moveSpecial == SPECIAL_CASTLE) { castles->fetch_add(1); }
+    if (moveSpecial == SPECIAL_PROMOTION) { castles->fetch_add(1); }
 
     return;
   }
@@ -788,6 +790,6 @@ void Board::perft(int ply,
 
   #pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
-    children[ci].perft(ply - 1, count, captures, ep, castles, mates);
+    children[ci].perft(ply - 1, count, captures, ep, castles, promotions, mates);
   }
 }
