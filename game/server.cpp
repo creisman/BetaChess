@@ -22,14 +22,19 @@ string repLoop(int ply) {
   cout << "looking for suggestion (" << moves.size() << ") moves in" << endl;
 
   // Some Book stuff here.
+  scored_move_t suggest;
 
+  move_t *bookMove = bookT.multiArmBandit(moves);
+  if (bookMove != nullptr) {
+    cout << "Got move from book" << endl;
+    suggest = make_pair(NAN, *bookMove);
+  } else {
+    suggest = boardT.findMove(ply);
+  } 
 
-  scored_move_t suggest = boardT.findMove(ply);
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
-
   string coords = boardT.coordinateNotation(move);
-  
   string alg = boardT.algebraicNotation(move); 
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
@@ -139,7 +144,7 @@ int main() {
   }
 
   cout << "Launching Server" << endl << endl;
-  //book.load();
+  bookT.load();
 
   evhttp_set_gencb(server.get(), genericHandler, nullptr);
   if (event_dispatch() == -1) {

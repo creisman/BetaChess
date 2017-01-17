@@ -18,6 +18,8 @@ Book::Book() {
 }
 
 bool Book::load(void) {
+  positionsLoaded = 0;
+
   // read some lines do some stuff build a tree.
   root.move = make_tuple(0, 0, 0, 0, 0, 0, 0);
   root.played = 10;
@@ -36,6 +38,7 @@ bool Book::load(void) {
       continue;
     }
 
+    positionsLoaded++;
 
     size_t depth = 0;
     while (line.size() && line.front() == ' ') {
@@ -74,6 +77,7 @@ bool Book::load(void) {
     path.push_back(&entry);
   }
 
+  cout << "Loaded book with " << positionsLoaded << " positions" << endl;
   return true;
 }
 
@@ -119,6 +123,9 @@ string Book::stringMove(move_t move) {
 move_t* Book::multiArmBandit(vector<move_t> moves) {
   // TODO init random with clock hour (so we play same moves in chuncks).
   BetaChessBookEntry *entry = recurse(moves);
+  if (entry == nullptr) {
+    return nullptr;
+  }
 
   // TODO make this a class variable.
   mt19937 generator(909);

@@ -24,6 +24,7 @@ namespace book {
   class Book {
     public:
       static const string ANTICHESS_FILE;
+      int positionsLoaded = 0;
 
       // Not Required but added because I'm OCD;
       Book();
