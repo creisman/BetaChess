@@ -9,7 +9,7 @@ DEPS = board.h
 	g++ -c -o $@ $< $(CFLAGS)
 
 server: $(OBJ) server.cpp
-	g++ -o betachess-server $(CFLAGS) -levent $(OBJ) server.cpp
+	g++ -o betachess-server $(CFLAGS) $(OBJ) server.cpp -levent
 
 betachess: $(OBJ) main.cpp
 	g++ -o betachess $(CFLAGS) $(OBJ) main.cpp
