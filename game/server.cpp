@@ -30,12 +30,12 @@ string repLoop(int ply) {
     suggest = make_pair(NAN, *bookMove);
   } else {
     suggest = boardT.findMove(ply);
-  } 
+  }
 
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
   string coords = boardT.coordinateNotation(move);
-  string alg = boardT.algebraicNotation(move); 
+  string alg = boardT.algebraicNotation(move);
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
   return coords;
@@ -85,7 +85,7 @@ void genericHandler(evhttp_request * req, void *args) {
 
   auto *inBuffer = evhttp_request_get_input_buffer(req);
   size_t inSize = evbuffer_get_length(inBuffer);
-  size_t readSize = min(inSize, (unsigned int) 1000);
+  size_t readSize = min(inSize, (size_t) 1000);
   char data[readSize+1];
   memset(data, '\0', readSize+1);
   cout << "\tdata size: " << inSize << endl;
@@ -121,7 +121,7 @@ void genericHandler(evhttp_request * req, void *args) {
   cout << "return: \"" << reply << "\"" << endl << endl << endl;
 
   auto *outBuffer = evhttp_request_get_output_buffer(req);
-  evbuffer_add_printf(outBuffer, reply.c_str());
+  evbuffer_add_printf(outBuffer, "%s", reply.c_str());
   evhttp_add_header(req->output_headers, "Content-Type", "application/json");
 
   evhttp_send_reply(req, HTTP_OK, "", outBuffer);
