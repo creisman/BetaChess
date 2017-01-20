@@ -38,7 +38,7 @@ namespace book {
       // TODO
       //bool updateResult(vector<move_t> moves, bool result);
 
-      void printBook(BetaChessBookEntry *entry, int depth, int recurse);
+      void printBook(void);
 
     private:
       // class variables
@@ -48,6 +48,7 @@ namespace book {
 
       // private methods
       BetaChessBookEntry* recurse(vector<move_t> moves);
+      void printBook(BetaChessBookEntry *entry, int depth, int recurse);
 
       // helper printer method.
       string stringRecord(BetaChessBookEntry *entry);

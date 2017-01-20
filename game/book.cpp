@@ -60,13 +60,10 @@ bool Book::load(void) {
     int raw[10];
     istringstream strStream(line);
     for (int i = 0; i < 10; i++) {
-      int part;
       char comma;
-      strStream >> part;
+      strStream >> raw[i];
       strStream >> comma;
       assert(comma == ',' || i == 9);
-
-      raw[i] = part;
     }
 
     BetaChessBookEntry *entry = new BetaChessBookEntry();
@@ -94,15 +91,38 @@ bool Book::load(void) {
  
   // Print book for debug purpose.
   //cout << "Loaded book with " << positionsLoaded << " positions" << endl;
-  //printBook(&root, 0, 4);
+  //printBook();
 
   return true;
 }
 
 
+
+bool writeHelper(ostream& fs, string prefix, BetaChessBookEntry *entry) {
+  assert (entry != nullptr);
+  move_t m = entry->move;
+  fs << prefix;
+  fs << (int)get<0>(m) << "," << (int)get<1>(m) << ","
+       << (int)get<2>(m) << "," << (int)get<3>(m) << ","
+       << (int)get<4>(m) << "," << (int)get<5>(m) << ","
+       << (int)get<6>(m) << ",";
+  fs << entry->played << ",";
+  fs << entry->wins << ",";
+  fs << entry->losses << endl;
+
+  // TODO sort by child game count.
+  for (auto child : entry->children) {
+    writeHelper(fs, prefix + " ", child);
+  }
+}
+  
+
 bool Book::write(void) {
-  // TODO write file out.
-  return true;
+  string outFile = ANTICHESS_FILE + ".tmp";
+  fstream fs(outFile, fstream::out);
+  for (auto child : root.children) {
+    writeHelper(fs, "", child);
+  }
 }
 
 
@@ -111,6 +131,9 @@ bool Book::updatePlayed(vector<move_t> moves) {
   return true;
 }
 
+void Book::printBook() {
+  printBook(&root, 0, 10);
+}
 
 void Book::printBook(BetaChessBookEntry *entry, int depth, int recurse) {
   if (entry != nullptr) {
@@ -207,15 +230,11 @@ BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
 }
 
 
-/*
 int main(void) {
   cout << "In Book Main!" << endl;
 
   Book book;
   book.load();
-
-  vector<move_t> moves;
-
-  book.printBook(moves);
+  book.printBook();
+  book.write();
 }
-*/
