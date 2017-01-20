@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <ctime>
 #include <fstream>
 #include <iostream>
@@ -114,7 +116,9 @@ bool Book::updatePlayed(vector<move_t> moves) {
 void Book::printBook(BetaChessBookEntry *entry, int depth, int recurse) {
   if (entry != nullptr) {
     for (int i = 0; i < depth; i++) { cout << " "; }
-    cout << stringRecord(entry) << " with " << entry->children.size() << " children" << endl;
+    cout << stringRecord(entry)
+        << " record " << entry->played << " +" << entry->wins << " -" << entry->losses 
+        << " with " << entry->children.size() << " children" << endl;
     if (recurse > 0) {
       for (auto child : entry->children) {
         printBook(child, depth + 1, recurse - 1);
@@ -140,32 +144,45 @@ string Book::stringMove(move_t move) {
 }
 
 move_t* Book::multiArmBandit(vector<move_t> moves) {
-  // TODO init random with clock hour (so we play same moves in chuncks).
   BetaChessBookEntry *entry = recurse(moves);
   if (entry == nullptr) {
     return nullptr;
   }
 
-  // TODO actually impliment MAB.
-  int games = 0;
-  for (auto child = entry->children.begin(); child != entry->children.end(); child++) {
-    games += (*child)->played;
+  vector<pair<double, move_t*>> sortedMoves;
+  for (auto child : entry->children) {
+    // See "How Not To Sort By Average Rating".
+    double score = 0;
+
+    int wins = child->wins;
+    int losses = child->losses;
+    int n = wins + losses;
+    if (n > 0) {
+      double z = 1.96;
+      double zt = z*z / n;
+      double pHat = (1.0 * wins) / n;
+      score = (pHat + zt/2 - z * sqrt( (pHat * (1 - pHat) + zt/4) / n )) / (1 + zt);
+    }
+
+    // TODO verify this win real data later.
+    //cout << "\t" << n << " = " << wins << " - " << losses << " with score: " << score << endl;
+    sortedMoves.push_back(make_pair(score, &child->move));
   }
 
-  if (games == 0) {
+  if (sortedMoves.empty()) {
     return nullptr;
   }
 
-  // NOTE this has slight bias but I don't care.
-  int gameSelected = randomGenerator() % games;
-  for (auto child = entry->children.begin(); child != entry->children.end(); child++) {
-    gameSelected -= (*child)->played;
-    if (gameSelected < 0) {
-      return &((*child)->move);
-    }
+  sort(sortedMoves.begin(), sortedMoves.end());
+  reverse(sortedMoves.begin(), sortedMoves.end());
+
+  // Small change to choose randomly "Explore"
+  if (randomGenerator() % 5 == 0) {
+    return sortedMoves[randomGenerator() % sortedMoves.size()].second;
   }
 
-  assert( false );
+  // "Exploit"
+  return sortedMoves[0].second;
 }
 
 
@@ -174,9 +191,9 @@ BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
   BetaChessBookEntry *entry = &root;
   for (move_t move : moves) {
     bool found = false;
-    for (auto child = entry->children.begin(); child != entry->children.end(); child++) {
-      if ((*child)->move == move) {
-        entry = *child;
+    for (auto child : entry->children) {
+      if (child->move == move) {
+        entry = child;
         found = true;
         break;
       }
