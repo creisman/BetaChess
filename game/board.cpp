@@ -134,7 +134,7 @@ void Board::resetBoard(void) {
 
   memset(&state, '\0', sizeof(state));
 
-  // TODO lastMove
+  // TODO figure out what this should be.
   lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
 
   for (int i = 0; i < 8; i++) {
@@ -389,7 +389,8 @@ vector<Board> Board::getLegalChildren(void) {
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s selfKing = selfColor * KING;
   // A guess where king will be (or nearby).
-  board_s kingY = -1, kingX;
+  board_s kingY = -1;
+  board_s kingX;
 
   for (int y = 0; kingY == -1 && y < 8; y++) {
     for (int x = 0; x < 8; x++) {
@@ -447,7 +448,7 @@ void Board::promoHelper(
     // promotion && underpromotion
     board_s lastPromoPiece = IS_ANTICHESS ? KING : QUEEN;
     for (board_s newPiece = KNIGHT; newPiece <= lastPromoPiece; newPiece++) {
-      // "promote" then move piece (TODO how does this affect history?)
+      // "promote" then move piece (this means history shows Queen moving to back row not a pawn)
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
       c.makeMove(y,x,    y2, x2, SPECIAL_PROMOTION);
@@ -547,7 +548,6 @@ board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
   return 0;
 }
 
-// TODO inline
 bool Board::onBoard(board_s a, board_s b) {
   return 0 <= a && a <= 7 && 0 <= b && b <= 7;
 }
@@ -566,13 +566,10 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   return make_pair(false, 0);
 }
 
-// TODO inline?
 board_s Board::getPiece(board_s a, board_s b) {
-  // TODO test using &&
   return onBoard(a, b) ? state[a][b] : 0;
 }
 
-// inline
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
   if (special == SPECIAL_CASTLE) {
     if (d == 2) {
@@ -637,17 +634,10 @@ bool Board::isWhitePiece(board_s piece) {
   return piece > 0;
 }
 
-board_s Board::peaceSign(board_s piece) {
-  // TODO is this in cmath?
-  if (piece == 0) {
-    return 0;
-  }
-  return  (piece > 0) ? WHITE : BLACK;
+inline board_s Board::peaceSign(board_s piece) {
+//  return (piece == 0) ? 0 : (piece > 0) ? WHITE : BLACK;
+  return (0 < piece) - (piece < 0);
 }
-
-
-
-
 
 string Board::algebraicNotation(move_t child_move) {
   // e4 = white king pawn double out.
@@ -720,7 +710,7 @@ string Board::algebraicNotation(move_t child_move) {
 
 
 string Board::coordinateNotation(move_t move) {
-  // TODO this partially (via inference) supports castling, ep
+  // This partially (via inference) supports castling, ep
   // and has explicit promotion.
 
   string fromTo = squareName(get<0>(move), get<1>(move)) + " - " +

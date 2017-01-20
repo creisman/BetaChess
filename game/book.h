@@ -26,7 +26,6 @@ namespace book {
     public:
       static const string ANTICHESS_FILE;
 
-      // Not Required but added because I'm OCD;
       Book();
 
       bool load(void);

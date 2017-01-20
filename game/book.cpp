@@ -18,7 +18,6 @@ using namespace book;
 const string Book::ANTICHESS_FILE = "antichess-book.txt";
 
 Book::Book() {
-  // TODO make this a class variable.
   time_t t = time(NULL);
   struct tm * local = localtime(&t);
 
@@ -164,7 +163,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
       score = (pHat + zt/2 - z * sqrt( (pHat * (1 - pHat) + zt/4) / n )) / (1 + zt);
     }
 
-    // TODO verify this win real data later.
+    // TODO verify this with real data later.
     //cout << "\t" << n << " = " << wins << " - " << losses << " with score: " << score << endl;
     sortedMoves.push_back(make_pair(score, &child->move));
   }

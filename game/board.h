@@ -10,7 +10,7 @@
 using namespace std;
 
 #define BOARD_SIZE 8
-#define IS_ANTICHESS true
+#define IS_ANTICHESS false
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
