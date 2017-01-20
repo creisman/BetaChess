@@ -1,4 +1,5 @@
 #include <cassert>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -15,6 +16,13 @@ using namespace book;
 const string Book::ANTICHESS_FILE = "antichess-book.txt";
 
 Book::Book() {
+  // TODO make this a class variable.
+  time_t t = time(NULL);
+  struct tm * local = localtime(&t);
+
+  size_t seed = local->tm_hour;
+  //cout << "Seeding Book with " << seed << endl;
+  randomGenerator.seed(seed);
 }
 
 bool Book::load(void) {
@@ -22,9 +30,9 @@ bool Book::load(void) {
 
   // read some lines do some stuff build a tree.
   root.move = make_tuple(0, 0, 0, 0, 0, 0, 0);
-  root.played = 10;
-  root.wins = 2;
-  root.losses = 1;
+  root.played = 0;
+  root.wins = 0;
+  root.losses = 0;
   root.children.clear();
 
   fstream fs(ANTICHESS_FILE, fstream::in);
@@ -60,11 +68,11 @@ bool Book::load(void) {
       raw[i] = part;
     }
 
-    BetaChessBookEntry entry;
-    entry.move = make_tuple(raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6]);
-    entry.played = raw[7];
-    entry.wins = raw[8];
-    entry.losses = raw[9];
+    BetaChessBookEntry *entry = new BetaChessBookEntry();
+    entry->move = make_tuple(raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6]);
+    entry->played = raw[7];
+    entry->wins = raw[8];
+    entry->losses = raw[9];
 
     assert( depth <= path.size() );
 
@@ -72,12 +80,21 @@ bool Book::load(void) {
       path.pop_back();
     }
 
+    if (depth == 0) {
+      root.played += entry->played;
+    }
+
     assert (depth == path.size() - 1);
-    path.back()->children.push_back(entry);
-    path.push_back(&entry);
+    (path.back()->children).push_back(entry);
+
+    path.push_back(entry);
   }
 
-  cout << "Loaded book with " << positionsLoaded << " positions" << endl;
+ 
+  // Print book for debug purpose.
+  //cout << "Loaded book with " << positionsLoaded << " positions" << endl;
+  //printBook(&root, 0, 4);
+
   return true;
 }
 
@@ -94,12 +111,14 @@ bool Book::updatePlayed(vector<move_t> moves) {
 }
 
 
-void Book::printBook(vector<move_t> moves) {
-  BetaChessBookEntry *entry = recurse(moves);
+void Book::printBook(BetaChessBookEntry *entry, int depth, int recurse) {
   if (entry != nullptr) {
+    for (int i = 0; i < depth; i++) { cout << " "; }
     cout << stringRecord(entry) << " with " << entry->children.size() << " children" << endl;
-    for (int i = 0; i < entry->children.size(); i++) {
-      cout << "\t" << i << ": " << stringMove(entry->children[i].move) << endl;
+    if (recurse > 0) {
+      for (auto child : entry->children) {
+        printBook(child, depth + 1, recurse - 1);
+      }
     }
   }
 }
@@ -127,13 +146,10 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
     return nullptr;
   }
 
-  // TODO make this a class variable.
-  mt19937 generator(909);
-
   // TODO actually impliment MAB.
   int games = 0;
   for (auto child = entry->children.begin(); child != entry->children.end(); child++) {
-    games += child->played;
+    games += (*child)->played;
   }
 
   if (games == 0) {
@@ -141,11 +157,11 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
   }
 
   // NOTE this has slight bias but I don't care.
-  int gameSelected = generator() % games;
+  int gameSelected = randomGenerator() % games;
   for (auto child = entry->children.begin(); child != entry->children.end(); child++) {
-    gameSelected -= child->played;
+    gameSelected -= (*child)->played;
     if (gameSelected < 0) {
-      return &child->move;
+      return &((*child)->move);
     }
   }
 
@@ -154,12 +170,13 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
 
 
 BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
+  cout << " Recursing to depth: " << moves.size() << endl;
   BetaChessBookEntry *entry = &root;
   for (move_t move : moves) {
     bool found = false;
     for (auto child = entry->children.begin(); child != entry->children.end(); child++) {
-      if (child->move == move) {
-        entry = &(*child);
+      if ((*child)->move == move) {
+        entry = *child;
         found = true;
         break;
       }

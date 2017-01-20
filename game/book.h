@@ -1,9 +1,10 @@
 #ifndef BOOK_H
 #define BOOK_H
 
+#include <cstring>
+#include <random>
 #include <tuple>
 #include <vector>
-#include <cstring>
 
 #include "board.h"
 
@@ -17,14 +18,13 @@ namespace book {
     short wins;
     short losses;
 
-    vector<BetaChessBookEntry> children;
+    vector<BetaChessBookEntry*> children;
   };
 
   // Book Class
   class Book {
     public:
       static const string ANTICHESS_FILE;
-      int positionsLoaded = 0;
 
       // Not Required but added because I'm OCD;
       Book();
@@ -39,15 +39,21 @@ namespace book {
       // TODO
       //bool updateResult(vector<move_t> moves, bool result);
 
-      void printBook(vector<move_t> moves);
+      void printBook(BetaChessBookEntry *entry, int depth, int recurse);
+
     private:
+      // class variables
+      int positionsLoaded = 0;
+      BetaChessBookEntry root;
+      mt19937 randomGenerator;
+
+      // private methods
       BetaChessBookEntry* recurse(vector<move_t> moves);
 
       // helper printer method.
       string stringRecord(BetaChessBookEntry *entry);
       string stringMove(move_t move);
 
-      BetaChessBookEntry root;
   };
 }
 #endif // BOOK_H
