@@ -112,7 +112,7 @@ Board::Board(string fen) {
   // TODO Next is fullmove clock
 
   // TODO matestatus
-  materialDiff = getPieceValues();
+  materialDiff = getPiecesValue();
 }
 
 
@@ -589,6 +589,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
 
   if (special == SPECIAL_EN_PASSANT) {
     get<5>(lastMove) = state[a][d];
+    updateMaterialDiff(state[a][d]);
     assert(abs(state[a][d]) == PAWN);
     state[a][d] = 0;
   }
@@ -611,6 +612,9 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   ply++;
   isWhiteTurn = !isWhiteTurn;
   lastMove = make_tuple(a, b, c, d, moving, removed, 0);
+  if (removed != 0) {
+    updateMaterialDiff(removed);
+  }
 
   // update castling.
   if (isWhite) {
@@ -741,18 +745,29 @@ string Board::fileName(board_s b) {
 }
 
 
-int Board::getPieceValues(void) {
+board_s Board::getPieceValue(board_s piece) {
+  assert(piece != 0);
+  board_s absPiece = abs(piece);
+  if (IS_ANTICHESS) {
+    // Pieces have negative value. This might be a bad idea but it simplifies right now.
+    return  -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(absPiece);
+  } else {
+    return  peaceSign(piece) * PIECE_VALUE.at(absPiece);
+  }
+}
+
+void Board::updateMaterialDiff(board_s removed) {
+  assert(removed != 0);
+  materialDiff -= getPieceValue(removed);
+}
+
+int Board::getPiecesValue(void) {
   int pieceValue = 0;
   for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
       board_s piece = state[r][c];
       if (piece != 0) {
-        board_s absPiece = abs(piece);
-        if (IS_ANTICHESS) {
-          pieceValue += -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(absPiece);
-        } else {
-          pieceValue += peaceSign(piece) * PIECE_VALUE.at(absPiece);
-        }
+        pieceValue += getPieceValue(piece);
       }
     }
   }
@@ -761,9 +776,12 @@ int Board::getPieceValues(void) {
 
 
 double Board::heuristic() {
+  //int pieceValue = getPiecesValue();
+  //assert( pieceValue == materialDiff );
+  int pieceValue = materialDiff;
+
   if (IS_ANTICHESS) {
     // TODO cache between boards.
-    int pieceValue = getPieceValues();
 
     // Was lastmove a capture? 
     int heuristicSign = isWhiteTurn ? 1 : -1;
@@ -787,7 +805,6 @@ double Board::heuristic() {
   //int whiteMobility = 0
   //int blackMobility = 0
 
-  int pieceValue = getPieceValues();
   if (pieceValue > 100) {
     // black is missing king.
     materialDiff = WHITE_WIN;

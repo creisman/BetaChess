@@ -105,7 +105,10 @@ namespace board {
       static string fileName(board_s b);
 
     private:
-      int getPieceValues(void);
+      board_s getPieceValue(board_s piece);
+      void updateMaterialDiff(board_s removed);
+      // Not the added s on Piece(s), this sums all pieces (using 8x8 search)
+      int getPiecesValue(void);
 
       void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
