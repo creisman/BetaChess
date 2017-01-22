@@ -35,7 +35,7 @@ namespace board {
       static const board_s WHITE = 1;
       static const board_s BLACK = -1;
 
-      // Pieces.
+      // Pieces
       static const board_s PAWN = 1;
       static const board_s KNIGHT = 2;
       static const board_s BISHOP = 3;
@@ -43,7 +43,7 @@ namespace board {
       static const board_s QUEEN = 5;
       static const board_s KING = 6;
 
-      // Castle status.
+      // Castle status
       static const board_s WHITE_OO = 8;
       static const board_s WHITE_OOO = 4;
       static const board_s BLACK_OO = 2;
@@ -53,6 +53,10 @@ namespace board {
       static const unsigned char SPECIAL_CASTLE = 1;
       static const unsigned char SPECIAL_EN_PASSANT = 2;
       static const unsigned char SPECIAL_PROMOTION = 3;
+
+      // Material diff special
+      static const board_s  WHITE_WIN = 100;
+      static const board_s  BLACK_WIN = -100;
 
 
       static const string PIECE_SYMBOL;
@@ -101,6 +105,8 @@ namespace board {
       static string fileName(board_s b);
 
     private:
+      int getPieceValues(void);
+
       void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
 
@@ -124,7 +130,7 @@ namespace board {
       short ply;
       bool isWhiteTurn;
       board_t state;
-      board_s mateStatus;
+      board_s materialDiff;
 
       move_t lastMove;
 

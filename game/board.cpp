@@ -112,8 +112,7 @@ Board::Board(string fen) {
   // TODO Next is fullmove clock
 
   // TODO matestatus
-  mateStatus = -2;
-
+  materialDiff = getPieceValues();
 }
 
 
@@ -127,7 +126,7 @@ Board Board::copy() {
 void Board::resetBoard(void) {
   ply = 0;
   isWhiteTurn = true;
-  mateStatus = -2;
+  materialDiff = 0;
 
   // whiteOO = whiteOOO = true;
   // blackOO = blackOOO = true;
@@ -742,19 +741,29 @@ string Board::fileName(board_s b) {
 }
 
 
-double Board::heuristic() {
-  if (IS_ANTICHESS) {
-    // TODO cache between boards.
-    int pieceValue = 0;
-    for (int r = 0; r < 8; r++) {
-      for (int c = 0; c < 8; c++) {
-        board_s piece = state[r][c];
-        if (piece != 0) {
-          // you DO NOT want pieces.
-          pieceValue += -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(abs(piece));;
+int Board::getPieceValues(void) {
+  int pieceValue = 0;
+  for (int r = 0; r < 8; r++) {
+    for (int c = 0; c < 8; c++) {
+      board_s piece = state[r][c];
+      if (piece != 0) {
+        board_s absPiece = abs(piece);
+        if (IS_ANTICHESS) {
+          pieceValue += -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(absPiece);
+        } else {
+          pieceValue += peaceSign(piece) * PIECE_VALUE.at(absPiece);
         }
       }
     }
+  }
+  return pieceValue;
+}
+
+
+double Board::heuristic() {
+  if (IS_ANTICHESS) {
+    // TODO cache between boards.
+    int pieceValue = getPieceValues();
 
     // Was lastmove a capture? 
     int heuristicSign = isWhiteTurn ? 1 : -1;
@@ -778,24 +787,12 @@ double Board::heuristic() {
   //int whiteMobility = 0
   //int blackMobility = 0
 
-  int pieceValue = 0;
-  for (int r = 0; r < 8; r++) {
-    for (int c = 0; c < 8; c++) {
-      board_s piece = state[r][c];
-      if (piece != 0) {
-        // TODO(seth) to be made faster later.
-        pieceValue += peaceSign(piece) * PIECE_VALUE.at(abs(piece));
-      }
-    }
-  }
-
+  int pieceValue = getPieceValues();
   if (pieceValue > 100) {
     // black is missing king.
-    mateStatus = 1;
+    materialDiff = WHITE_WIN;
   } else if (pieceValue < -100) {
-    mateStatus = -1;
-  } else {
-    mateStatus = 0;
+    materialDiff = BLACK_WIN;
   }
 
   //sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
