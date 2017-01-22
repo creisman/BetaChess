@@ -21,7 +21,7 @@ run-server: server
 	./betachess-server
 
 run-test: tests
-	$(time ./betachess-tests)
+	./betachess-tests
 
 #time g++ -std=c++14 -fopenmp -O2 -o betachess board.h board.cpp main.cpp
 #  time ./betachess-server

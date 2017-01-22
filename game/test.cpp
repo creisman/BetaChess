@@ -1,4 +1,6 @@
 #include <atomic>
+#include <chrono>
+#include <cstdio>
 #include <iostream>
 
 #include "board.h"
@@ -14,7 +16,8 @@ void perft(int ply, string fen) {
   }
 
   b.printBoard();
-  cout << "Size of Board class: " << sizeof(b) << endl;
+
+  auto T0 = chrono::system_clock().now();
 
   atomic<int> count(0);
   atomic<int> captures(0);
@@ -24,6 +27,10 @@ void perft(int ply, string fen) {
   atomic<int> mates(0);
   b.perft(ply, &count, &captures, &ep, &castles, &promotions, &mates);
 
+  auto T1 = chrono::system_clock().now();
+  chrono::duration<double> duration = T1 - T0;
+  double duration_s = duration.count();
+
   cout << "Perft results for" <<
           " depth (ply): " << ply << endl;
   cout << "\tcount: " << count << 
@@ -32,6 +39,7 @@ void perft(int ply, string fen) {
           "\tcastles: " << castles <<
           "\tpromotions: " << promotions <<
           "\tmates: " << mates << endl;
+  printf("\tevaled: %.0f knodes/s (%.2f seconds)", (count / duration_s / 1000), duration_s);
   cout << endl << endl;
 }
 
@@ -111,6 +119,8 @@ int main(int argc, char *argv[]) {
   if (argc > 1){
     cout << "Called with " << argc << " args" << endl;
   }
+
+  cout << "Size of Board class: " << sizeof(Board) << endl << endl;
 
   //playGame(8, "");
   //playGame(10, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
