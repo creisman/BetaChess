@@ -126,7 +126,7 @@ namespace board {
       static bool onBoard(board_s a, board_s b);
 
       // Used for counting moves in findMove
-      static int dbgCounter;
+      static atomic<int> dbgCounter;
 
 
       // 2 + 1 + 64 + 1   +   6+1  = 76 bytes.

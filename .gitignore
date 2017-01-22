@@ -1,6 +1,7 @@
 # BetaChess specific files
 betachess
 betachess-server
+betachess-tests
 
 # C++ files
 *.o

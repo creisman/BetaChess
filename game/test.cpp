@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   cout << "Size of Board class: " << sizeof(Board) << endl << endl;
 
   if (testPlay) {
-    playGame(2, 5, "");
+    playGame(4, 5, "");
     //playGame(10, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
   }
 

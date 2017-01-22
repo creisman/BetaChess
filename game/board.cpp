@@ -822,7 +822,8 @@ double Board::heuristic() {
   return pieceValue;
 }
 
-int Board::dbgCounter = 0;
+
+atomic<int> Board::dbgCounter(0);
 scored_move_t Board::findMove(int plyR) {
   Board::dbgCounter = 0;
 
@@ -836,7 +837,7 @@ scored_move_t Board::findMove(int plyR) {
   while (true) {
     auto scoredMove = findMove(plyR + addedPly, -1000.0, 1000);
     cout << "plyR " << plyR + addedPly << "=> " << Board::dbgCounter << " moves" << endl;
-    if (abs(scoredMove.first) > 400 || dbgCounter > 198000) {
+    if (abs(scoredMove.first) > 400 || dbgCounter > 700000) {
       return scoredMove;
     }
     addedPly += 1;
@@ -859,26 +860,38 @@ scored_move_t Board::findMove(int plyR, double alpha, double beta) {
     return make_pair(score, lastMove);
   }
 
+  atomic<double> atomic_alpha(alpha);
+  atomic<double> atomic_beta(beta);
+  atomic<bool> shouldBreak(false);
+  #pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
-    auto suggest = children[ci].findMove(plyR - 1, alpha, beta);
-    double value = suggest.first;
+    if (shouldBreak) {
+      continue;
+    }
 
+    auto suggest = children[ci].findMove(plyR - 1, atomic_alpha, atomic_beta);
+    double value = suggest.first;
+  
     if (isWhiteTurn) {
      if (value > bestInGen) {
         suggestion = children[ci].getLastMove();
         bestInGen = value;
-        alpha = max(alpha, bestInGen);
-        if (beta <= alpha) {
-          break; // Beta cut-off  (Opp won't pick this brach because we can do too well)
+        atomic_alpha = max(atomic_alpha.load(), bestInGen);
+        if (atomic_beta <= atomic_alpha) {
+          // Beta cut-off  (Opp won't pick this brach because we can do too well)
+          shouldBreak = true;
+          //break;
         }
       }
     } else {
      if (value < bestInGen) {
         suggestion = children[ci].getLastMove();
         bestInGen = value;
-        beta = min(beta, bestInGen);
-        if (beta <= alpha) {
-          break; // alpha cut-off  (We have a strong defense so opp will play older better branch)
+        atomic_beta = min(atomic_beta.load(), bestInGen);
+        if (atomic_beta <= atomic_alpha) {
+          // Alpha cut-off  (We have a strong defense so opp will play older better branch)
+          shouldBreak = true;
+          //break;
         }
       }
     }
