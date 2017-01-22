@@ -39,79 +39,32 @@ void perft(int ply, string fen) {
           "\tcastles: " << castles <<
           "\tpromotions: " << promotions <<
           "\tmates: " << mates << endl;
-  printf("\tevaled: %.0f knodes/s (%.2f seconds)", (count / duration_s / 1000), duration_s);
+  printf("\tevaled: %.0f knodes/s (%.2f seconds)\n", (count / duration_s / 1000), duration_s);
   cout << endl << endl;
 }
 
 
-void playGame(int ply, string fen) {
+void playGame(int moves, int ply, string fen) {
   Board b(true /* init */);
   if (!fen.empty()) {
     b = Board(fen);
     cout << "Loaded from fen: \"" << fen << "\"" << endl;
   }
 
-  b.printBoard();
+  auto T0 = chrono::system_clock().now();
 
-
-  bool weAreWhite;
-  cout << "[W]hite or [B]lack?" << endl;
-  {
-    string test;
-    cin >> test;
-    weAreWhite = (test == "w" || test == "W" ||
-                  test == "White" || test == "white");
-  }
-
-  cout << "We are playing white: " << weAreWhite << endl;
-
-  // white start with c4.
-  if (weAreWhite) {
-    b.makeMove(1, 2, 3, 2);
-    b.printBoard();
-  }
-
-  for (int halfCount = weAreWhite ? 1 : 0; halfCount < 50; halfCount++) {
-    move_t m;
-
-    // Make the move.
-    if (weAreWhite == (halfCount % 2 == 0)) {
-      auto scoredMove = b.findMove(ply);
-      m = scoredMove.second;
-      cout << "iter: " << halfCount << "\tScore: " << scoredMove.first << endl;
-    } else {
-      // read move from input.
-      string oldS, newS;
-      while (true) {
-        cout << "What move did they play?" << endl;
-        cin >> oldS;
-        cin >> newS;
-
-        cout << "confirm [" << oldS << "] to [" << newS << "]" <<endl;
-        string confirm;
-        cin >> confirm; 
-        if (confirm == "y" || confirm == "t") {
-          break;
-        }
-      }
-      m = make_tuple(oldS[1] - '1', oldS[0] - 'a',
-                     newS[1] - '1', newS[0] - 'a',
-                     1 /* moving */, 0 /* removing */,
-                     0 /* special */);
-    }
-
-    cout << Board::coordinateNotation(m) <<
-         "\tpiece: " <<(int) get<4>(m) << "\ttakes: " << (int)get<5>(m) << endl;
-
-    // signals win.
-    if (get<4>(m) == 0) {
-      break;
-    }
-
-
+  for (int move = 0; move < moves; move++) {
+    auto scoredMove = b.findMove(ply);
+    move_t m = scoredMove.second;
+    cout << "iter: " << ply << "\tScore: " << scoredMove.first << endl;
     b.makeMove(get<0>(m), get<1>(m), get<2>(m), get<3>(m));
-    b.printBoard();
+    //b.printBoard();
   }
+
+  auto T1 = chrono::system_clock().now();
+  chrono::duration<double> duration = T1 - T0;
+  double duration_s = duration.count();
+  printf("evaled: %d moves (%.2f seconds)\n\n", moves, duration_s);
 }
 
 
@@ -122,7 +75,7 @@ int main(int argc, char *argv[]) {
 
   cout << "Size of Board class: " << sizeof(Board) << endl << endl;
 
-  //playGame(8, "");
+  playGame(2, 5, "");
   //playGame(10, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 
 
