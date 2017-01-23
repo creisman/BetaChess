@@ -1,3 +1,6 @@
+TODO mark all procedures as optimized, todo, or slow.
+
+
 I'd enjoy trying to generate a large perf.
 
 it seems like it's a classic map reduce problem based around how much you can increase the reduce step.

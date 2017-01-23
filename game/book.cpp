@@ -126,12 +126,49 @@ bool Book::write(void) {
 }
 
 
-bool Book::incrementPlayed(vector<move_t> moves) {
+bool Book::updateResult(vector<move_t> moves, board_s result) {
   BetaChessBookEntry *entry = recurse(moves);
+
+  cout << "Update " << stringMove(moves.back()) <<
+          "\tat depth(" << moves.size() << ") found: " << (entry != nullptr) << endl;
+
   if (entry == nullptr) {
-    return false;
+    // Try to add if we only missed by one.
+    vector<move_t> test(moves);
+    move_t last = test.back();
+    test.pop_back();
+
+    entry = recurse(test);
+
+    if (entry == nullptr) {
+      return false;
+    }
+
+    cout << "\tAdding entry for move: " << stringMove(last) << endl;
+
+    BetaChessBookEntry *newEntry = new BetaChessBookEntry();
+    newEntry->move = last;
+    newEntry->played = 0;
+    newEntry->wins = 0;
+    newEntry->losses = 0;
+
+    entry->children.push_back(newEntry);
+    entry = newEntry;
   }
+
+  // Update result.
   entry->played += 1;
+
+  if (result == Board::RESULT_WHITE_WIN) {
+    entry->wins += 1;
+  } else if (result == Board::RESULT_BLACK_WIN) {
+    entry->wins += 1;
+  } else if (result == Board::RESULT_TIE) {
+    // pass.
+  } else {
+    cerr << "Got invalid result: " << result << endl;
+    assert (false); // Invalid result.
+  }
 }
 
 void Book::printBook() {
@@ -190,7 +227,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
     }
 
     // TODO verify this with real data later.
-    //cout << "\t" << n << " = " << wins << " - " << losses << " with score: " << score << endl;
+    cout << "\t" << n << " = " << wins << " - " << losses << " with score: " << score << endl;
     sortedMoves.push_back(make_pair(score, &child->move));
   }
 
@@ -201,8 +238,10 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
   sort(sortedMoves.begin(), sortedMoves.end());
   reverse(sortedMoves.begin(), sortedMoves.end());
 
+  double bestWinRate = sortedMoves[0].first;
+
   // Small change to choose randomly "Explore"
-  if (randomGenerator() % 5 == 0) {
+  if (bestWinRate < 0.3 || randomGenerator() % 5 == 0) {
     return sortedMoves[randomGenerator() % sortedMoves.size()].second;
   }
 
@@ -212,7 +251,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
 
 
 BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
-  cout << " Recursing to depth: " << moves.size() << endl;
+  //cout << " Recursing to depth: " << moves.size() << endl;
   BetaChessBookEntry *entry = &root;
   for (move_t move : moves) {
     bool found = false;
@@ -224,8 +263,7 @@ BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
       }
     }
     if (!found) {
-      // TODO add move or repr of move.
-      cout << "couldn't find move: " << endl;
+      //cout << "couldn't find move: " << stringMove(move) << endl;
       return nullptr;
     }
   }

@@ -12,6 +12,7 @@ using namespace std;
 using namespace board;
 
 namespace book {
+  // TODO book isn't smart enough to allow transpositions (e4, e5, d4, d5 = d4, d5, e4, e5).
   struct BetaChessBookEntry {
     move_t move;
     short played;
@@ -33,10 +34,7 @@ namespace book {
 
       move_t* multiArmBandit(vector<move_t> moves);
 
-      bool incrementPlayed(vector<move_t> moves);
-    
-      // TODO
-      //bool updateResult(vector<move_t> moves, bool result);
+      bool updateResult(vector<move_t> moves, board_s result);
 
       void printBook(void);
 

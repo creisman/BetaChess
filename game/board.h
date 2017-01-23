@@ -10,7 +10,7 @@
 using namespace std;
 
 #define BOARD_SIZE 8
-#define IS_ANTICHESS false
+#define IS_ANTICHESS true
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
@@ -55,8 +55,14 @@ namespace board {
       static const unsigned char SPECIAL_PROMOTION = 3;
 
       // Material diff special
-      static const board_s  WHITE_WIN = 100;
       static const board_s  BLACK_WIN = -100;
+      static const board_s  WHITE_WIN = 100;
+
+      // Game result
+      static const board_s RESULT_TIE = -2; // TODO reconsider value later
+      static const board_s RESULT_BLACK_WIN = BLACK_WIN;
+      static const board_s RESULT_WHITE_WIN = WHITE_WIN;
+      static const board_s RESULT_IN_PROGRESS = 0;
 
 
       static const string PIECE_SYMBOL;
@@ -93,6 +99,9 @@ namespace board {
           atomic<int> *promotions,
           atomic<int> *mates);
 
+      // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
+      board_s getGameResult();
+
       // Algebraic notation of legal move from this board.
       string algebraicNotation(move_t child_move);
 
@@ -114,7 +123,7 @@ namespace board {
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
 
       // 1-arg version is public.
-      scored_move_t findMove(int ply, double alpha, double beta);
+      scored_move_t findMoveHelper(int ply, double alpha, double beta);
 
       board_s checkAttack(bool fromWhite, board_s a, board_s b);
       board_s getPiece(board_s a, board_s b);

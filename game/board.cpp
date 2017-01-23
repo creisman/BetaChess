@@ -27,7 +27,7 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
 };
 
 const map<board_s, int> Board::PIECE_VALUE = {
-  {KING, 200},
+  {KING, 100},
   {QUEEN, 9 },
   {ROOK, 5 },
   {BISHOP, 3 },
@@ -638,10 +638,34 @@ bool Board::isWhitePiece(board_s piece) {
   return piece > 0;
 }
 
-inline board_s Board::peaceSign(board_s piece) {
+board_s Board::peaceSign(board_s piece) {
 //  return (piece == 0) ? 0 : (piece > 0) ? WHITE : BLACK;
   return (0 < piece) - (piece < 0);
 }
+
+
+board_s Board::getGameResult(void) {
+  if (IS_ANTICHESS) {
+    bool hasMove = !getLegalChildren().empty();
+
+    // To win, don't have a valid move.
+    if (hasMove) {
+      // TODO check for draw conditions (insufficent material, no move, ...).
+      return RESULT_IN_PROGRESS;
+    }
+
+    // check stalemate.
+
+    if (isWhiteTurn) {
+      return RESULT_WHITE_WIN;
+    } else {
+      return RESULT_BLACK_WIN;
+    }
+  }
+
+  assert (false); // TODO implement for non-antichess
+}
+
 
 string Board::algebraicNotation(move_t child_move) {
   // e4 = white king pawn double out.
@@ -805,10 +829,10 @@ double Board::heuristic() {
   //int whiteMobility = 0
   //int blackMobility = 0
 
-  if (pieceValue > 100) {
+  if (pieceValue > 50) {
     // black is missing king.
     materialDiff = WHITE_WIN;
-  } else if (pieceValue < -100) {
+  } else if (pieceValue < -50) {
     materialDiff = BLACK_WIN;
   }
 
@@ -823,9 +847,18 @@ double Board::heuristic() {
 }
 
 
+// Public method that setups and calls helper method.
 atomic<int> Board::dbgCounter(0);
 scored_move_t Board::findMove(int plyR) {
   Board::dbgCounter = 0;
+
+  // Check if game has a result
+  board_s result = getGameResult();
+  if (result != RESULT_IN_PROGRESS) {
+    cout << "Game Result: " << result << endl;
+    move_t emptyMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
+    return make_pair(result, emptyMove);
+  }
 
   // Check if we only have one move (if so no real choice).
   auto c = getLegalChildren();
@@ -833,19 +866,27 @@ scored_move_t Board::findMove(int plyR) {
     return make_pair(NAN, c[0].getLastMove());
   }
 
+
   int addedPly = 0;
+  scored_move_t scoredMove;
   while (true) {
-    auto scoredMove = findMove(plyR + addedPly, -1000.0, 1000);
+    scoredMove = findMoveHelper(plyR + addedPly, -1000.0, 1000);
     cout << "plyR " << plyR + addedPly << "=> " << Board::dbgCounter << " moves" << endl;
-    if (abs(scoredMove.first) > 400 || dbgCounter > 700000) {
-      return scoredMove;
+    if (abs(scoredMove.first) > 400 || dbgCounter > 500000) {
+      break;
     }
     addedPly += 1;
   }
+
+  if (scoredMove.first == NAN) {
+    // what is this?
+  }
+
+  return scoredMove;
 }
 
 
-scored_move_t Board::findMove(int plyR, double alpha, double beta) {
+scored_move_t Board::findMoveHelper(int plyR, double alpha, double beta) {
   Board::dbgCounter += 1;
   if (plyR == 0) {
     return make_pair(heuristic(), lastMove);
@@ -855,6 +896,7 @@ scored_move_t Board::findMove(int plyR, double alpha, double beta) {
   vector<Board> children = getLegalChildren();
 
   if (children.empty()) {
+    // TODO callGameResultStatus
     // Node is a winner!
     double score = isWhiteTurn ? 500 : -500;
     return make_pair(score, lastMove);
@@ -869,7 +911,7 @@ scored_move_t Board::findMove(int plyR, double alpha, double beta) {
       continue;
     }
 
-    auto suggest = children[ci].findMove(plyR - 1, atomic_alpha, atomic_beta);
+    auto suggest = children[ci].findMoveHelper(plyR - 1, atomic_alpha, atomic_beta);
     double value = suggest.first;
   
     if (isWhiteTurn) {
