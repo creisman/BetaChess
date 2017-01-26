@@ -3,7 +3,7 @@
 
 CFLAGS=-std=c++11 -O2 -fopenmp
 OBJ = board.o book.o
-DEPS = board.h
+DEPS = board.h polyglot.h
 
 %.o: %.cpp $(DEPS)
 	g++ -c -o $@ $< $(CFLAGS)

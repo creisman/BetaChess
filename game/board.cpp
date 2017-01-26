@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "polyglot.h"
 #include "board.h"
 
 using namespace std;
@@ -113,6 +114,9 @@ Board::Board(string fen) {
 
   // TODO matestatus
   materialDiff = getPiecesValue();
+  zobrist = getZobrist();
+
+  cout << "zobrist: " << hex << zobrist << endl;
 }
 
 
@@ -844,6 +848,33 @@ double Board::heuristic() {
 
   //return sumValueWhite - sumValueBlack + mobilityBonus
   return pieceValue;
+}
+
+
+uint64_t Board::getZobrist(void) {
+  uint64_t hash = 0;
+  for (int r = 0; r < 8; r++) {
+    for (int f = 0; f < 8; f++) {
+      board_s piece = state[r][f];
+      if (piece != 0) {
+        short kindOfPiece = 2 * (abs(piece) - 1)  + isWhitePiece(piece);
+        short index = 64 * kindOfPiece + 8 * r + f;
+        assert (0 <= index && index < 768);
+        hash ^= POLYGLOT_RANDOM[index];
+      }
+    }
+  }
+
+  hash ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
+  hash ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
+  hash ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
+  hash ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
+
+  // TODO enpassant.
+
+  hash ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
+
+  return hash;
 }
 
 

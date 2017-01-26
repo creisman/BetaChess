@@ -84,6 +84,8 @@ namespace board {
 
       double heuristic(void);
 
+      uint64_t getZobrist(void);
+
       string boardStr(void);
       void printBoard(void);
 
@@ -119,6 +121,8 @@ namespace board {
       // Not the added s on Piece(s), this sums all pieces (using 8x8 search)
       int getPiecesValue(void);
 
+  
+
       void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
 
@@ -138,7 +142,8 @@ namespace board {
       static atomic<int> dbgCounter;
 
 
-      // 2 + 1 + 64 + 1   +   6+1  = 76 bytes.
+      // 4 + 2 + 1 + 64 + 1   +   6+1  = 80 bytes.
+      uint64_t zobrist;
       short ply;
       bool isWhiteTurn;
       board_t state;

@@ -227,6 +227,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
     }
 
     // TODO verify this with real data later.
+    // TODO add move name.
     cout << "\t" << n << " = " << wins << " - " << losses << " with score: " << score << endl;
     sortedMoves.push_back(make_pair(score, &child->move));
   }
@@ -242,6 +243,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
 
   // Small change to choose randomly "Explore"
   if (bestWinRate < 0.3 || randomGenerator() % 5 == 0) {
+    cout << "\tMAB is exploring" << endl;
     return sortedMoves[randomGenerator() % sortedMoves.size()].second;
   }
 

@@ -69,8 +69,9 @@ void playGame(int moves, int ply, string fen) {
 
 
 int main(int argc, char *argv[]) {
-  bool testPlay = true;
+  bool testPlay = false;
   bool testPerft = false;
+  bool testHash = true;
 
   if (argc > 1){
     cout << "Called with " << argc << " args" << endl;
@@ -98,6 +99,16 @@ int main(int argc, char *argv[]) {
 
     // "Position 4"
     perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -");
+  }
+
+
+  if (testHash) {
+    Board b(true /* init */);
+    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x463b96181691fc9c) << endl;
+
+    string fen = "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3";
+    b = Board(fen);
+    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x652a607ca3f242c1) << endl;
   }
 
   return 0;
