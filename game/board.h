@@ -92,10 +92,6 @@ namespace board {
       scored_move_t findMove(int minNodes);
       void makeMove(move_t move);
 
-      // Make these private?
-      void makeMove(board_s a, board_s b, board_s c, board_s d);
-      void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
-
       void perft(int ply,
           atomic<int> *count,
           atomic<int> *captures,
@@ -124,7 +120,8 @@ namespace board {
       // Not the added s on Piece(s), this sums all pieces (using 8x8 search)
       int getPiecesValue(void);
 
-  
+      void makeMove(board_s a, board_s b, board_s c, board_s d);
+      void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       void promoHelper(vector<Board> *all_moves,
           bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);

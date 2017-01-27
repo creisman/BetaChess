@@ -51,11 +51,6 @@ void repLoop(void) {
       nodes += generator() % 2000000;
     }
 
-    // Black needs help to win I guess.
-    if (moves.size() % 2 == 1) {
-      nodes *= 1.4;
-    }
-
     suggest = boardT->findMove(nodes);
   }
 
@@ -115,7 +110,8 @@ int main(void) {
   bookT.load();
 
   // Do some serious thery
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 1000; i++) {
+    // TODO add timing.
     playGame();
   }
 

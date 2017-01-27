@@ -9,7 +9,7 @@ DEPS = board.h polyglot.h
 	g++ -c -o $@ $< $(CFLAGS)
 
 server: $(OBJ) server.cpp
-	g++ -o betachess-server $(CFLAGS) -levent $(OBJ) server.cpp
+	g++ -o betachess-server $(CFLAGS) $(OBJ) server.cpp -levent
 
 tests: $(OBJ) test.cpp
 	g++ -o betachess-tests $(CFLAGS) $(OBJ) test.cpp
