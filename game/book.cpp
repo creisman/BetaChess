@@ -15,6 +15,7 @@
 using namespace std;
 using namespace book;
 
+const size_t Book::MAX_DEPTH = 5;
 const string Book::ANTICHESS_FILE = "antichess-book.txt";
 
 Book::Book() {
@@ -126,48 +127,47 @@ bool Book::write(void) {
 }
 
 
-bool Book::updateResult(vector<move_t> moves, board_s whiteResult) {
-  BetaChessBookEntry *entry = recurse(moves);
+bool Book::updateResult(vector<move_t> moves, board_s result) {
+  BetaChessBookEntry *entry = &root;
+  Board b(true /* init */);
 
-  cout << "Update " << stringMove(moves.back()) <<
-          "\tat depth(" << moves.size() << ") found: " << (entry != nullptr) << endl;
+  cout << "End result was " << result << " (for white)" << endl;
+  for (int i = 0; i < min(MAX_DEPTH, moves.size()); i++) {
+    //b.makeMove(moves[i]);
+    assert (b.getLastMove() == moves[i]);
+    string moveName = b.algebraicNotation(b.getLastMove());
 
-  if (entry == nullptr) {
-    // Try to add if we only missed by one.
-    vector<move_t> test(moves);
-    move_t last = test.back();
-    test.pop_back();
+    BetaChessBookEntry *newEntry = recurseMove(entry, moves[i]);
+    if (newEntry == nullptr) {
+      cout << "\tAdding entry for move(" << i << "): " << moveName << endl;
+      BetaChessBookEntry *newEntry = new BetaChessBookEntry();
+      newEntry->move = moves[i];
+      newEntry->played = 0;
+      newEntry->wins = 0;
+      newEntry->losses = 0;
 
-    entry = recurse(test);
-
-    if (entry == nullptr) {
-      return false;
+      entry->children.push_back(newEntry);
+    } else {
+      cout << "\tUpdate (" << i << "): " << moveName << 
+              "\t +" << newEntry->wins <<
+                " -" << newEntry->losses << 
+                " (from " << newEntry->played << ")" << endl;
     }
-
-    cout << "\tAdding entry for move: " << stringMove(last) << endl;
-
-    BetaChessBookEntry *newEntry = new BetaChessBookEntry();
-    newEntry->move = last;
-    newEntry->played = 0;
-    newEntry->wins = 0;
-    newEntry->losses = 0;
-
-    entry->children.push_back(newEntry);
     entry = newEntry;
-  }
 
-  // Update result.
-  entry->played += 1;
+    // Update result.
+    entry->played += 1;
 
-  if (result == Board::RESULT_WHITE_WIN) {
-    entry->wins += 1;
-  } else if (result == Board::RESULT_BLACK_WIN) {
-    entry->wins += 1;
-  } else if (result == Board::RESULT_TIE) {
-    // pass.
-  } else {
-    cerr << "Got invalid result: " << result << endl;
-    assert (false); // Invalid result.
+    if (result == Board::RESULT_WHITE_WIN) {
+      entry->wins += 1;
+    } else if (result == Board::RESULT_BLACK_WIN) {
+      entry->wins += 1;
+    } else if (result == Board::RESULT_TIE) {
+      // pass.
+    } else {
+      cerr << "Got invalid result: " << result << endl;
+      assert (false); // Invalid result.
+    }
   }
 }
 
@@ -206,7 +206,7 @@ string Book::stringMove(move_t move) {
 }
 
 move_t* Book::multiArmBandit(vector<move_t> moves) {
-  BetaChessBookEntry *entry = recurse(moves);
+  BetaChessBookEntry *entry = recurseMoves(&root, moves);
   if (entry == nullptr) {
     return nullptr;
   }
@@ -223,7 +223,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
       double z = 1.96;
       double zt = z*z / n;
 
-      int goodResult = (moves.size() % 2 == 0) wins : losses; 
+      int goodResult = (moves.size() % 2 == 0) ? wins : losses; 
       double pHat = (1.0 * goodResult) / n;
       score = (pHat + zt/2 - z * sqrt( (pHat * (1 - pHat) + zt/4) / n )) / (1 + zt);
     }
@@ -254,24 +254,26 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
 }
 
 
-BetaChessBookEntry* Book::recurse(vector<move_t> moves) {
-  //cout << " Recursing to depth: " << moves.size() << endl;
-  BetaChessBookEntry *entry = &root;
+BetaChessBookEntry* Book::recurseMove(BetaChessBookEntry *entry, move_t moves) {
+  //for (auto child : entry->children) {
+  //  if (child->move == move) {
+  //    return child;
+  //  }
+  //}
+  //cout << "couldn't find move: " << stringMove(move) << endl;
+  return nullptr;
+}
+
+
+BetaChessBookEntry* Book::recurseMoves(BetaChessBookEntry *entry, vector<move_t> moves) {
+  BetaChessBookEntry *result = entry;
   for (move_t move : moves) {
-    bool found = false;
-    for (auto child : entry->children) {
-      if (child->move == move) {
-        entry = child;
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      //cout << "couldn't find move: " << stringMove(move) << endl;
-      return nullptr;
+    result = recurseMove(result, move);
+    if (result == nullptr) {
+      return result;
     }
   }
-  return entry;
+  return result;
 }
 
 

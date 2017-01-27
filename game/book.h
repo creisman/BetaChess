@@ -25,6 +25,7 @@ namespace book {
   // Book Class
   class Book {
     public:
+      static const size_t MAX_DEPTH;
       static const string ANTICHESS_FILE;
 
       Book();
@@ -34,6 +35,7 @@ namespace book {
 
       move_t* multiArmBandit(vector<move_t> moves);
 
+      // see Board.h getGameResult() for player agnostic result.
       bool updateResult(vector<move_t> moves, board_s result);
 
       void printBook(void);
@@ -45,7 +47,8 @@ namespace book {
       mt19937 randomGenerator;
 
       // private methods
-      BetaChessBookEntry* recurse(vector<move_t> moves);
+      BetaChessBookEntry* recurseMove(BetaChessBookEntry *entry, move_t move);
+      BetaChessBookEntry* recurseMoves(BetaChessBookEntry *entry, vector<move_t> moves);
       void printBook(BetaChessBookEntry *entry, int depth, int recurse);
 
       // helper printer method.

@@ -86,12 +86,8 @@ string update(string move) {
     if (result != Board::RESULT_IN_PROGRESS) {
       cout << "Server update, game result: " << (int) result << endl;
 
-      // Update some small amount of the book.
-      vector<move_t> bookMoves;
-      for (int i = 0; i < 5; i++) {
-        bookMoves.push_back(moves[i]);
-        bookT.updateResult(bookMoves, result /* for white */);
-      }
+      // Update some of the book (let Book figure out how much).
+      bookT.updateResult(moves, result /* for white */);
     }
     bookT.write();
   }
