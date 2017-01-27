@@ -89,7 +89,10 @@ namespace board {
       string boardStr(void);
       void printBoard(void);
 
-      scored_move_t findMove(int ply);
+      scored_move_t findMove(int minNodes);
+      void makeMove(move_t move);
+
+      // Make these private?
       void makeMove(board_s a, board_s b, board_s c, board_s d);
       void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 

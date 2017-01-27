@@ -57,7 +57,7 @@ void playGame(int moves, int ply, string fen) {
     auto scoredMove = b.findMove(ply);
     move_t m = scoredMove.second;
     cout << "iter: " << ply << "\tScore: " << scoredMove.first << endl;
-    b.makeMove(get<0>(m), get<1>(m), get<2>(m), get<3>(m));
+    b.makeMove(m);
     //b.printBoard();
   }
 

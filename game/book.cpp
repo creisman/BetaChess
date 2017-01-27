@@ -89,7 +89,7 @@ bool Book::load(void) {
     path.push_back(entry);
   }
 
- 
+
   // Print book for debug purpose.
   //cout << "Loaded book with " << positionsLoaded << " positions" << endl;
   //printBook();
@@ -116,7 +116,7 @@ bool writeHelper(ostream& fs, string prefix, BetaChessBookEntry *entry) {
     writeHelper(fs, prefix + " ", child);
   }
 }
-  
+
 
 bool Book::write(void) {
   string outFile = ANTICHESS_FILE + ".tmp";
@@ -131,28 +131,31 @@ bool Book::updateResult(vector<move_t> moves, board_s result) {
   BetaChessBookEntry *entry = &root;
   Board b(true /* init */);
 
-  cout << "End result was " << result << " (for white)" << endl;
+  cout << "End result was " << (int) result << " (for white)" << endl;
   for (int i = 0; i < min(MAX_DEPTH, moves.size()); i++) {
-    //b.makeMove(moves[i]);
+    move_t move = moves[i];
+    b.makeMove(move);
+
     assert (b.getLastMove() == moves[i]);
     string moveName = b.algebraicNotation(b.getLastMove());
 
-    BetaChessBookEntry *newEntry = recurseMove(entry, moves[i]);
-    if (newEntry == nullptr) {
+    BetaChessBookEntry *newEntry = recurseMove(entry, move);
+    if (newEntry != nullptr) {
+      cout << "\tUpdate (" << i << "): " << moveName <<
+              "\t +" << newEntry->wins <<
+                " -" << newEntry->losses <<
+                " (from " << newEntry->played << ")" << endl;
+    } else {
       cout << "\tAdding entry for move(" << i << "): " << moveName << endl;
-      BetaChessBookEntry *newEntry = new BetaChessBookEntry();
+      newEntry = new BetaChessBookEntry();
       newEntry->move = moves[i];
       newEntry->played = 0;
       newEntry->wins = 0;
       newEntry->losses = 0;
 
       entry->children.push_back(newEntry);
-    } else {
-      cout << "\tUpdate (" << i << "): " << moveName << 
-              "\t +" << newEntry->wins <<
-                " -" << newEntry->losses << 
-                " (from " << newEntry->played << ")" << endl;
     }
+    assert (newEntry != nullptr);
     entry = newEntry;
 
     // Update result.
@@ -161,7 +164,7 @@ bool Book::updateResult(vector<move_t> moves, board_s result) {
     if (result == Board::RESULT_WHITE_WIN) {
       entry->wins += 1;
     } else if (result == Board::RESULT_BLACK_WIN) {
-      entry->wins += 1;
+      entry->losses += 1;
     } else if (result == Board::RESULT_TIE) {
       // pass.
     } else {
@@ -179,7 +182,7 @@ void Book::printBook(BetaChessBookEntry *entry, int depth, int recurse) {
   if (entry != nullptr) {
     for (int i = 0; i < depth; i++) { cout << " "; }
     cout << stringRecord(entry)
-        << " record " << entry->played << " +" << entry->wins << " -" << entry->losses 
+        << " record " << entry->played << " +" << entry->wins << " -" << entry->losses
         << " with " << entry->children.size() << " children" << endl;
     if (recurse > 0) {
       for (auto child : entry->children) {
@@ -223,7 +226,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
       double z = 1.96;
       double zt = z*z / n;
 
-      int goodResult = (moves.size() % 2 == 0) ? wins : losses; 
+      int goodResult = (moves.size() % 2 == 0) ? wins : losses;
       double pHat = (1.0 * goodResult) / n;
       score = (pHat + zt/2 - z * sqrt( (pHat * (1 - pHat) + zt/4) / n )) / (1 + zt);
     }
@@ -246,6 +249,9 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
   // Small change to choose randomly "Explore"
   if (bestWinRate < 0.3 || randomGenerator() % 5 == 0) {
     cout << "\tMAB is exploring" << endl;
+    if (randomGenerator() % 2 == 0 && sortedMoves.size() < 3) {
+      return nullptr;
+    }
     return sortedMoves[randomGenerator() % sortedMoves.size()].second;
   }
 
@@ -254,12 +260,12 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
 }
 
 
-BetaChessBookEntry* Book::recurseMove(BetaChessBookEntry *entry, move_t moves) {
-  //for (auto child : entry->children) {
-  //  if (child->move == move) {
-  //    return child;
-  //  }
-  //}
+BetaChessBookEntry* Book::recurseMove(BetaChessBookEntry *entry, move_t move) {
+  for (auto child : entry->children) {
+    if (child->move == move) {
+      return child;
+    }
+  }
   //cout << "couldn't find move: " << stringMove(move) << endl;
   return nullptr;
 }

@@ -574,6 +574,26 @@ board_s Board::getPiece(board_s a, board_s b) {
   return onBoard(a, b) ? state[a][b] : 0;
 }
 
+void Board::makeMove(move_t move) {
+  board_s a = get<0>(move);
+  board_s b = get<1>(move);
+  board_s c = get<2>(move);
+  board_s d = get<3>(move);
+  board_s moving  = get<4>(move);
+  board_s capture = get<5>(move);
+  unsigned char special = get<6>(move);
+  
+  if (special != SPECIAL_EN_PASSANT) {
+    assert (state[c][d] == capture);
+  }
+
+  state[a][b] = moving;
+  makeMove(a, b, c, d, special);
+  // This is the special magic for promotions.
+
+  assert(this->getLastMove() == move);
+}
+
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
   if (special == SPECIAL_CASTLE) {
     if (d == 2) {
@@ -880,7 +900,7 @@ uint64_t Board::getZobrist(void) {
 
 // Public method that setups and calls helper method.
 atomic<int> Board::dbgCounter(0);
-scored_move_t Board::findMove(int plyR) {
+scored_move_t Board::findMove(int minNodes) {
   Board::dbgCounter = 0;
 
   // Check if game has a result
@@ -898,20 +918,19 @@ scored_move_t Board::findMove(int plyR) {
   }
 
 
-  int addedPly = 0;
+  int plyR = 4;
   scored_move_t scoredMove;
   while (true) {
-    scoredMove = findMoveHelper(plyR + addedPly, -1000.0, 1000);
-    cout << "plyR " << plyR + addedPly << "=> " << Board::dbgCounter << " moves" << endl;
-    if (abs(scoredMove.first) > 400 || dbgCounter > 500000) {
+    scoredMove = findMoveHelper(plyR, -1000.0, 1000);
+    if (abs(scoredMove.first) > 400 || dbgCounter > minNodes) {
       break;
     }
-    addedPly += 1;
+    plyR += 1;
   }
 
-  if (scoredMove.first == NAN) {
-    // what is this?
-  }
+  // scoredMove.first == NAN when it's a forced move.
+
+  cout << "\t\tplyR " << plyR << "=> " << Board::dbgCounter << " nodes" << endl;
 
   return scoredMove;
 }

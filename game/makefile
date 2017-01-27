@@ -14,14 +14,20 @@ server: $(OBJ) server.cpp
 tests: $(OBJ) test.cpp
 	g++ -o betachess-tests $(CFLAGS) $(OBJ) test.cpp
 
+gen-book: $(OBJ)
+	g++ -o betachess-gen-book $(CFLAGS) $(OBJ) genBook.cpp
+
 clean:
-	rm -f betachess-tests betachess-server *.o *.gch
+	rm -f betachess-* *.o *.gch
 
 run-server: server
 	./betachess-server
 
 run-test: tests
 	./betachess-tests
+
+run-gen-book: gen-book
+	./betachess-gen-book
 
 #time g++ -std=c++14 -fopenmp -O2 -o betachess board.h board.cpp main.cpp
 #  time ./betachess-server
