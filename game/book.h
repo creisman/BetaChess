@@ -16,8 +16,8 @@ namespace book {
   struct BetaChessBookEntry {
     move_t move;
     short played;
-    short wins;
-    short losses;
+    short wins; // Measured by white.
+    short losses; // Measured by white.
 
     vector<BetaChessBookEntry*> children;
   };

@@ -90,7 +90,7 @@ string update(string move) {
       vector<move_t> bookMoves;
       for (int i = 0; i < 5; i++) {
         bookMoves.push_back(moves[i]);
-        bookT.updateResult(bookMoves, result);
+        bookT.updateResult(bookMoves, result /* for white */);
       }
     }
     bookT.write();

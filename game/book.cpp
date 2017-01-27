@@ -126,7 +126,7 @@ bool Book::write(void) {
 }
 
 
-bool Book::updateResult(vector<move_t> moves, board_s result) {
+bool Book::updateResult(vector<move_t> moves, board_s whiteResult) {
   BetaChessBookEntry *entry = recurse(moves);
 
   cout << "Update " << stringMove(moves.back()) <<
@@ -222,7 +222,9 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
     if (n > 0) {
       double z = 1.96;
       double zt = z*z / n;
-      double pHat = (1.0 * wins) / n;
+
+      int goodResult = (moves.size() % 2 == 0) wins : losses; 
+      double pHat = (1.0 * goodResult) / n;
       score = (pHat + zt/2 - z * sqrt( (pHat * (1 - pHat) + zt/4) / n )) / (1 + zt);
     }
 
