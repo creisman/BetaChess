@@ -115,5 +115,7 @@ int main(void) {
     playGame();
   }
 
+  bookT.printBook();
+
   return 0;
 }

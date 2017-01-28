@@ -49,7 +49,7 @@ namespace book {
       // private methods
       BetaChessBookEntry* recurseMove(BetaChessBookEntry *entry, move_t move);
       BetaChessBookEntry* recurseMoves(BetaChessBookEntry *entry, vector<move_t> moves);
-      void printBook(BetaChessBookEntry *entry, int depth, int recurse);
+      void printBook(Board &b, BetaChessBookEntry *entry, int depth, int recurse);
 
       // helper printer method.
       string stringRecord(BetaChessBookEntry *entry);

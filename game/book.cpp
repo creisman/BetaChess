@@ -175,18 +175,32 @@ bool Book::updateResult(vector<move_t> moves, board_s result) {
 }
 
 void Book::printBook() {
-  printBook(&root, 0, 10);
+  Board b(true /* init */);
+  printBook(b, &root, 0, 10);
 }
 
-void Book::printBook(BetaChessBookEntry *entry, int depth, int recurse) {
+void Book::printBook(Board &b, BetaChessBookEntry *entry, int depth, int recurse) {
   if (entry != nullptr) {
-    for (int i = 0; i < depth; i++) { cout << " "; }
-    cout << stringRecord(entry)
-        << " record " << entry->played << " +" << entry->wins << " -" << entry->losses
-        << " with " << entry->children.size() << " children" << endl;
+    string start = "";
+    start.resize(depth, ' ');
+
+    Board c = b.copy();
+    if (entry != &root) {
+      c.makeMove(entry->move);
+    }
+    start += (entry == &root) ? "START" : b.algebraicNotation(entry->move);
+
+    // Pad out depth / move data.
+    start.resize(20, ' ');
+    cout << start
+    //     << " (" << stringMove(entry->move) << ") "
+         << stringRecord(entry)
+         << " record " << entry->played << " +" << entry->wins << " -" << entry->losses
+         << " with " << entry->children.size() << " children" << endl;
     if (recurse > 0) {
       for (auto child : entry->children) {
-        printBook(child, depth + 1, recurse - 1);
+        // Consider sorting by # played or success.
+        printBook(c, child, depth + 1, recurse - 1);
       }
     }
   }
@@ -194,7 +208,7 @@ void Book::printBook(BetaChessBookEntry *entry, int depth, int recurse) {
 
 
 string Book::stringRecord(BetaChessBookEntry *entry) {
-  return "Games: " + to_string(entry->played) +
+  return "p: " + to_string(entry->played) +
     " w: " + to_string(entry->wins) +
     " l: " + to_string(entry->losses);
 }
