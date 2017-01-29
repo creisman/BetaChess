@@ -88,7 +88,7 @@ void playGame(void) {
   boardT = new Board(true /* init */);
   moves.clear();
 
-  while (!boardT->getGameResult() != Board::RESULT_IN_PROGRESS) {
+  while (!boardT->getGameResult_slow() != Board::RESULT_IN_PROGRESS) {
     repLoop();
 
     // TODO hack for fifty move rule.
@@ -97,8 +97,9 @@ void playGame(void) {
     }
   }
 
-  cout << "Game ended with result " << (int) boardT->getGameResult() << endl;
-  bookT.updateResult(moves, boardT->getGameResult());
+  board_s gameResult = boardT->getGameResult_slow();
+  cout << "Game ended with result " << (int) gameResult << endl;
+  bookT.updateResult(moves, gameResult);
   bookT.write();
 }
 
