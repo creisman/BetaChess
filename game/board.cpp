@@ -112,7 +112,6 @@ Board::Board(string fen) {
   // TODO Next is halfmove clock
   // TODO Next is fullmove clock
 
-  // TODO matestatus
   materialDiff = getPiecesValue_slow();
   zobrist = getZobrist_slow();
 }
@@ -303,10 +302,8 @@ vector<Board> Board::getChildren(void) {
     }
   }
 
-  // Castling 
-  if (!hasCapture || !IS_ANTICHESS) {
-    // TODO: This is likely broken for Antichess (but not CRITICALLY?)
-
+  // Castling (not allowed in ANTICHESS)
+  if (!IS_ANTICHESS) {
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {
@@ -456,13 +453,24 @@ void Board::promoHelper(
   board_s y,
   board_s x2,
   board_s y2) {
+
+  assert(state[y][x] == selfColor * PAWN);
   if ((isWhiteTurn && y2 == 7) || (!isWhiteTurn && y2 == 0)) {
+    board_s movingPawn = state[y][x];
     // promotion && underpromotion
     board_s lastPromoPiece = IS_ANTICHESS ? KING : QUEEN;
     for (board_s newPiece = KNIGHT; newPiece <= lastPromoPiece; newPiece++) {
       // "promote" then move piece (this means history shows Queen moving to back row not a pawn)
       Board c = copy();
-      c.state[y][x] = selfColor * newPiece;
+
+      // We replace the pawn with a newPiece.
+      board_s signedPiece = selfColor * newPiece;
+      c.state[y][x] = signedPiece;
+
+      c.materialDiff += getPieceValue(signedPiece) - getPieceValue(movingPawn);
+      c.updateZobristPiece(y, x, movingPawn);
+      c.updateZobristPiece(y, x, signedPiece);
+
       c.makeMove(y,x,    y2, x2, SPECIAL_PROMOTION);
       all_moves->push_back(c);
     }
@@ -583,32 +591,46 @@ void Board::makeMove(move_t move) {
   board_s b = get<1>(move);
   board_s c = get<2>(move);
   board_s d = get<3>(move);
-  board_s moving  = get<4>(move);
-  board_s capture = get<5>(move);
   unsigned char special = get<6>(move);
   
   if (special != SPECIAL_EN_PASSANT) {
+    board_s capture = get<5>(move);
     assert (state[c][d] == capture);
   }
 
-  state[a][b] = moving;
+  if (special == SPECIAL_PROMOTION) {
+    board_s moving  = get<4>(move);
+    state[a][b] = moving;
+    updateZobristPiece(a, b, peaceSign(moving) * PAWN);
+    updateZobristPiece(a, b, moving);
+    // This is the special magic for promotions.
+  }
   makeMove(a, b, c, d, special);
-  // This is the special magic for promotions.
 
   assert(this->getLastMove() == move);
 }
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
   if (special == SPECIAL_CASTLE) {
+    board_s ourKing = state[a][4];
+    board_s ourRook = peaceSign(state[a][4]) * ROOK;
+
     if (d == 2) {
-      assert(abs(state[a][0]) == ROOK);
+      assert( state[a][0] == ourRook );
       state[a][3] = state[a][0];
       state[a][0] = 0;
-    } else {
-      assert(d == 6);
-      assert(abs(state[a][7]) == ROOK);
+
+      updateZobristPiece(a, 0, ourRook);
+      updateZobristPiece(a, 3, ourRook);
+    } else if (d == 6) {
+      assert( state[a][7] == ourRook );
       state[a][5] = state[a][7];
       state[a][7] = 0;
+
+      updateZobristPiece(a, 5, ourRook);
+      updateZobristPiece(a, 7, ourRook);
+    } else {
+      assert (false); // unknown destination;
     }
   }
 
@@ -616,10 +638,14 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
   get<6>(lastMove) = special;
 
   if (special == SPECIAL_EN_PASSANT) {
-    get<5>(lastMove) = state[a][d];
-    updateMaterialDiff(state[a][d]);
-    assert(abs(state[a][d]) == PAWN);
+    board_s theirPawn = state[a][d];
+    assert(abs(theirPawn) == PAWN);
+
     state[a][d] = 0;
+    // Note that we captured a pawn.
+    get<5>(lastMove) = theirPawn; 
+    updateMaterialDiff(theirPawn);
+    updateZobristPiece(a, d, theirPawn);
   }
 }
 
@@ -635,6 +661,8 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
 
   state[a][b] = 0;
   state[c][d] = moving;
+  updateZobristPiece(a, b, moving);
+  updateZobristPiece(c, d, moving);
 
   // update turn state
   ply++;
@@ -642,6 +670,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   lastMove = make_tuple(a, b, c, d, moving, removed, 0);
   if (removed != 0) {
     updateMaterialDiff(removed);
+    updateZobristPiece(c, d, removed);
   }
 
   // update castling.
@@ -878,15 +907,15 @@ uint64_t Board::getZobrist_slow(void) {
       }
     }
   }
-
+/*
   zobrist ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
   zobrist ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
   zobrist ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
   zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
-
+*/
   // TODO enpassant.
 
-  zobrist ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
+  //zobrist ^= (isWhiteTurn == true) * POLYGLOT_RANDOM[780];
   return zobrist;
 }
 
@@ -1058,6 +1087,8 @@ void Board::perft(
     board_s moveSpecial = get<6>(move);
 
     count->fetch_add(1);
+    uint64_t test = zobrist;
+    assert( test == getZobrist_slow() );
 
     if (get<5>(move) != 0) { captures->fetch_add(1); }
     if (moveSpecial == SPECIAL_EN_PASSANT) { ep->fetch_add(1); }

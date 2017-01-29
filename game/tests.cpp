@@ -70,8 +70,8 @@ void playGame(int moves, int ply, string fen) {
 
 int main(int argc, char *argv[]) {
   bool testPlay = false;
-  bool testPerft = false;
-  bool testHash = true;
+  bool testPerft = true;
+  bool testHash = false;
 
   if (argc > 1){
     cout << "Called with " << argc << " args" << endl;
@@ -109,6 +109,8 @@ int main(int argc, char *argv[]) {
     string fen = "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3";
     b = Board(fen);
     cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x652a607ca3f242c1) << dec << endl;
+
+    // TODO do a complex series of makeMoves (O-O-O, O-O, en_passant, ...) and verify.
   }
 
   return 0;
