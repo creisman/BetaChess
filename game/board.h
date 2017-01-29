@@ -81,6 +81,8 @@ namespace board {
       string boardStr(void);
       void printBoard(void);
 
+      uint64_t getZobrist(void);
+
       move_t getLastMove(void);
       vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
@@ -133,7 +135,7 @@ namespace board {
       // Note the added s in Piece(s), this sums all pieces (using 8x8 search)
       int getPiecesValue_slow(void);
 
-      static void updateZobristPiece(board_s a, board_s b, board_s piece);
+      void updateZobristPiece(board_s a, board_s b, board_s piece);
       uint64_t getZobrist_slow(void);
 
 

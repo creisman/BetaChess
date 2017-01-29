@@ -104,11 +104,11 @@ int main(int argc, char *argv[]) {
 
   if (testHash) {
     Board b(true /* init */);
-    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x463b96181691fc9c) << endl;
+    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x463b96181691fc9c) << dec << endl;
 
     string fen = "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3";
     b = Board(fen);
-    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x652a607ca3f242c1) << endl;
+    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x652a607ca3f242c1) << dec << endl;
   }
 
   return 0;

@@ -11,13 +11,13 @@ DEPS = board.h polyglot.h
 server: $(OBJ) server.cpp
 	g++ -o betachess-server $(CFLAGS) $(OBJ) server.cpp -levent
 
-tests: $(OBJ) test.cpp
-	g++ -o betachess-tests $(CFLAGS) $(OBJ) test.cpp
+tests: $(OBJ) tests.cpp
+	g++ -o betachess-tests $(CFLAGS) $(OBJ) tests.cpp
 
-eval-tests: $(OBJ)
+eval-tests: $(OBJ) evalTests.cpp
 	g++ -o betachess-eval-tests $(CFLAGS) $(OBJ) evalTests.cpp
 
-gen-book: $(OBJ)
+gen-book: $(OBJ) genBook.cpp
 	g++ -o betachess-gen-book $(CFLAGS) $(OBJ) genBook.cpp
 
 clean:

@@ -190,6 +190,10 @@ void Board::printBoard(void) {
   cout << boardStr() << endl;
 }
 
+uint64_t Board::getZobrist(void) {
+  return zobrist;
+}
+
 move_t Board::getLastMove(void) {
   return lastMove;
 }
@@ -870,7 +874,7 @@ uint64_t Board::getZobrist_slow(void) {
     for (int f = 0; f < 8; f++) {
       board_s piece = state[r][f];
       if (piece != 0) {
-        updateZobristPiece(a, b, piece);
+        updateZobristPiece(r, f, piece);
       }
     }
   }
