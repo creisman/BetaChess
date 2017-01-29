@@ -27,7 +27,7 @@
       console.log("doesn't make sense to request suggest with mismatched move numbers");
     }
 
-    let isOurAccount = /peace-call|betachess/i.test($('.username .text').text())
+    let isOurAccount = /peace-call|betachess/.test($('.username .text').text())
     let isOurFirstTurn = (moves.length < 2) && isOurAccount;
     let hasNoResult = $('.moves .result').length == 0;
     let isActive = ($('.clock.running').length != 0 || isOurFirstTurn) && hasNoResult;
