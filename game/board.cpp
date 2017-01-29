@@ -645,12 +645,16 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
     // if king moves (king can't be captured so if it leaves square it moves)
     if (a == 0 && b == 4 && moving == KING) { castleStatus &= 3; } // whiteOO = 0, whiteOOO = 0
 
+    // TODO correctly apply zobrist rules here.
+
     // rook moving back doesn't count.
     if (c == 0 && d == 0 && moving == ROOK) { castleStatus &= 7; } // whiteOO = 0
     if (c == 0 && d == 7 && moving == ROOK) { castleStatus &= 11; } // whiteOOO =0
   } else { 
     // if king moves (king can't be captured so if it leaves square it moves)
     if (a == 7 && b == 4 && moving == -KING) { castleStatus &= 12; } // blackOO = 0, blackOOO = 0
+
+    // TODO correctly apply zobrist rules here.
 
     // rook moving back doesn't count.
     if (c == 7 && d == 0 && moving == -ROOK) { castleStatus &= 13; } // blackOO = 0
@@ -852,30 +856,34 @@ int Board::getPiecesValue_slow(void) {
 }
 
 
+void Board::updateZobristPiece(board_s a, board_s b, board_s piece) {
+  short kindOfPiece = 2 * (abs(piece) - 1)  + isWhitePiece(piece);
+  short index = 64 * kindOfPiece + 8 * a + b; // a = rank, b = file
+  assert (0 <= index && index < 768);
+  zobrist ^= POLYGLOT_RANDOM[index];
+}
+
+
 uint64_t Board::getZobrist_slow(void) {
-  uint64_t hash = 0;
+  zobrist = 0;
   for (int r = 0; r < 8; r++) {
     for (int f = 0; f < 8; f++) {
       board_s piece = state[r][f];
       if (piece != 0) {
-        short kindOfPiece = 2 * (abs(piece) - 1)  + isWhitePiece(piece);
-        short index = 64 * kindOfPiece + 8 * r + f;
-        assert (0 <= index && index < 768);
-        hash ^= POLYGLOT_RANDOM[index];
+        updateZobristPiece(a, b, piece);
       }
     }
   }
 
-  hash ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
-  hash ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
-  hash ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
-  hash ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
+  zobrist ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
+  zobrist ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
+  zobrist ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
+  zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
 
   // TODO enpassant.
 
-  hash ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
-
-  return hash;
+  zobrist ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
+  return zobrist;
 }
 
 

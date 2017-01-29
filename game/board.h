@@ -130,13 +130,12 @@ namespace board {
       static bool onBoard(board_s a, board_s b);
 
       void updateMaterialDiff(board_s removed);
-
-      // TODO update this every turn.
-      uint64_t getZobrist_slow(void);
-
-
       // Note the added s in Piece(s), this sums all pieces (using 8x8 search)
       int getPiecesValue_slow(void);
+
+      static void updateZobristPiece(board_s a, board_s b, board_s piece);
+      uint64_t getZobrist_slow(void);
+
 
       void promoHelper(
           vector<Board> *all_moves,
