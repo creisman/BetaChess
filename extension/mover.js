@@ -10,24 +10,24 @@
   }
   
   monitorGame() {
-    if (updating) {
+    if (this.updating) {
       return;
     }
 
     let moves = $('.moves move:not(.empty)');
-    if (moves.length > currentUpdatedMove) {
-      updating = true;
-      update(moves.eq(currentUpdatedMove).text());
-      currentUpdatedMove += 1;
-      requestedSuggest = false;
+    if (moves.length > this.currentUpdatedMove) {
+      this.updating = true;
+      this.update(moves.eq(this.currentUpdatedMove).text());
+      this.currentUpdatedMove += 1;
+      this.requestedSuggest = false;
       return
     }
   
-    if (moves.length != currentUpdatedMove) {
+    if (moves.length != this.currentUpdatedMove) {
       console.log("doesn't make sense to request suggest with mismatched move numbers");
     }
 
-    let isOurAccount = /peace-call|betachess/.test($('.username .text').text())
+    let isOurAccount = /peace-call|betachess/i.test($('.username .text').text())
     let isOurFirstTurn = (moves.length < 2) && isOurAccount;
     let hasNoResult = $('.moves .result').length == 0;
     let isActive = ($('.clock.running').length != 0 || isOurFirstTurn) && hasNoResult;
@@ -42,24 +42,26 @@
     //console.log('isActive: ' + isActive + ', isOurTurn: ' + isOurTurn +
     //                 ', moves: ' + moves.length + ' > ' + currentUpdatedMove +
     //                 ', requestedSuggest: ' + requestedSuggest);
-    if (isOurTurn && !requestedSuggest) {
+    if (isOurTurn && !this.requestedSuggest) {
       // consider looking at the square.last-move and calculating with division of translate.
       console.log('requesting suggestion');
-      requestedSuggest = true;
-      getMove();
+      this.requestedSuggest = true;
+      this.getMove();
     }
   }
   
   move(src, dest, promo) {
-    eventQueue.push(fireEvent.bind(this, createMouseEvent('mousedown', findCoordinates(src.x, src.y))));
-    eventQueue.push(fireEvent.bind(this, createMouseEvent('mousemove', findCoordinates(dest.x, dest.y))));
-    eventQueue.push(fireEvent.bind(this, createMouseEvent('mouseup', findCoordinates(dest.x, dest.y))));
+    this.eventQueue.push(this.fireEvent.bind(this, this.createMouseEvent('mousedown', this.findCoordinates(src.x, src.y))));
+    this.eventQueue.push(this.fireEvent.bind(this, this.createMouseEvent('mousemove', this.findCoordinates(dest.x, dest.y))));
+    this.eventQueue.push(this.fireEvent.bind(this, this.createMouseEvent('mouseup', this.findCoordinates(dest.x, dest.y))));
     
     if (promo) {
-      eventQueue.push(function() {
-        $("#promotion_choice piece." + PROMO_MAP[promo]).click();
-      })
+      this.eventQueue.push(function() {
+        $("#promotion_choice piece." + this.PROMO_MAP[promo]).click();
+      }.bind(this));
     }
+    
+    this.processEvent();
   }
   
   // This is indexed from (0,0) to (7,7)
@@ -73,8 +75,8 @@
       y = 7 - y
     }
     
-    let xCord = (x + 0.25 + 0.5 * Math.random()) * SQUARE_SIZE + boardWrapper.offset().left - window.pageXOffset;
-    let yCord = (y + 0.25 + 0.5 * Math.random()) * SQUARE_SIZE + boardWrapper.offset().top  - window.pageYOffset;
+    let xCord = (x + 0.25 + 0.5 * Math.random()) * this.SQUARE_SIZE + boardWrapper.offset().left - window.pageXOffset;
+    let yCord = (y + 0.25 + 0.5 * Math.random()) * this.SQUARE_SIZE + boardWrapper.offset().top  - window.pageYOffset;
     
     return {
       x: xCord,
@@ -100,9 +102,9 @@
       }
       if (response.src && response.dest) {
         console.log("Got move from server:", response.data, response.src, response.dest);
-        move(response.src, response.dest, response.promo);
+        this.move(response.src, response.dest, response.promo);
       }
-    });
+    }.bind(this));
   }
   
   checkForStart() {
@@ -118,10 +120,10 @@
   
     console.log("signalling start-game");
     chrome.runtime.sendMessage("start-game", function(response) {
-      console.log(signal + " acked: " + response.data);
+      console.log("start-game acked: " + response.data);
 
-      setInterval(monitorGame.bind(this), 250);
-    });
+      setInterval(this.monitorGame.bind(this), 250);
+    }.bind(this));
     return true;
   }
   
@@ -129,14 +131,14 @@
     chrome.runtime.sendMessage(move, function(response) {
       console.log("response to update: " + response.data);
       // TODO make sure that state matches or something
-      updating = false;
-    });
+      this.updating = false;
+    }.bind(this));
   }
   
   processEvent() {
-    if (eventQueue.length > 0) {
-      eventQueue.shift()();
-      setTimeout(processEvent.bind(this), Math.random() * 500);
+    if (this.eventQueue.length > 0) {
+      this.eventQueue.shift()();
+      setTimeout(this.processEvent.bind(this), 100 + Math.random() * 200);
     }
   }
   
