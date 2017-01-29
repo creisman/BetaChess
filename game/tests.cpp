@@ -33,8 +33,8 @@ void perft(int ply, string fen) {
 
   cout << "Perft results for" <<
           " depth (ply): " << ply << endl;
-  cout << "\tcount: " << count << 
-          "\tcaptures: " << captures << 
+  cout << "\tcount: " << count <<
+          "\tcaptures: " << captures <<
           "\ten passant: " << ep <<
           "\tcastles: " << castles <<
           "\tpromotions: " << promotions <<
