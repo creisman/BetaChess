@@ -115,8 +115,6 @@ Board::Board(string fen) {
   // TODO matestatus
   materialDiff = getPiecesValue();
   zobrist = getZobrist();
-
-  cout << "zobrist: " << hex << zobrist << endl;
 }
 
 
@@ -299,6 +297,8 @@ vector<Board> Board::getChildren(void) {
 
   // Castling 
   if (!hasCapture || !IS_ANTICHESS) {
+    // TODO: This is likely broken for Antichess (but not CRITICALLY?)
+
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {

@@ -14,6 +14,9 @@ server: $(OBJ) server.cpp
 tests: $(OBJ) test.cpp
 	g++ -o betachess-tests $(CFLAGS) $(OBJ) test.cpp
 
+eval-tests: $(OBJ)
+	g++ -o betachess-eval-tests $(CFLAGS) $(OBJ) evalTests.cpp
+
 gen-book: $(OBJ)
 	g++ -o betachess-gen-book $(CFLAGS) $(OBJ) genBook.cpp
 
@@ -25,6 +28,9 @@ run-server: server
 
 run-test: tests
 	./betachess-tests
+
+run-eval-test: eval-tests
+	./betachess-eval-tests
 
 run-gen-book: gen-book
 	./betachess-gen-book
