@@ -16,6 +16,7 @@ using namespace book;
 Book bookT;
 Board boardT(true /* init */);
 vector<move_t> moves;
+vector<string> moveNames;
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply) {
@@ -25,10 +26,27 @@ string repLoop(int ply) {
   scored_move_t suggest;
 
   move_t *bookMove = bookT.multiArmBandit(moves);
+  bool foundBookResponse = false;
   if (bookMove != nullptr) {
     cout << "Got move from book" << endl;
     suggest = make_pair(NAN, *bookMove);
-  } else {
+
+    // Verify it's a real move
+    for (Board c : boardT.getLegalChildren()) {
+      if (*bookMove == c.getLastMove()) {
+        foundBookResponse = true;
+        break;
+      }
+    }
+    if (!foundBookResponse) {
+      cout << "Got bad suggestion from book after: " << endl;
+      for (string moveName : moveNames) {
+        cout << "\t" << moveName << endl;
+      }
+    }
+  }
+
+  if (!foundBookResponse) {
     suggest = boardT.findMove(ply);
   }
 
@@ -55,8 +73,23 @@ string update(string move) {
       foundMove = true;
       boardT = c;
       moves.push_back(c.getLastMove());
+      moveNames.push_back(moveToGetC);
       break;
     }
+  }
+
+  if (foundMove) {
+    // Check if game is over
+    //TODO(creisman): pass result from server to double check.
+    
+    board_s result = boardT.getGameResult();
+    if (result != Board::RESULT_IN_PROGRESS) {
+      cout << "Server update, game result: " << (int) result << endl;
+
+      // Update some of the book (let Book figure out how much).
+      bookT.updateResult(moves, result /* for white */);
+    }
+    bookT.write();
   }
 
   if (!foundMove) {
@@ -107,6 +140,7 @@ void genericHandler(evhttp_request * req, void *args) {
   if (!startHeader.empty()) {
     boardT = Board(true /* init */);
     moves.clear();
+    moveNames.clear();
 
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";

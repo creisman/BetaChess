@@ -1,3 +1,4 @@
+#include <atomic>
 #include <cassert>
 #include <cctype>
 #include <cmath>
@@ -9,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "polyglot.h"
 #include "board.h"
 
 using namespace std;
@@ -26,7 +28,7 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
 };
 
 const map<board_s, int> Board::PIECE_VALUE = {
-  {KING, 200},
+  {KING, 100},
   {QUEEN, 9 },
   {ROOK, 5 },
   {BISHOP, 3 },
@@ -111,22 +113,15 @@ Board::Board(string fen) {
   // TODO Next is fullmove clock
 
   // TODO matestatus
-  mateStatus = -2;
-
-}
-
-
-Board Board::copy() {
-  // Call "copy" constructor.
-  Board copy = *this;
-  return copy;
+  materialDiff = getPiecesValue_slow();
+  zobrist = getZobrist_slow();
 }
 
 
 void Board::resetBoard(void) {
   ply = 0;
   isWhiteTurn = true;
-  mateStatus = -2;
+  materialDiff = 0;
 
   // whiteOO = whiteOOO = true;
   // blackOO = blackOOO = true;
@@ -134,7 +129,7 @@ void Board::resetBoard(void) {
 
   memset(&state, '\0', sizeof(state));
 
-  // TODO lastMove
+  // TODO figure out what this should be.
   lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
 
   for (int i = 0; i < 8; i++) {
@@ -159,7 +154,18 @@ void Board::resetBoard(void) {
   state[7][5] = -BISHOP;
   state[7][6] = -KNIGHT;
   state[7][7] = -ROOK;
+
+  materialDiff = getPiecesValue_slow();
+  zobrist = getZobrist_slow();
 }
+
+
+Board Board::copy() {
+  // Call "copy" constructor.
+  Board copy = *this;
+  return copy;
+}
+
 
 string Board::boardStr(void) {
   string rep = "";
@@ -182,6 +188,10 @@ string Board::boardStr(void) {
 
 void Board::printBoard(void) {
   cout << boardStr() << endl;
+}
+
+uint64_t Board::getZobrist(void) {
+  return zobrist;
 }
 
 move_t Board::getLastMove(void) {
@@ -295,6 +305,8 @@ vector<Board> Board::getChildren(void) {
 
   // Castling 
   if (!hasCapture || !IS_ANTICHESS) {
+    // TODO: This is likely broken for Antichess (but not CRITICALLY?)
+
     int y = isWhiteTurn ? 0 : 7;
     int x = 4;
     if (state[y][x] == selfColor * KING) {
@@ -305,9 +317,9 @@ vector<Board> Board::getChildren(void) {
         // Check empty squares.
         if (state[y][1] == 0 && state[y][2] == 0 && state[y][3] == 0) {
           // chek for attack on [4] [3] and [2]
-          if ((checkAttack(isWhiteTurn, y, 4) == 0) &&
-              (checkAttack(isWhiteTurn, y, 3) == 0) &&
-              (checkAttack(isWhiteTurn, y, 2) == 0)) {
+          if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 3) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 2) == 0)) {
             Board c = copy();
             c.makeMove(y, 4,   y, 2, SPECIAL_CASTLE); // Record king over two as the move.
             all_moves.push_back( c );
@@ -318,9 +330,9 @@ vector<Board> Board::getChildren(void) {
         // Check empty squares.
         if (state[y][5] == 0 && state[y][6] == 0) {
           // chek for attack on [4] [5] and [6]
-          if ((checkAttack(isWhiteTurn, y, 4) == 0) &&
-              (checkAttack(isWhiteTurn, y, 5) == 0) &&
-              (checkAttack(isWhiteTurn, y, 6) == 0)) {
+          if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 5) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 6) == 0)) {
             Board c = copy();
             c.makeMove(y, 4,   y, 6, SPECIAL_CASTLE); // Record king over two as the move.
             all_moves.push_back( c );
@@ -389,7 +401,8 @@ vector<Board> Board::getLegalChildren(void) {
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s selfKing = selfColor * KING;
   // A guess where king will be (or nearby).
-  board_s kingY = -1, kingX;
+  board_s kingY = -1;
+  board_s kingX;
 
   for (int y = 0; kingY == -1 && y < 8; y++) {
     for (int x = 0; x < 8; x++) {
@@ -426,7 +439,7 @@ vector<Board> Board::getLegalChildren(void) {
     }
 
     assert( test->state[testY][testX] == selfKing );
-    if (test->checkAttack(isWhiteTurn, testY, testX) != 0) {
+    if (test->checkAttack_medium(isWhiteTurn, testY, testX) != 0) {
       all_moves.erase(test);
       test--;
     }
@@ -447,7 +460,7 @@ void Board::promoHelper(
     // promotion && underpromotion
     board_s lastPromoPiece = IS_ANTICHESS ? KING : QUEEN;
     for (board_s newPiece = KNIGHT; newPiece <= lastPromoPiece; newPiece++) {
-      // "promote" then move piece (TODO how does this affect history?)
+      // "promote" then move piece (this means history shows Queen moving to back row not a pawn)
       Board c = copy();
       c.state[y][x] = selfColor * newPiece;
       c.makeMove(y,x,    y2, x2, SPECIAL_PROMOTION);
@@ -463,13 +476,13 @@ void Board::promoHelper(
 
 
 // TODO a duplicate version that returns location of attack, count of attack
-board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
+board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) {
   // TODO consider pre calculating for each square in getChildrenMove of parent.
   // returns piece or 0 for no
 
-  board_s selfColor = forWhite ? WHITE : BLACK;
-  board_s oppKnight = forWhite ? -KNIGHT: KNIGHT;
-  board_s selfPawnDirection = forWhite ? 1 : -1;
+  board_s selfColor = byBlack ? WHITE : BLACK;
+  board_s oppKnight = byBlack ? -KNIGHT: KNIGHT;
+  board_s selfPawnDirection = byBlack ? 1 : -1;
 
   // Check if knight is attacking square.
   for (auto iter = MOVEMENTS.at(KNIGHT).begin();
@@ -547,11 +560,6 @@ board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
   return 0;
 }
 
-// TODO inline
-bool Board::onBoard(board_s a, board_s b) {
-  return 0 <= a && a <= 7 && 0 <= b && b <= 7;
-}
-
 pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   // prep for moving piece to state[a][b]
   // returns on board, piece on [a][b]
@@ -566,13 +574,30 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   return make_pair(false, 0);
 }
 
-// TODO inline?
 board_s Board::getPiece(board_s a, board_s b) {
-  // TODO test using &&
   return onBoard(a, b) ? state[a][b] : 0;
 }
 
-// inline
+void Board::makeMove(move_t move) {
+  board_s a = get<0>(move);
+  board_s b = get<1>(move);
+  board_s c = get<2>(move);
+  board_s d = get<3>(move);
+  board_s moving  = get<4>(move);
+  board_s capture = get<5>(move);
+  unsigned char special = get<6>(move);
+  
+  if (special != SPECIAL_EN_PASSANT) {
+    assert (state[c][d] == capture);
+  }
+
+  state[a][b] = moving;
+  makeMove(a, b, c, d, special);
+  // This is the special magic for promotions.
+
+  assert(this->getLastMove() == move);
+}
+
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
   if (special == SPECIAL_CASTLE) {
     if (d == 2) {
@@ -592,6 +617,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
 
   if (special == SPECIAL_EN_PASSANT) {
     get<5>(lastMove) = state[a][d];
+    updateMaterialDiff(state[a][d]);
     assert(abs(state[a][d]) == PAWN);
     state[a][d] = 0;
   }
@@ -614,11 +640,16 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   ply++;
   isWhiteTurn = !isWhiteTurn;
   lastMove = make_tuple(a, b, c, d, moving, removed, 0);
+  if (removed != 0) {
+    updateMaterialDiff(removed);
+  }
 
   // update castling.
   if (isWhite) {
     // if king moves (king can't be captured so if it leaves square it moves)
     if (a == 0 && b == 4 && moving == KING) { castleStatus &= 3; } // whiteOO = 0, whiteOOO = 0
+
+    // TODO correctly apply zobrist rules here.
 
     // rook moving back doesn't count.
     if (c == 0 && d == 0 && moving == ROOK) { castleStatus &= 7; } // whiteOO = 0
@@ -627,26 +658,60 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
     // if king moves (king can't be captured so if it leaves square it moves)
     if (a == 7 && b == 4 && moving == -KING) { castleStatus &= 12; } // blackOO = 0, blackOOO = 0
 
+    // TODO correctly apply zobrist rules here.
+
     // rook moving back doesn't count.
     if (c == 7 && d == 0 && moving == -ROOK) { castleStatus &= 13; } // blackOO = 0
     if (c == 7 && d == 7 && moving == -ROOK) { castleStatus &= 14; } // blackOOO = 0;
   }
 }
 
-bool Board::isWhitePiece(board_s piece) {
-  return piece > 0;
-}
+board_s Board::getGameResult_slow(void) {
+  // TODO: Tie a lot of moves since pawn move.
 
-board_s Board::peaceSign(board_s piece) {
-  // TODO is this in cmath?
-  if (piece == 0) {
-    return 0;
+  if (IS_ANTICHESS) {
+    bool hasMove = !getLegalChildren().empty();
+
+    // To win, don't have a valid move.
+    if (hasMove) {
+      // TODO check for draw conditions (insufficent material, no move, ...).
+      return RESULT_IN_PROGRESS;
+    }
+
+    // TODO check stalemate.
+    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
   }
-  return  (piece > 0) ? WHITE : BLACK;
+
+  pair<board_s, board_s> kingPos =
+      findPiece_slow(isWhiteTurn ? KING : -KING);
+  assert( onBoard(get<0>(kingPos), get<1>(kingPos)) );
+
+  bool inCheck = checkAttack_medium(
+      !isWhiteTurn /* byBlack */,
+      get<0>(kingPos),
+      get<1>(kingPos)) == 0;
+
+  // This could be improved (maybe making this _medium) by instead checking move_exists?
+  vector<Board> children = getLegalChildren();
+  bool hasChildren = !children.empty();
+
+
+  if (hasChildren) {
+      return RESULT_IN_PROGRESS;
+  }
+
+  // Loss conditions: no moves + in check.
+  if (!hasChildren && inCheck) {
+    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
+  }
+
+  // Tie (stalemate) conditions: no moves + not in check.
+  if (!hasChildren && !inCheck) {
+    return RESULT_TIE;
+  }
+
+  assert(false);
 }
-
-
-
 
 
 string Board::algebraicNotation(move_t child_move) {
@@ -720,7 +785,7 @@ string Board::algebraicNotation(move_t child_move) {
 
 
 string Board::coordinateNotation(move_t move) {
-  // TODO this partially (via inference) supports castling, ep
+  // This partially (via inference) supports castling, ep
   // and has explicit promotion.
 
   string fromTo = squareName(get<0>(move), get<1>(move)) + " - " +
@@ -751,19 +816,88 @@ string Board::fileName(board_s b) {
 }
 
 
-double Board::heuristic() {
+board_s Board::getPieceValue(board_s piece) {
+  assert(piece != 0);
+  board_s absPiece = abs(piece);
   if (IS_ANTICHESS) {
-    // TODO cache between boards.
-    int pieceValue = 0;
-    for (int r = 0; r < 8; r++) {
-      for (int c = 0; c < 8; c++) {
-        board_s piece = state[r][c];
-        if (piece != 0) {
-          // you DO NOT want pieces.
-          pieceValue += -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(abs(piece));;
-        }
+    // Pieces have negative value. This might be a bad idea but it simplifies right now.
+    return  -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(absPiece);
+  } else {
+    return  peaceSign(piece) * PIECE_VALUE.at(absPiece);
+  }
+}
+
+bool Board::isWhitePiece(board_s piece) {
+  return piece > 0;
+}
+
+board_s Board::peaceSign(board_s piece) {
+//  return (piece == 0) ? 0 : (piece > 0) ? WHITE : BLACK;
+  return (0 < piece) - (piece < 0);
+}
+
+bool Board::onBoard(board_s a, board_s b) {
+  return 0 <= a && a <= 7 && 0 <= b && b <= 7;
+}
+
+
+void Board::updateMaterialDiff(board_s removed) {
+  assert(removed != 0);
+  materialDiff -= getPieceValue(removed);
+}
+
+int Board::getPiecesValue_slow(void) {
+  int pieceValue = 0;
+  for (int r = 0; r < 8; r++) {
+    for (int c = 0; c < 8; c++) {
+      board_s piece = state[r][c];
+      if (piece != 0) {
+        pieceValue += getPieceValue(piece);
       }
     }
+  }
+  return pieceValue;
+}
+
+
+void Board::updateZobristPiece(board_s a, board_s b, board_s piece) {
+  short kindOfPiece = 2 * (abs(piece) - 1)  + isWhitePiece(piece);
+  short index = 64 * kindOfPiece + 8 * a + b; // a = rank, b = file
+  assert (0 <= index && index < 768);
+  zobrist ^= POLYGLOT_RANDOM[index];
+}
+
+
+uint64_t Board::getZobrist_slow(void) {
+  zobrist = 0;
+  for (int r = 0; r < 8; r++) {
+    for (int f = 0; f < 8; f++) {
+      board_s piece = state[r][f];
+      if (piece != 0) {
+        updateZobristPiece(r, f, piece);
+      }
+    }
+  }
+
+  zobrist ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
+  zobrist ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
+  zobrist ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
+  zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
+
+  // TODO enpassant.
+
+  zobrist ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
+  return zobrist;
+}
+
+
+double Board::heuristic() {
+  //int pieceValue = getPiecesValue_slow();
+  //assert( pieceValue == materialDiff );
+  int pieceValue = materialDiff;
+
+  if (IS_ANTICHESS) {
+    // TODO cache between boards.
 
     // Was lastmove a capture? 
     int heuristicSign = isWhiteTurn ? 1 : -1;
@@ -787,24 +921,11 @@ double Board::heuristic() {
   //int whiteMobility = 0
   //int blackMobility = 0
 
-  int pieceValue = 0;
-  for (int r = 0; r < 8; r++) {
-    for (int c = 0; c < 8; c++) {
-      board_s piece = state[r][c];
-      if (piece != 0) {
-        // TODO(seth) to be made faster later.
-        pieceValue += peaceSign(piece) * PIECE_VALUE.at(abs(piece));
-      }
-    }
-  }
-
-  if (pieceValue > 100) {
+  if (pieceValue > 50) {
     // black is missing king.
-    mateStatus = 1;
-  } else if (pieceValue < -100) {
-    mateStatus = -1;
-  } else {
-    mateStatus = 0;
+    materialDiff = WHITE_WIN;
+  } else if (pieceValue < -50) {
+    materialDiff = BLACK_WIN;
   }
 
   //sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
@@ -817,9 +938,19 @@ double Board::heuristic() {
   return pieceValue;
 }
 
-int Board::dbgCounter = 0;
-scored_move_t Board::findMove(int plyR) {
+
+// Public method that setups and calls helper method.
+atomic<int> Board::dbgCounter(0);
+scored_move_t Board::findMove(int minNodes) {
   Board::dbgCounter = 0;
+
+  // Check if game has a result
+  board_s result = getGameResult_slow();
+  if (result != RESULT_IN_PROGRESS) {
+    cout << "Game Result: " << (int) result << endl;
+    move_t emptyMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
+    return make_pair(result, emptyMove);
+  }
 
   // Check if we only have one move (if so no real choice).
   auto c = getLegalChildren();
@@ -827,19 +958,26 @@ scored_move_t Board::findMove(int plyR) {
     return make_pair(NAN, c[0].getLastMove());
   }
 
-  int addedPly = 0;
+
+  int plyR = 4;
+  scored_move_t scoredMove;
   while (true) {
-    auto scoredMove = findMove(plyR + addedPly, -1000.0, 1000);
-    cout << "plyR " << plyR + addedPly << "=> " << Board::dbgCounter << " moves" << endl;
-    if (abs(scoredMove.first) > 400 || dbgCounter > 198000) {
-      return scoredMove;
+    scoredMove = findMoveHelper(plyR, -1000.0, 1000);
+    if (abs(scoredMove.first) > 400 || dbgCounter > minNodes) {
+      break;
     }
-    addedPly += 1;
+    plyR += 1;
   }
+
+  // scoredMove.first == NAN when it's a forced move.
+
+  cout << "\t\tplyR " << plyR << "=> " << Board::dbgCounter << " nodes" << endl;
+
+  return scoredMove;
 }
 
 
-scored_move_t Board::findMove(int plyR, double alpha, double beta) {
+scored_move_t Board::findMoveHelper(int plyR, double alpha, double beta) {
   Board::dbgCounter += 1;
   if (plyR == 0) {
     return make_pair(heuristic(), lastMove);
@@ -849,31 +987,44 @@ scored_move_t Board::findMove(int plyR, double alpha, double beta) {
   vector<Board> children = getLegalChildren();
 
   if (children.empty()) {
+    // TODO callGameResultStatus
     // Node is a winner!
     double score = isWhiteTurn ? 500 : -500;
     return make_pair(score, lastMove);
   }
 
+  atomic<double> atomic_alpha(alpha);
+  atomic<double> atomic_beta(beta);
+  atomic<bool> shouldBreak(false);
+  #pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
-    auto suggest = children[ci].findMove(plyR - 1, alpha, beta);
-    double value = suggest.first;
+    if (shouldBreak) {
+      continue;
+    }
 
+    auto suggest = children[ci].findMoveHelper(plyR - 1, atomic_alpha, atomic_beta);
+    double value = suggest.first;
+  
     if (isWhiteTurn) {
      if (value > bestInGen) {
         suggestion = children[ci].getLastMove();
         bestInGen = value;
-        alpha = max(alpha, bestInGen);
-        if (beta <= alpha) {
-          break; // Beta cut-off  (Opp won't pick this brach because we can do too well)
+        atomic_alpha = max(atomic_alpha.load(), bestInGen);
+        if (atomic_beta <= atomic_alpha) {
+          // Beta cut-off  (Opp won't pick this brach because we can do too well)
+          shouldBreak = true;
+          //break;
         }
       }
     } else {
      if (value < bestInGen) {
         suggestion = children[ci].getLastMove();
         bestInGen = value;
-        beta = min(beta, bestInGen);
-        if (beta <= alpha) {
-          break; // alpha cut-off  (We have a strong defense so opp will play older better branch)
+        atomic_beta = min(atomic_beta.load(), bestInGen);
+        if (atomic_beta <= atomic_alpha) {
+          // Alpha cut-off  (We have a strong defense so opp will play older better branch)
+          shouldBreak = true;
+          //break;
         }
       }
     }
@@ -882,7 +1033,20 @@ scored_move_t Board::findMove(int plyR, double alpha, double beta) {
 };
 
 
-void Board::perft(int ply,
+pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      if (state[y][x] == piece) {
+        return make_pair(y, x);
+      }
+    }
+  }
+  return make_pair(-1, -1);
+}
+
+
+void Board::perft(
+    int ply,
     atomic<int> *count,
     atomic<int> *captures,
     atomic<int> *ep,

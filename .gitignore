@@ -1,6 +1,5 @@
 # BetaChess specific files
-betachess
-betachess-server
+betachess-*
 
 # C++ files
 *.o
@@ -8,6 +7,7 @@ betachess-server
 
 # Python files
 __pycache__/
+*.pyc
 
 # Windows image file caches
 Thumbs.db

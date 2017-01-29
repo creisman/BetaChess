@@ -10,7 +10,7 @@
 using namespace std;
 
 #define BOARD_SIZE 8
-#define IS_ANTICHESS true
+#define IS_ANTICHESS false
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
@@ -35,7 +35,7 @@ namespace board {
       static const board_s WHITE = 1;
       static const board_s BLACK = -1;
 
-      // Pieces.
+      // Pieces
       static const board_s PAWN = 1;
       static const board_s KNIGHT = 2;
       static const board_s BISHOP = 3;
@@ -43,7 +43,7 @@ namespace board {
       static const board_s QUEEN = 5;
       static const board_s KING = 6;
 
-      // Castle status.
+      // Castle status
       static const board_s WHITE_OO = 8;
       static const board_s WHITE_OOO = 4;
       static const board_s BLACK_OO = 2;
@@ -53,6 +53,16 @@ namespace board {
       static const unsigned char SPECIAL_CASTLE = 1;
       static const unsigned char SPECIAL_EN_PASSANT = 2;
       static const unsigned char SPECIAL_PROMOTION = 3;
+
+      // Material diff special
+      static const board_s  BLACK_WIN = -100;
+      static const board_s  WHITE_WIN = 100;
+
+      // Game result
+      static const board_s RESULT_TIE = -2; // TODO reconsider value later
+      static const board_s RESULT_BLACK_WIN = BLACK_WIN;
+      static const board_s RESULT_WHITE_WIN = WHITE_WIN;
+      static const board_s RESULT_IN_PROGRESS = 0;
 
 
       static const string PIECE_SYMBOL;
@@ -64,30 +74,20 @@ namespace board {
       Board(bool initState);
       Board(string fen);
 
+      void resetBoard(void);
+
       Board copy(void);
 
-      void resetBoard(void);
+      string boardStr(void);
+      void printBoard(void);
+
+      uint64_t getZobrist(void);
 
       move_t getLastMove(void);
       vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
 
-      double heuristic(void);
-
-      string boardStr(void);
-      void printBoard(void);
-
-      scored_move_t findMove(int ply);
-      void makeMove(board_s a, board_s b, board_s c, board_s d);
-      void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
-
-      void perft(int ply,
-          atomic<int> *count,
-          atomic<int> *captures,
-          atomic<int> *ep,
-          atomic<int> *castles,
-          atomic<int> *promotions,
-          atomic<int> *mates);
+      void makeMove(move_t move);
 
       // Algebraic notation of legal move from this board.
       string algebraicNotation(move_t child_move);
@@ -100,31 +100,70 @@ namespace board {
       static string rankName(board_s a);
       static string fileName(board_s b);
 
+      double heuristic(void);
+
+      scored_move_t findMove(int minNodes);
+
+      void perft(
+          int ply,
+          atomic<int> *count,
+          atomic<int> *captures,
+          atomic<int> *ep,
+          atomic<int> *castles,
+          atomic<int> *promotions,
+          atomic<int> *mates);
+
+      // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
+      board_s getGameResult_slow(void);
+
     private:
-      void promoHelper(vector<Board> *all_moves,
-          bool isWhiteTurn, board_s selfColor, board_s pawnDirection, board_s x, board_s y, board_s x2);
+      board_s checkAttack_medium(bool byBlack, board_s a, board_s b);
 
-      // 1-arg version is public.
-      scored_move_t findMove(int ply, double alpha, double beta);
-
-      board_s checkAttack(bool fromWhite, board_s a, board_s b);
-      board_s getPiece(board_s a, board_s b);
       pair<bool, board_s> attemptMove(board_s a, board_s b);
+      board_s getPiece(board_s a, board_s b);
+
+      void makeMove(board_s a, board_s b, board_s c, board_s d);
+      void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       // Helper methods.
+      static board_s getPieceValue(board_s piece);
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
 
+      void updateMaterialDiff(board_s removed);
+      // Note the added s in Piece(s), this sums all pieces (using 8x8 search)
+      int getPiecesValue_slow(void);
+
+      void updateZobristPiece(board_s a, board_s b, board_s piece);
+      uint64_t getZobrist_slow(void);
+
+
+      void promoHelper(
+          vector<Board> *all_moves,
+          bool isWhiteTurn,
+          board_s selfColor,
+          board_s pawnDirection,
+          board_s x,
+          board_s y,
+          board_s x2);
+
+      // 1-arg version is public.
+      scored_move_t findMoveHelper(int ply, double alpha, double beta);
+
+      // Behavior is not defined if multiple pieces exist.
+      pair<board_s, board_s> findPiece_slow(board_s piece);
+
       // Used for counting moves in findMove
-      static int dbgCounter;
+      static atomic<int> dbgCounter;
 
 
-      // 2 + 1 + 64 + 1   +   6+1  = 76 bytes.
+      // 4 + 2 + 1 + 64 + 1   +   6+1  = 80 bytes.
+      uint64_t zobrist;
       short ply;
       bool isWhiteTurn;
       board_t state;
-      board_s mateStatus;
+      board_s materialDiff;
 
       move_t lastMove;
 
