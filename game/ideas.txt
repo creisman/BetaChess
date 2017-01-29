@@ -1,14 +1,14 @@
-TODO mark all procedures as optimized, todo, or slow.
+make this capable of playing on chessTempo.
 
+Update all procedures as optimized, todo, or slow.
 
 I'd enjoy trying to generate a large perf.
+  it seems like it's a classic map reduce problem based around how much you can increase the reduce step.
 
-it seems like it's a classic map reduce problem based around how much you can increase the reduce step.
+  first stage
+    expand positons
+      combine any duplicates
 
-first stage
-  expand positons
-    combine any duplicates
-
-the trick is duplicates can be from different generations (if you "undo" a move) seems like I might be able to store this.
-
+  one trick is duplicates can be from different generations
+    if position yields X in 1, Y in 2, Z in 3... (maybe?)
 

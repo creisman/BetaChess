@@ -113,15 +113,8 @@ Board::Board(string fen) {
   // TODO Next is fullmove clock
 
   // TODO matestatus
-  materialDiff = getPiecesValue();
-  zobrist = getZobrist();
-}
-
-
-Board Board::copy() {
-  // Call "copy" constructor.
-  Board copy = *this;
-  return copy;
+  materialDiff = getPiecesValue_slow();
+  zobrist = getZobrist_slow();
 }
 
 
@@ -161,7 +154,18 @@ void Board::resetBoard(void) {
   state[7][5] = -BISHOP;
   state[7][6] = -KNIGHT;
   state[7][7] = -ROOK;
+
+  materialDiff = getPiecesValue_slow();
+  zobrist = getZobrist_slow();
 }
+
+
+Board Board::copy() {
+  // Call "copy" constructor.
+  Board copy = *this;
+  return copy;
+}
+
 
 string Board::boardStr(void) {
   string rep = "";
@@ -309,9 +313,9 @@ vector<Board> Board::getChildren(void) {
         // Check empty squares.
         if (state[y][1] == 0 && state[y][2] == 0 && state[y][3] == 0) {
           // chek for attack on [4] [3] and [2]
-          if ((checkAttack(isWhiteTurn, y, 4) == 0) &&
-              (checkAttack(isWhiteTurn, y, 3) == 0) &&
-              (checkAttack(isWhiteTurn, y, 2) == 0)) {
+          if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 3) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 2) == 0)) {
             Board c = copy();
             c.makeMove(y, 4,   y, 2, SPECIAL_CASTLE); // Record king over two as the move.
             all_moves.push_back( c );
@@ -322,9 +326,9 @@ vector<Board> Board::getChildren(void) {
         // Check empty squares.
         if (state[y][5] == 0 && state[y][6] == 0) {
           // chek for attack on [4] [5] and [6]
-          if ((checkAttack(isWhiteTurn, y, 4) == 0) &&
-              (checkAttack(isWhiteTurn, y, 5) == 0) &&
-              (checkAttack(isWhiteTurn, y, 6) == 0)) {
+          if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 5) == 0) &&
+              (checkAttack_medium(isWhiteTurn, y, 6) == 0)) {
             Board c = copy();
             c.makeMove(y, 4,   y, 6, SPECIAL_CASTLE); // Record king over two as the move.
             all_moves.push_back( c );
@@ -431,7 +435,7 @@ vector<Board> Board::getLegalChildren(void) {
     }
 
     assert( test->state[testY][testX] == selfKing );
-    if (test->checkAttack(isWhiteTurn, testY, testX) != 0) {
+    if (test->checkAttack_medium(isWhiteTurn, testY, testX) != 0) {
       all_moves.erase(test);
       test--;
     }
@@ -468,13 +472,13 @@ void Board::promoHelper(
 
 
 // TODO a duplicate version that returns location of attack, count of attack
-board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
+board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) {
   // TODO consider pre calculating for each square in getChildrenMove of parent.
   // returns piece or 0 for no
 
-  board_s selfColor = forWhite ? WHITE : BLACK;
-  board_s oppKnight = forWhite ? -KNIGHT: KNIGHT;
-  board_s selfPawnDirection = forWhite ? 1 : -1;
+  board_s selfColor = byBlack ? WHITE : BLACK;
+  board_s oppKnight = byBlack ? -KNIGHT: KNIGHT;
+  board_s selfPawnDirection = byBlack ? 1 : -1;
 
   // Check if knight is attacking square.
   for (auto iter = MOVEMENTS.at(KNIGHT).begin();
@@ -550,10 +554,6 @@ board_s Board::checkAttack(bool forWhite, board_s a, board_s b) {
     }
   }
   return 0;
-}
-
-bool Board::onBoard(board_s a, board_s b) {
-  return 0 <= a && a <= 7 && 0 <= b && b <= 7;
 }
 
 pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
@@ -658,17 +658,9 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   }
 }
 
-bool Board::isWhitePiece(board_s piece) {
-  return piece > 0;
-}
+board_s Board::getGameResult_slow(void) {
+  // TODO: Tie a lot of moves since pawn move.
 
-board_s Board::peaceSign(board_s piece) {
-//  return (piece == 0) ? 0 : (piece > 0) ? WHITE : BLACK;
-  return (0 < piece) - (piece < 0);
-}
-
-
-board_s Board::getGameResult(void) {
   if (IS_ANTICHESS) {
     bool hasMove = !getLegalChildren().empty();
 
@@ -678,16 +670,39 @@ board_s Board::getGameResult(void) {
       return RESULT_IN_PROGRESS;
     }
 
-    // check stalemate.
-
-    if (isWhiteTurn) {
-      return RESULT_WHITE_WIN;
-    } else {
-      return RESULT_BLACK_WIN;
-    }
+    // TODO check stalemate.
+    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
   }
 
-  assert (false); // TODO implement for non-antichess
+  pair<board_s, board_s> kingPos =
+      findPiece_slow(isWhiteTurn ? KING : -KING);
+  assert( onBoard(get<0>(kingPos), get<1>(kingPos)) );
+
+  bool inCheck = checkAttack_medium(
+      !isWhiteTurn /* byBlack */,
+      get<0>(kingPos),
+      get<1>(kingPos)) == 0;
+
+  // This could be improved (maybe making this _medium) by instead checking move_exists?
+  vector<Board> children = getLegalChildren();
+  bool hasChildren = !children.empty();
+
+
+  if (hasChildren) {
+      return RESULT_IN_PROGRESS;
+  }
+
+  // Loss conditions: no moves + in check.
+  if (!hasChildren && inCheck) {
+    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
+  }
+
+  // Tie (stalemate) conditions: no moves + not in check.
+  if (!hasChildren && !inCheck) {
+    return RESULT_TIE;
+  }
+
+  assert(false);
 }
 
 
@@ -804,12 +819,26 @@ board_s Board::getPieceValue(board_s piece) {
   }
 }
 
+bool Board::isWhitePiece(board_s piece) {
+  return piece > 0;
+}
+
+board_s Board::peaceSign(board_s piece) {
+//  return (piece == 0) ? 0 : (piece > 0) ? WHITE : BLACK;
+  return (0 < piece) - (piece < 0);
+}
+
+bool Board::onBoard(board_s a, board_s b) {
+  return 0 <= a && a <= 7 && 0 <= b && b <= 7;
+}
+
+
 void Board::updateMaterialDiff(board_s removed) {
   assert(removed != 0);
   materialDiff -= getPieceValue(removed);
 }
 
-int Board::getPiecesValue(void) {
+int Board::getPiecesValue_slow(void) {
   int pieceValue = 0;
   for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
@@ -823,8 +852,35 @@ int Board::getPiecesValue(void) {
 }
 
 
+uint64_t Board::getZobrist_slow(void) {
+  uint64_t hash = 0;
+  for (int r = 0; r < 8; r++) {
+    for (int f = 0; f < 8; f++) {
+      board_s piece = state[r][f];
+      if (piece != 0) {
+        short kindOfPiece = 2 * (abs(piece) - 1)  + isWhitePiece(piece);
+        short index = 64 * kindOfPiece + 8 * r + f;
+        assert (0 <= index && index < 768);
+        hash ^= POLYGLOT_RANDOM[index];
+      }
+    }
+  }
+
+  hash ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
+  hash ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
+  hash ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
+  hash ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
+
+  // TODO enpassant.
+
+  hash ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
+
+  return hash;
+}
+
+
 double Board::heuristic() {
-  //int pieceValue = getPiecesValue();
+  //int pieceValue = getPiecesValue_slow();
   //assert( pieceValue == materialDiff );
   int pieceValue = materialDiff;
 
@@ -871,42 +927,15 @@ double Board::heuristic() {
 }
 
 
-uint64_t Board::getZobrist(void) {
-  uint64_t hash = 0;
-  for (int r = 0; r < 8; r++) {
-    for (int f = 0; f < 8; f++) {
-      board_s piece = state[r][f];
-      if (piece != 0) {
-        short kindOfPiece = 2 * (abs(piece) - 1)  + isWhitePiece(piece);
-        short index = 64 * kindOfPiece + 8 * r + f;
-        assert (0 <= index && index < 768);
-        hash ^= POLYGLOT_RANDOM[index];
-      }
-    }
-  }
-
-  hash ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
-  hash ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
-  hash ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
-  hash ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
-
-  // TODO enpassant.
-
-  hash ^= (isWhiteTurn > 0) * POLYGLOT_RANDOM[780];
-
-  return hash;
-}
-
-
 // Public method that setups and calls helper method.
 atomic<int> Board::dbgCounter(0);
 scored_move_t Board::findMove(int minNodes) {
   Board::dbgCounter = 0;
 
   // Check if game has a result
-  board_s result = getGameResult();
+  board_s result = getGameResult_slow();
   if (result != RESULT_IN_PROGRESS) {
-    cout << "Game Result: " << result << endl;
+    cout << "Game Result: " << (int) result << endl;
     move_t emptyMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
     return make_pair(result, emptyMove);
   }
@@ -992,7 +1021,20 @@ scored_move_t Board::findMoveHelper(int plyR, double alpha, double beta) {
 };
 
 
-void Board::perft(int ply,
+pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      if (state[y][x] == piece) {
+        return make_pair(y, x);
+      }
+    }
+  }
+  return make_pair(-1, -1);
+}
+
+
+void Board::perft(
+    int ply,
     atomic<int> *count,
     atomic<int> *captures,
     atomic<int> *ep,

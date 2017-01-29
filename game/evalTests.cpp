@@ -9,6 +9,7 @@ using namespace board;
 
 // The general idea is that these test tricky problems.
 
+
 // TODO: come up with some constants or enum for this.
 int K_NODES = 1000;
 int TEST_SHALLOW = 1000 * K_NODES;
@@ -18,37 +19,51 @@ vector<string> getBestMoves(Board &b, string epd);
 bool verifyIsInLegal(Board &b, vector<string> moves);
 
 
+int success = 0;
+int missed = 0;
 
-float eval(string epd) {
+void printStats(void) {
+  cout << success << " out of (" << success << " + " << missed << ")" << endl;
+}
+
+
+bool eval(string epd) {
   // Extended Position Description.
 
   // TODO: verify this plan.
 
   // Step 1: Parse position
-  // Step 2: Test with depth / count / time.
-  // Step 3: Verify match of best move.
-  // Step 3a: check if we consider this a legal move.
+  // Step 2: Parse best moves.
+  // Step 2a: check if we consider this a legal move.
+  // Step 3: Test with depth / count / time.
 
 
   // Step 1.
   Board b(epd);
 
-  // Step 3.
-  vector<string> bestMoves = getBestMoves(b, epd);
-
   // Step 2.
-  //move_t move = get<1>(b.findMove(TEST_SHALLOW));
-
-
+  vector<string> bestMoves = getBestMoves(b, epd);
   cout << epd << endl;
   cout << "\tbm: \"";
   for (string move : bestMoves) {
-    cout << move;
-    if (move != bestMoves.back()) {
-      cout << ", ";
-    }
+    cout << move << ((move == bestMoves.back()) ? "" : ", ");
   }
   cout << "\"" << endl;
+
+  // Step 3.
+  move_t move = get<1>(b.findMove(TEST_SHALLOW));
+  string moveName = b.algebraicNotation(move);
+
+  bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
+
+  if (found) {
+    success += 1;
+    cout << "Found: " << moveName << endl;
+  } else {
+    missed += 1;
+    cout << "Missed (" << moveName << " instead of " << bestMoves[0] << ")" << endl;
+  }
+  cout << endl;
 }
 
 
@@ -188,11 +203,15 @@ float evalStandardChess(void) {
   eval("rnbqk2r/pppp2pp/4pn2/5p2/1b1P4/2P2NP1/PP2PPBP/RNBQK2R b KQkq - bm Be7; id \"sbd.132\";");
   eval("rnbqr1k1/pp1p1ppp/5n2/3Pb3/1P6/P1N3P1/4NPBP/R1BQK2R w KQ - bm O-O; id \"sbd.133\";");
   eval("rnq1nrk1/pp3pbp/6p1/3p4/3P4/5N2/PP2BPPP/R1BQK2R w KQ - bm O-O; id \"sbd.134\";");
+
+  // With ply 5/6 and only the trivial heuristic 15 of 132.
+  printStats();
 }
 
 
 int main(void) {
   evalStandardChess();
+
 }
 
 
@@ -241,10 +260,7 @@ bool verifyIsInLegal(Board &b, vector<string> moves) {
 
   cout << "\t";
   for (string move : moves) {
-    cout << move;
-    if (move != moves.back()) {
-      cout << ", ";
-    }
+    cout << move << ((move == moves.back()) ? "" : ", ");
   }
 
   cout << " not in move list (";
