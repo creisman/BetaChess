@@ -667,6 +667,8 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   // update turn state
   ply++;
   isWhiteTurn = !isWhiteTurn;
+  updateZobristTurn(true); //Toggle turn.
+
   lastMove = make_tuple(a, b, c, d, moving, removed, 0);
   if (removed != 0) {
     updateMaterialDiff(removed);
@@ -675,23 +677,53 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
 
   // update castling.
   if (isWhite) {
-    // if king moves (king can't be captured so if it leaves square it moves)
-    if (a == 0 && b == 4 && moving == KING) { castleStatus &= 3; } // whiteOO = 0, whiteOOO = 0
+    bool kingMove = (a == 0 && b == 4 && moving == KING);
+    bool longRookMove  = (c == 0 && d == 0 && moving == ROOK);
+    bool shortRookMove = (c == 0 && d == 7 && moving == ROOK);
 
-    // TODO correctly apply zobrist rules here.
+    if ((kingMove || longRookMove) && (castleStatus & WHITE_OOO)) {
+      castleStatus ^= WHITE_OOO;
+      updateZobristCastle(WHITE_OOO);
+    }
+    if ((kingMove || shortRookMove) && (castleStatus & WHITE_OO)) {
+      castleStatus ^= WHITE_OO;
+      updateZobristCastle(WHITE_OO);
+    }
 
-    // rook moving back doesn't count.
-    if (c == 0 && d == 0 && moving == ROOK) { castleStatus &= 7; } // whiteOO = 0
-    if (c == 0 && d == 7 && moving == ROOK) { castleStatus &= 11; } // whiteOOO =0
+    bool blackLongRookCapture  = (c == 7 && d == 0 && removed == -ROOK);
+    bool blackShortRookCapture = (c == 7 && d == 7 && removed == -ROOK);
+    if (blackLongRookCapture && (castleStatus & BLACK_OOO)) {
+      castleStatus ^= BLACK_OOO;
+      updateZobristCastle(BLACK_OOO);
+    }
+    if (blackShortRookCapture && (castleStatus & BLACK_OO)) {
+      castleStatus ^= BLACK_OO;
+      updateZobristCastle(BLACK_OO);
+    }
   } else { 
-    // if king moves (king can't be captured so if it leaves square it moves)
-    if (a == 7 && b == 4 && moving == -KING) { castleStatus &= 12; } // blackOO = 0, blackOOO = 0
+    bool kingMove = (a == 7 && b == 4 && moving == -KING);
+    bool longRookMove  = (c == 7 && d == 0 && moving == -ROOK);
+    bool shortRookMove = (c == 7 && d == 7 && moving == -ROOK);
 
-    // TODO correctly apply zobrist rules here.
+    if ((kingMove || longRookMove) && (castleStatus & BLACK_OOO)) {
+      castleStatus ^= BLACK_OOO;
+      updateZobristCastle(BLACK_OOO);
+    }
+    if ((kingMove || shortRookMove) && (castleStatus & BLACK_OO)) {
+      castleStatus ^= BLACK_OO;
+      updateZobristCastle(BLACK_OO);
+    }
 
-    // rook moving back doesn't count.
-    if (c == 7 && d == 0 && moving == -ROOK) { castleStatus &= 13; } // blackOO = 0
-    if (c == 7 && d == 7 && moving == -ROOK) { castleStatus &= 14; } // blackOOO = 0;
+    bool whiteLongRookCapture  = (c == 0 && d == 0 && removed == ROOK);
+    bool whiteShortRookCapture = (c == 0 && d == 7 && removed == ROOK);
+    if (whiteLongRookCapture && (castleStatus & WHITE_OOO)) {
+      castleStatus ^= WHITE_OOO;
+      updateZobristCastle(WHITE_OOO);
+    }
+    if (whiteShortRookCapture && (castleStatus & WHITE_OO)) {
+      castleStatus ^= WHITE_OO;
+      updateZobristCastle(WHITE_OO);
+    }
   }
 }
 
@@ -896,6 +928,16 @@ void Board::updateZobristPiece(board_s a, board_s b, board_s piece) {
   zobrist ^= POLYGLOT_RANDOM[index];
 }
 
+void Board::updateZobristTurn(bool isWTurn) {
+  zobrist ^= (isWTurn == true) * POLYGLOT_RANDOM[780];
+}
+
+void Board::updateZobristCastle(char castleStatus) {
+  zobrist ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
+  zobrist ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
+  zobrist ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
+  zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
+}
 
 uint64_t Board::getZobrist_slow(void) {
   zobrist = 0;
@@ -907,15 +949,11 @@ uint64_t Board::getZobrist_slow(void) {
       }
     }
   }
-/*
-  zobrist ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
-  zobrist ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
-  zobrist ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
-  zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
-*/
-  // TODO enpassant.
 
-  //zobrist ^= (isWhiteTurn == true) * POLYGLOT_RANDOM[780];
+  // TODO enpassant.
+  updateZobristTurn(isWhiteTurn);
+  updateZobristCastle(castleStatus);
+
   return zobrist;
 }
 
@@ -1087,8 +1125,8 @@ void Board::perft(
     board_s moveSpecial = get<6>(move);
 
     count->fetch_add(1);
-    uint64_t test = zobrist;
-    assert( test == getZobrist_slow() );
+//    uint64_t test = zobrist;
+//    assert( test == getZobrist_slow() );
 
     if (get<5>(move) != 0) { captures->fetch_add(1); }
     if (moveSpecial == SPECIAL_EN_PASSANT) { ep->fetch_add(1); }
