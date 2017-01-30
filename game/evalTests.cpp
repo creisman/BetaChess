@@ -204,7 +204,8 @@ float evalStandardChess(void) {
   eval("rnbqr1k1/pp1p1ppp/5n2/3Pb3/1P6/P1N3P1/4NPBP/R1BQK2R w KQ - bm O-O; id \"sbd.133\";");
   eval("rnq1nrk1/pp3pbp/6p1/3p4/3P4/5N2/PP2BPPP/R1BQK2R w KQ - bm O-O; id \"sbd.134\";");
 
-  // With ply 5/6 and only the trivial heuristic 15 of 132.
+  // With nodes = 1M and only the trivial heuristic 15 of 132.
+  // This doesn't improve by increasing nodes up to 4M.
   printStats();
 }
 

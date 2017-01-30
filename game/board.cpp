@@ -106,7 +106,7 @@ Board::Board(string fen) {
     if (fen[fi] == 'k') { castleStatus |= BLACK_OO; }; // blackOO = true
     if (fen[fi] == 'q') { castleStatus |= BLACK_OOO; }; // blackOOO = true
     fi++;
-  }  
+  }
 
   // TODO Next is En passant
   // TODO Next is halfmove clock
@@ -178,7 +178,7 @@ string Board::boardStr(void) {
         symbol = toupper(symbol);
       }
       rep += symbol;
-      } 
+      }
     rep += "|\n";
   }
 
@@ -200,7 +200,7 @@ move_t Board::getLastMove(void) {
 vector<Board> Board::getChildren(void) {
   bool hasCapture = false;
   vector<Board> all_moves;
- 
+
   board_s pawnDirection = isWhiteTurn ? 1 : -1;
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s oppColor = isWhiteTurn ? BLACK : WHITE;
@@ -232,7 +232,7 @@ vector<Board> Board::getChildren(void) {
         moveTest = attemptMove(y + pawnDirection, x);
         // pawn move: if next space is empty.
         if (moveTest.first && moveTest.second == 0) {
-          // Normal move forward && promo    
+          // Normal move forward && promo
           promoHelper(&all_moves, isWhiteTurn, selfColor, x, y, x, y + pawnDirection);
 
           // double move (only if nothing in the way for single move)
@@ -358,8 +358,8 @@ vector<Board> Board::getChildren(void) {
         c.makeMove(lastY, testX, lastY + pawnDirection, lastX, SPECIAL_EN_PASSANT);
         all_moves.push_back( c );
       }
-    } 
-  } 
+    }
+  }
   return all_moves;
 }
 
@@ -384,7 +384,7 @@ vector<Board> Board::getLegalChildren(void) {
         test--;
       }
     }
-    
+
     // Verify remaining items are all captures.
     for (; test != all_moves.end(); test++) {
       bool isCapture = get<5>(test->getLastMove()) != 0;
@@ -392,7 +392,7 @@ vector<Board> Board::getLegalChildren(void) {
     }
 
     return all_moves;
-  } 
+  }
 
 
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
@@ -418,7 +418,7 @@ vector<Board> Board::getLegalChildren(void) {
   //    was square under double attack => had to move
   //    was square under knight attack => had to destroy knight or move
   //    was attack from adjacent square => had to move or destroy
-  //    was square under slide attack => 
+  //    was square under slide attack =>
   //      if king didn't move
   //        last move must be in way of single attack.
 
@@ -447,7 +447,7 @@ vector<Board> Board::getLegalChildren(void) {
 // inline
 void Board::promoHelper(
   vector<Board> *all_moves,
-  bool isWhiteTurn, 
+  bool isWhiteTurn,
   board_s selfColor,
   board_s x,
   board_s y,
@@ -479,8 +479,8 @@ void Board::promoHelper(
     Board c = copy();
     c.makeMove(y,x,    y2, x2);
     all_moves->push_back(c);
-  } 
-}        
+  }
+}
 
 
 // TODO a duplicate version that returns location of attack, count of attack
@@ -543,7 +543,7 @@ board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) {
 
         bool isDiagonal = iter->first != 0 && iter->second != 0;
         assert( isDiagonal );
-       
+
         if (pieceType == BISHOP) {
           return oppPiece;
         }
@@ -592,7 +592,7 @@ void Board::makeMove(move_t move) {
   board_s c = get<2>(move);
   board_s d = get<3>(move);
   unsigned char special = get<6>(move);
-  
+
   if (special != SPECIAL_EN_PASSANT) {
     board_s capture = get<5>(move);
     assert (state[c][d] == capture);
@@ -831,7 +831,7 @@ string Board::algebraicNotation(move_t child_move) {
   }
   if (special == SPECIAL_CASTLE) {
     return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
-  } 
+  }
 
   // Pawn captures get file added.
   if (piece == PAWN && !capture.empty()) {
@@ -966,7 +966,7 @@ double Board::heuristic() {
   if (IS_ANTICHESS) {
     // TODO cache between boards.
 
-    // Was lastmove a capture? 
+    // Was lastmove a capture?
     int heuristicSign = isWhiteTurn ? 1 : -1;
     double haveTempo = heuristicSign * 6.0 * (get<5>(lastMove) != 0);
 
@@ -1071,7 +1071,7 @@ scored_move_t Board::findMoveHelper(int plyR, double alpha, double beta) {
 
     auto suggest = children[ci].findMoveHelper(plyR - 1, atomic_alpha, atomic_beta);
     double value = suggest.first;
-  
+
     if (isWhiteTurn) {
      if (value > bestInGen) {
         suggestion = children[ci].getLastMove();

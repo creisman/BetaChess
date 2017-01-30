@@ -81,7 +81,7 @@ string update(string move) {
   if (foundMove) {
     // Check if game is over
     //TODO(creisman): pass result from server to double check.
-    
+
     board_s result = boardT.getGameResult();
     if (result != Board::RESULT_IN_PROGRESS) {
       cout << "Server update, game result: " << (int) result << endl;
