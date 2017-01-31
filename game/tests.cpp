@@ -99,6 +99,9 @@ int main(int argc, char *argv[]) {
 
     // "Position 4"
     perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -");
+
+    // From "perf(7) challange" - 14,794,751,816
+    // perft(7, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
   }
 
 
@@ -109,6 +112,14 @@ int main(int argc, char *argv[]) {
     string fen = "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3";
     b = Board(fen);
     cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x652a607ca3f242c1) << dec << endl;
+
+    // TODO make moves, then verify fen and zobrist a2a4 b7b5 h2h4 b5b4 c2c4 b4c3 a1a3
+    fen = "rnbqkbnr/p1pppppp/8/8/P6P/R1p5/1P1PPPP1/1NBQKBNR b Kkq - 0 4";
+    b = Board(fen);
+    cout << hex << b.getZobrist() << " " << (b.getZobrist() == 0x5c3f9b829b279560) << dec << endl;
+    cout << fen.size() << ": \"" << fen << "\"" << endl;
+    string gen = b.generateFen_slow();
+    cout << gen.size() << ": \"" << gen << "\" matches: " << (gen == fen) << endl;
   }
 
   return 0;

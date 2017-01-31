@@ -4,8 +4,10 @@
 #include <cmath>
 #include <cstring>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <string>
+#include <sstream>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -56,13 +58,20 @@ Board::Board(bool initState) {
 Board::Board(string fen) {
   // Fen is "easy" they said
 
+  // Make list of space seperated tokens.
+  stringstream ss(fen);
+  istream_iterator<string> begin(ss);
+  istream_iterator<string> end;
+  vector<string> parts(begin, end);
+
+  assert (parts.size() == 6);
+
   lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
-
   memset(&state, '\0', sizeof(state));
-
   int y = 7;
   int x = 0;
   int fi;
+  string boardPart = parts[0];
   for (fi = 0; fi < fen.size(); fi++) {
     if (y == 0 && x == 8) {
       break;
@@ -89,28 +98,24 @@ Board::Board(string fen) {
   }
 
   // Next is who to play.
-  assert(fen[fi] == ' ');
-  fi++;
-  assert(fen[fi] == 'b' || fen[fi] == 'w');
-  ply = (fen[fi] == 'w') ? 0 : 1;
-  isWhiteTurn = ply % 2 == 0;
-  fi++;
+  assert(parts[1] == "b" || parts[1] == "w");
+  isWhiteTurn = parts[1] == "w";
 
   // Next is castling
-  assert(fen[fi] == ' ');
-  fi++;
   castleStatus = 0;
-  while (fen[fi] != ' ') {
-    if (fen[fi] == 'K') { castleStatus |= WHITE_OO; }; // whiteOO = true
-    if (fen[fi] == 'Q') { castleStatus |= WHITE_OOO; }; // whiteOOO = true
-    if (fen[fi] == 'k') { castleStatus |= BLACK_OO; }; // blackOO = true
-    if (fen[fi] == 'q') { castleStatus |= BLACK_OOO; }; // blackOOO = true
-    fi++;
+  for (char castle : parts[2]) {
+    if (castle == 'K') { castleStatus |= WHITE_OO; }; // whiteOO = true
+    if (castle == 'Q') { castleStatus |= WHITE_OOO; }; // whiteOOO = true
+    if (castle == 'k') { castleStatus |= BLACK_OO; }; // blackOO = true
+    if (castle == 'q') { castleStatus |= BLACK_OOO; }; // blackOOO = true
   }
 
   // TODO Next is En passant
+
   // TODO Next is halfmove clock
   // TODO Next is fullmove clock
+  halfMoves = stoul(parts[4]);
+  gameMoves = 2 * stoul(parts[5]) + !isWhiteTurn;
 
   // TODO matestatus
   materialDiff = getPiecesValue_slow();
@@ -119,13 +124,12 @@ Board::Board(string fen) {
 
 
 void Board::resetBoard(void) {
-  ply = 0;
+  gameMoves = 0;
+  halfMoves = 0;
   isWhiteTurn = true;
   materialDiff = 0;
 
-  // whiteOO = whiteOOO = true;
-  // blackOO = blackOOO = true;
-  castleStatus = 15;
+  castleStatus = WHITE_OO | WHITE_OOO | BLACK_OO | BLACK_OOO;
 
   memset(&state, '\0', sizeof(state));
 
@@ -183,6 +187,59 @@ string Board::boardStr(void) {
     rep += "|\n";
   }
 
+  return rep;
+}
+
+string Board::generateFen_slow(void) {
+  string rep = "";
+  for (int row = 7; row >= 0; row--) {
+    int spaces = 0;
+    for (int col = 0; col < 8; col++) {
+      board_s piece = state[row][col];
+      if (piece == 0) {
+        spaces += 1;
+        continue;
+      }
+      if (spaces > 0) {
+        rep += to_string(spaces);
+        spaces = 0;
+      }
+
+      board_s absPiece = (piece >= 0) ? piece : -piece;
+      char symbol = (piece != 0) ? PIECE_SYMBOL[absPiece] : '.';
+      if (piece > 0) {
+        symbol = toupper(symbol);
+      }
+      rep += symbol;
+    }
+    if (spaces > 0) {
+      rep += to_string(spaces);
+    }
+    if (row > 0) {
+      rep += "/";
+    }
+  }
+  rep += " ";
+
+  // Who's turn it is.
+  rep += isWhiteTurn ? "w" : "b";
+  rep += " ";
+
+  // Castling status.
+  rep += (castleStatus & WHITE_OO) ? "K" : "";
+  rep += (castleStatus & WHITE_OOO) ? "Q" : "";
+  rep += (castleStatus & BLACK_OO) ? "k" : "";
+  rep += (castleStatus & BLACK_OOO) ? "q" : "";
+  rep += " ";
+
+  // TODO en passant.
+  rep += "- ";
+
+  // Half moves clock.
+  rep += to_string(halfMoves) + " ";
+
+  // Whole moves.
+  rep += to_string(gameMoves / 2);
   return rep;
 }
 
@@ -637,12 +694,15 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   state[c][d] = moving;
 
   // update turn state
-  ply++;
+  gameMoves++;
+  halfMoves++;
   isWhiteTurn = !isWhiteTurn;
   lastMove = make_tuple(a, b, c, d, moving, removed, 0);
   if (removed != 0) {
     updateMaterialDiff(removed);
+    halfMoves = 0;
   }
+  // TODO halfmoves on pawn move / promotion.
 
   // update castling.
   if (isWhite) {
