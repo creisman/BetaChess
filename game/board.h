@@ -112,8 +112,8 @@ namespace board {
 
       void perft(
           int ply,
-          atomic<int> *count,
-          atomic<int> *captures,
+          atomic<long> *count,
+          atomic<long> *captures,
           atomic<int> *ep,
           atomic<int> *castles,
           atomic<int> *promotions,

@@ -1235,8 +1235,8 @@ board_s Board::getGameResult_slow(void) {
 
 void Board::perft(
     int ply,
-    atomic<int> *count,
-    atomic<int> *captures,
+    atomic<long> *count,
+    atomic<long> *captures,
     atomic<int> *ep,
     atomic<int> *castles,
     atomic<int> *promotions,

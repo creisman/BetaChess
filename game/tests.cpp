@@ -60,8 +60,8 @@ void perft(int ply, string fen) {
 
   auto T0 = chrono::system_clock().now();
 
-  atomic<int> count(0);
-  atomic<int> captures(0);
+  atomic<long> count(0);
+  atomic<long> captures(0);
   atomic<int> ep(0);
   atomic<int> castles(0);
   atomic<int> promotions(0);
@@ -111,8 +111,8 @@ void playGame(int moves, int ply, string fen) {
 
 int main(int argc, char *argv[]) {
   bool testPlay = false;
-  bool testPerft = false;
-  bool testHash = true;
+  bool testPerft = true;
+  bool testHash = false;
 
   if (argc > 1){
     cout << "Called with " << argc << " args" << endl;
