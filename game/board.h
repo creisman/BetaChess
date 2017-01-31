@@ -79,6 +79,7 @@ namespace board {
       Board copy(void);
 
       string boardStr(void);
+      string generateFen_slow(void);
       void printBoard(void);
 
       uint64_t getZobrist(void);
@@ -159,18 +160,21 @@ namespace board {
       // Used for counting moves in findMove
       static atomic<int> dbgCounter;
 
+      // Size per instance ~= 2 + 2 + 1 + 64 + 1 + 1 + 7 + 1 + 4 = 82 bytes.
 
-      // 4 + 2 + 1 + 64 + 1   +   6+1  = 80 bytes.
-      uint64_t zobrist;
-      short ply;
+      // (full move count * 2 + isBlack)
+      short gameMoves;
+      // Used to count 50 move rule.
+      short halfMoves;
+
       bool isWhiteTurn;
       board_t state;
       board_s materialDiff;
-
       move_t lastMove;
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
+      uint64_t zobrist;
   };
 }
 #endif // BOARD_H
