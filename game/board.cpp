@@ -110,12 +110,33 @@ Board::Board(string fen) {
     if (castle == 'q') { castleStatus |= BLACK_OOO; }; // blackOOO = true
   }
 
-  // TODO Next is En passant
+  // En passant "target square" (square behind the pawn)
+  if (parts[3] != "-") {
+    assert( (isWhiteTurn && parts[3][1] == '3') ||
+             (!isWhiteTurn && parts[3][2] == '6') );
 
-  // TODO Next is halfmove clock
-  // TODO Next is fullmove clock
+    board_s file = parts[3][0] - 'a';
+    board_s rank = parts[3][1] - '0';
+    board_s direction = isWhiteTurn ? 1 : -1;
+
+    assert( onBoard(rank, file) );
+
+    assert( abs(state[rank + direction][file]) == PAWN );
+    assert( state[rank][file] == 0 );
+    assert( state[rank - direction][file] == 0 );
+
+    lastMove = make_tuple(rank - direction, file,
+                          rank + direction, file,
+                          direction * PAWN, 0,
+                          SPECIAL_EN_PASSANT);
+  };
+
+  // Number of moves since pawn push or capture.
   halfMoves = stoul(parts[4]);
-  gameMoves = 2 * stoul(parts[5]) + !isWhiteTurn;
+
+  // Number of moves into the game (FEN records number of full turns).
+  // TODO verify off by one is correct.
+  gameMoves = 2 * (stoul(parts[5]) - 1) + !isWhiteTurn;
 
   materialDiff = getPiecesValue_slow();
   zobrist = getZobrist_slow();
@@ -225,11 +246,15 @@ string Board::generateFen_slow(void) {
   rep += " ";
 
   // Castling status.
-  rep += (castleStatus & WHITE_OO) ? "K" : "";
-  rep += (castleStatus & WHITE_OOO) ? "Q" : "";
-  rep += (castleStatus & BLACK_OO) ? "k" : "";
-  rep += (castleStatus & BLACK_OOO) ? "q" : "";
-  rep += " ";
+  if (castleStatus == 0) {
+    rep += "- ";
+  } else {
+    rep += (castleStatus & WHITE_OO) ? "K" : "";
+    rep += (castleStatus & WHITE_OOO) ? "Q" : "";
+    rep += (castleStatus & BLACK_OO) ? "k" : "";
+    rep += (castleStatus & BLACK_OOO) ? "q" : "";
+    rep += " ";
+  }
 
   // TODO en passant.
   rep += "- ";
@@ -238,7 +263,7 @@ string Board::generateFen_slow(void) {
   rep += to_string(halfMoves) + " ";
 
   // Whole moves.
-  rep += to_string(gameMoves / 2);
+  rep += to_string(1 + gameMoves / 2);
   return rep;
 }
 
@@ -664,7 +689,7 @@ void Board::makeMove(move_t move) {
   }
   makeMove(a, b, c, d, special);
 
-  assert(this->getLastMove() == move);
+  assert(getLastMove() == move);
 }
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
@@ -703,15 +728,16 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
     get<5>(lastMove) = theirPawn; 
     updateMaterialDiff(theirPawn);
     updateZobristPiece(a, d, theirPawn);
+    halfMoves = 0;
   }
 }
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
-  bool isWhite = isWhitePiece(moving);
+  bool isWhiteP = isWhitePiece(moving);
   board_s removed = state[c][d];
 
-  assert( isWhite == isWhiteTurn );
+  assert( isWhiteP == isWhiteTurn );
   if (removed != 0) {
     assert( isWhitePiece(removed) != isWhiteTurn );
   }
@@ -721,25 +747,11 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   updateZobristPiece(a, b, moving);
   updateZobristPiece(c, d, moving);
 
-  // update turn state
-  gameMoves++;
-  halfMoves++;
-  isWhiteTurn = !isWhiteTurn;
-  updateZobristTurn(true); //Toggle turn.
-
-  lastMove = make_tuple(a, b, c, d, moving, removed, 0);
-  if (removed != 0) {
-    updateMaterialDiff(removed);
-    updateZobristPiece(c, d, removed);
-    halfMoves = 0;
-  }
-  // TODO halfmoves on pawn move / promotion.
-
   // update castling.
-  if (isWhite) {
+  if (isWhiteTurn) {
     bool kingMove = (a == 0 && b == 4 && moving == KING);
-    bool longRookMove  = (c == 0 && d == 0 && moving == ROOK);
-    bool shortRookMove = (c == 0 && d == 7 && moving == ROOK);
+    bool longRookMove  = (a == 0 && b == 0 && moving == ROOK);
+    bool shortRookMove = (a == 0 && b == 7 && moving == ROOK);
 
     if ((kingMove || longRookMove) && (castleStatus & WHITE_OOO)) {
       castleStatus ^= WHITE_OOO;
@@ -762,8 +774,8 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
     }
   } else { 
     bool kingMove = (a == 7 && b == 4 && moving == -KING);
-    bool longRookMove  = (c == 7 && d == 0 && moving == -ROOK);
-    bool shortRookMove = (c == 7 && d == 7 && moving == -ROOK);
+    bool longRookMove  = (a == 7 && b == 0 && moving == -ROOK);
+    bool shortRookMove = (a == 7 && b == 7 && moving == -ROOK);
 
     if ((kingMove || longRookMove) && (castleStatus & BLACK_OOO)) {
       castleStatus ^= BLACK_OOO;
@@ -785,57 +797,40 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
       updateZobristCastle(WHITE_OO);
     }
   }
+
+  // update turn state
+  gameMoves++;
+  halfMoves++;
+  isWhiteTurn = !isWhiteTurn;
+  updateZobristTurn(true); //Toggle turn.
+
+  lastMove = make_tuple(a, b, c, d, moving, removed, 0);
+  if (removed != 0) {
+    updateMaterialDiff(removed);
+    updateZobristPiece(c, d, removed);
+  }
+
+  if (abs(moving) == PAWN || removed != 0) { 
+    halfMoves = 0;
+  }
 }
 
-board_s Board::getGameResult_slow(void) {
-  // TODO: Tie a lot of moves since pawn move.
 
-  if (IS_ANTICHESS) {
-    bool hasMove = !getLegalChildren().empty();
+bool Board::makeAlgebraicMove_slow(string move) {
+  // This is like slow^2.
+  // For each child, go another lookup over each child (to find if it's disambigous)
 
-    // To win, don't have a valid move.
-    if (hasMove) {
-      // TODO check for draw conditions (insufficent material, no move, ...).
-      return RESULT_IN_PROGRESS;
+  for (Board c : getLegalChildren()) {
+    if (algebraicNotation_slow(c.getLastMove()) == move) {
+      makeMove(c.getLastMove());
+      return true;
     }
-
-    // TODO check stalemate.
-    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
   }
-
-  pair<board_s, board_s> kingPos =
-      findPiece_slow(isWhiteTurn ? KING : -KING);
-  assert( onBoard(get<0>(kingPos), get<1>(kingPos)) );
-
-  bool inCheck = checkAttack_medium(
-      !isWhiteTurn /* byBlack */,
-      get<0>(kingPos),
-      get<1>(kingPos)) == 0;
-
-  // This could be improved (maybe making this _medium) by instead checking move_exists?
-  vector<Board> children = getLegalChildren();
-  bool hasChildren = !children.empty();
-
-
-  if (hasChildren) {
-      return RESULT_IN_PROGRESS;
-  }
-
-  // Loss conditions: no moves + in check.
-  if (!hasChildren && inCheck) {
-    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
-  }
-
-  // Tie (stalemate) conditions: no moves + not in check.
-  if (!hasChildren && !inCheck) {
-    return RESULT_TIE;
-  }
-
-  assert(false);
+  return false;
 }
 
 
-string Board::algebraicNotation(move_t child_move) {
+string Board::algebraicNotation_slow(move_t child_move) {
   // e4 = white king pawn double out.
   // e is file.
   // 4 is rank.
@@ -843,6 +838,9 @@ string Board::algebraicNotation(move_t child_move) {
   bool mult = false;
   bool sameFile = false;
   bool sameRank = false;
+
+  Board child_board = copy();
+  child_board.makeMove(child_move);
 
   // NOTE(seth): It appears disambigous is only looking at "valid" moves.
   vector<Board> children = getLegalChildren();
@@ -856,6 +854,7 @@ string Board::algebraicNotation(move_t child_move) {
 
       if (equalFile && equalRank) {
         // the move itself.
+        assert(c.getZobrist() == child_board.getZobrist());
         continue;
       }
       mult = true;
@@ -863,6 +862,21 @@ string Board::algebraicNotation(move_t child_move) {
       sameRank |= equalRank;
     }
   }
+
+  pair<board_s, board_s> oppKingPos =
+      child_board.findPiece_slow(isWhiteTurn ? -KING : KING);
+  assert( child_board.onBoard(get<0>(oppKingPos), get<1>(oppKingPos)) );
+
+  // Assume We are currently white.
+  // After our move check if blackKing is under attack by white (not byBlack).
+  bool isCheck = child_board.checkAttack_medium(
+      !isWhiteTurn /* byBlack */,
+      get<0>(oppKingPos),
+      get<1>(oppKingPos)) != 0;
+//  // Note assumes self move can't result in mate.
+  bool isMate = isCheck && 
+      ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow());
+  string check = isMate ? "#" : (isCheck ? "+" : "");
 
   string capture = get<5>(child_move) == 0 ? "" : "x";
 
@@ -878,19 +892,17 @@ string Board::algebraicNotation(move_t child_move) {
   string disambiguate = (fileDisambigs ? fileName(get<1>(child_move)) : "") +
                         (sameFile      ? rankName(get<0>(child_move)) : "");
 
-  // TODO consider adding check/mate (+/#) status.
-
   unsigned char special = get<6>(child_move);
   if (special == SPECIAL_PROMOTION) {
     // Piece handly records what we promoted to!
     // But it's not a recorded as a pawn move so add capture logic again.
     if (!capture.empty()) {
-      return fileName(get<1>(child_move)) + capture + dest +  "=" + pieceName;
+      return fileName(get<1>(child_move)) + capture + dest +  "=" + pieceName + check;
     }
-    return dest + "=" + pieceName;
+    return dest + "=" + pieceName + check;
   }
   if (special == SPECIAL_CASTLE) {
-    return (get<3>(child_move) == 2) ? "O-O-O" : "O-O";
+    return ((get<3>(child_move) == 2) ? "O-O-O" : "O-O") + check;
   }
 
   // Pawn captures get file added.
@@ -898,10 +910,10 @@ string Board::algebraicNotation(move_t child_move) {
     // A special (generic) case of disambiguate.
     // Can't be disambigous once we know file.
     pieceName = fileName(get<1>(child_move));
-    return pieceName + capture + dest;
+    return pieceName + capture + dest + check;
   }
 
-  return pieceName + disambiguate + capture + dest;
+  return pieceName + disambiguate + capture + dest + check;
 }
 
 
@@ -1050,9 +1062,9 @@ double Board::heuristic() {
 
   if (pieceValue > 50) {
     // black is missing king.
-    materialDiff = WHITE_WIN;
+    materialDiff = RESULT_WHITE_WIN;
   } else if (pieceValue < -50) {
-    materialDiff = BLACK_WIN;
+    materialDiff = RESULT_BLACK_WIN;
   }
 
   //sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
@@ -1169,6 +1181,55 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
     }
   }
   return make_pair(-1, -1);
+}
+
+
+board_s Board::getGameResult_slow(void) {
+  // TODO: Tie a lot of moves since pawn move.
+
+  if (IS_ANTICHESS) {
+    bool hasMove = !getLegalChildren().empty();
+
+    // To win, don't have a valid move.
+    if (hasMove) {
+      // TODO check for draw conditions (insufficent material, no move, ...).
+      return RESULT_IN_PROGRESS;
+    }
+
+    // TODO check stalemate.
+    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
+  }
+
+  pair<board_s, board_s> kingPos =
+      findPiece_slow(isWhiteTurn ? KING : -KING);
+  assert( onBoard(get<0>(kingPos), get<1>(kingPos)) );
+
+  bool inCheck = checkAttack_medium(
+      !isWhiteTurn /* byBlack */,
+      get<0>(kingPos),
+      get<1>(kingPos)) == 0;
+
+  // This could be improved (maybe making this _medium) by instead checking move_exists?
+  vector<Board> children = getLegalChildren();
+  bool hasChildren = !children.empty();
+
+
+  if (hasChildren) {
+      return RESULT_IN_PROGRESS;
+  }
+
+  // Loss conditions: no moves + in check.
+  if (!hasChildren && inCheck) {
+    printBoard();
+    return isWhiteTurn ? RESULT_BLACK_WIN : RESULT_WHITE_WIN;
+  }
+
+  // Tie (stalemate) conditions: no moves + not in check.
+  if (!hasChildren && !inCheck) {
+    return RESULT_TIE;
+  }
+
+  assert(false);
 }
 
 

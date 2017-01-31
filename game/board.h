@@ -55,13 +55,12 @@ namespace board {
       static const unsigned char SPECIAL_PROMOTION = 3;
 
       // Material diff special
-      static const board_s  BLACK_WIN = -100;
-      static const board_s  WHITE_WIN = 100;
+      //  Uses RESULT_{BLACK,WHITE}_WIN
 
       // Game result
       static const board_s RESULT_TIE = -2; // TODO reconsider value later
-      static const board_s RESULT_BLACK_WIN = BLACK_WIN;
-      static const board_s RESULT_WHITE_WIN = WHITE_WIN;
+      static const board_s RESULT_BLACK_WIN = -100;
+      static const board_s RESULT_WHITE_WIN = 100;
       static const board_s RESULT_IN_PROGRESS = 0;
 
 
@@ -70,9 +69,11 @@ namespace board {
       static const map<board_s, int> PIECE_VALUE;
       static const map<board_s, int> ANTICHESS_PIECE_VALUE;
 
-      // Constructor (including the hidden copy constructor).
+      // Constructors
       Board(bool initState);
       Board(string fen);
+      // Included to avoid bool/string ambiguity.
+      Board(char const* s) : Board(string(s)) {};
 
       void resetBoard(void);
 
@@ -89,9 +90,10 @@ namespace board {
       vector<Board> getLegalChildren(void);
 
       void makeMove(move_t move);
+      bool makeAlgebraicMove_slow(string move);
 
       // Algebraic notation of legal move from this board.
-      string algebraicNotation(move_t child_move);
+      string algebraicNotation_slow(move_t child_move);
 
       // ~Coordinate notation.
       static string coordinateNotation(move_t move);
@@ -105,6 +107,9 @@ namespace board {
 
       scored_move_t findMove(int minNodes);
 
+      // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
+      board_s getGameResult_slow(void);
+
       void perft(
           int ply,
           atomic<int> *count,
@@ -113,9 +118,6 @@ namespace board {
           atomic<int> *castles,
           atomic<int> *promotions,
           atomic<int> *mates);
-
-      // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
-      board_s getGameResult_slow(void);
 
     private:
       board_s checkAttack_medium(bool byBlack, board_s a, board_s b);

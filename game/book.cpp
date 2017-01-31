@@ -137,7 +137,7 @@ bool Book::updateResult(vector<move_t> moves, board_s result) {
     b.makeMove(move);
 
     assert (b.getLastMove() == moves[i]);
-    string moveName = b.algebraicNotation(b.getLastMove());
+    string moveName = b.algebraicNotation_slow(b.getLastMove());
 
     BetaChessBookEntry *newEntry = recurseMove(entry, move);
     if (newEntry != nullptr) {
@@ -188,7 +188,7 @@ void Book::printBook(Board &b, BetaChessBookEntry *entry, int depth, int recurse
     if (entry != &root) {
       c.makeMove(entry->move);
     }
-    start += (entry == &root) ? "START" : b.algebraicNotation(entry->move);
+    start += (entry == &root) ? "START" : b.algebraicNotation_slow(entry->move);
 
     // Pad out depth / move data.
     start.resize(20, ' ');
