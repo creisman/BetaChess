@@ -939,7 +939,7 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
 
 typedef tbb::concurrent_hash_map<uint64_t, uint64_t> perfter;
 
-unordered_map<uint64_t, uint64_t> perftLookup[10];
+//unordered_map<uint64_t, uint64_t> perftLookup[10];
 perfter lookupTBB[10];
 
 uint64_t Board::perftMoveOnly(int ply) {
@@ -971,13 +971,18 @@ uint64_t Board::perftMoveOnly(int ply) {
     }
   }
 
-  if (ply > 1) {
+  if (ply > 0) { // Test vs 0,1,2
     perfter::accessor b;
     lookupTBB[ply].insert(b, key);
     b->second = count;
     b.release();
   //  perftLookup[ply][key] = count;
   }
+
+  if (ply >= 4) {
+    cout << "db: " << lookupTBB[2].size() << " " << lookupTBB[1].size() << endl;
+  }
+
   return count;
 }
 
