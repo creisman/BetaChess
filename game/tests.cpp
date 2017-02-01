@@ -49,7 +49,7 @@ bool verifySeriesOfMoves(
   return (gen == fen) && (genZ == zobrist);
 }
 
-void perft(int ply, string fen) {
+void perft(int ply, bool simple, string fen) {
   Board b(true /* init */);
   if (!fen.empty()) {
     b = Board(fen);
@@ -66,7 +66,12 @@ void perft(int ply, string fen) {
   atomic<int> castles(0);
   atomic<int> promotions(0);
   atomic<int> mates(0);
-  b.perft(ply, &count, &captures, &ep, &castles, &promotions, &mates);
+
+  if (simple) {
+    count += b.perftMoveOnly(ply);
+  } else {
+    b.perft(ply, &count, &captures, &ep, &castles, &promotions, &mates);
+  }
 
   auto T1 = chrono::system_clock().now();
   chrono::duration<double> duration = T1 - T0;
@@ -74,43 +79,25 @@ void perft(int ply, string fen) {
 
   cout << "Perft results for" <<
           " depth (ply): " << ply << endl;
-  cout << "\tcount: " << count <<
-          "\tcaptures: " << captures <<
+  cout << "\tcount: " << count;
+
+  if (simple) {
+    cout << endl;
+  } else {
+    cout<<"\tcaptures: " << captures <<
           "\ten passant: " << ep <<
           "\tcastles: " << castles <<
           "\tpromotions: " << promotions <<
           "\tmates: " << mates << endl;
-  printf("\tevaled: %.0f knodes/s (%.2f seconds)\n", (count / duration_s / 1000), duration_s);
+  }
+
+  printf("\tevaled: %.0f knodes/s (%.2f seconds)\n",
+      count/ duration_s / 1000.0, duration_s);
   cout << endl << endl;
 }
 
 
-void playGame(int moves, int ply, string fen) {
-  Board b(true /* init */);
-  if (!fen.empty()) {
-    b = Board(fen);
-    cout << "Loaded from fen: \"" << fen << "\"" << endl;
-  }
-
-  auto T0 = chrono::system_clock().now();
-
-  for (int move = 0; move < moves; move++) {
-    auto scoredMove = b.findMove(ply);
-    move_t m = scoredMove.second;
-    cout << "iter: " << ply << "\tScore: " << scoredMove.first << endl;
-    b.makeMove(m);
-    //b.printBoard();
-  }
-
-  auto T1 = chrono::system_clock().now();
-  chrono::duration<double> duration = T1 - T0;
-  double duration_s = duration.count();
-  printf("evaled: %d moves (%.2f seconds)\n\n", moves, duration_s);
-}
-
-
 int main(int argc, char *argv[]) {
-  bool testPlay = false;
   bool testPerft = true;
   bool testHash = false;
 
@@ -120,26 +107,21 @@ int main(int argc, char *argv[]) {
 
   cout << "Size of Board class: " << sizeof(Board) << endl << endl;
 
-  if (testPlay) {
-    playGame(4, 5, "");
-    //playGame(10, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-  }
-
   if (testPerft) {
     // Initial Position
     // rPi seems to generate ~1.1M nodes / second with pragma on.
-    perft(5, "");
+    perft(5, false, "");
+    perft(5, true, "");
 
     // "Position 2 - Kiwipete"
     // rPi seems to generate ~1.5M nodes / second with pragma on.
-    // perf 5 had a miss by a couple thousand.
-    perft(4, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0");
+    //perft(4, false, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0");
 
     // "Position 3"
-    perft(6, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0");
+    //perft(6, false, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0");
 
     // "Position 4"
-    perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 0");
+    //perft(5, false, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 0");
 
     // From "perf(7) challange" - 14,794,751,816
     // perft(7, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
