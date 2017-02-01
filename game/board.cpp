@@ -10,7 +10,10 @@
 #include <sstream>
 #include <tuple>
 #include <utility>
+#include <unordered_map>
 #include <vector>
+
+#include "tbb/concurrent_hash_map.h"
 
 #include "polyglot.h"
 #include "board.h"
@@ -934,6 +937,10 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
   return make_pair(-1, -1);
 }
 
+typedef tbb::concurrent_hash_map<uint64_t, uint64_t> perfter;
+
+unordered_map<uint64_t, uint64_t> perftLookup[10];
+perfter lookupTBB[10];
 
 uint64_t Board::perftMoveOnly(int ply) {
   if (ply == 0) {
@@ -941,17 +948,36 @@ uint64_t Board::perftMoveOnly(int ply) {
   }
 
   vector<Board> children = getLegalChildren();
-  if (ply == 1) {
-    return children.size(); 
-  }
+  uint64_t key = getZobrist();
+  //auto lookup = perftLookup[ply].find(key);
+  //if (lookup != perftLookup[ply].end()) {
+  //  return lookup->second;
+  //}
 
+  perfter::accessor a;
+  if (lookupTBB[ply].find(a, key)) {
+    uint64_t count = a->second;
+    return count;
+  } 
+  a.release();
 
   atomic<uint64_t> count(0);
-  #pragma omp parallel for
-  for (int ci = 0; ci < children.size(); ci++) {
-    count += children[ci].perftMoveOnly(ply - 1);
+  if (ply == 1) {
+    count = children.size(); 
+  } else {
+    #pragma omp parallel for
+    for (int ci = 0; ci < children.size(); ci++) {
+      count += children[ci].perftMoveOnly(ply - 1);
+    }
   }
-  
+
+  if (ply > 1) {
+    perfter::accessor b;
+    lookupTBB[ply].insert(b, key);
+    b->second = count;
+    b.release();
+  //  perftLookup[ply][key] = count;
+  }
   return count;
 }
 

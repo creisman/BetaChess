@@ -1,7 +1,7 @@
 # Dear heavenly father we pray for our eternal soul.
 # We have made a makefile and are sinful.
 
-CFLAGS=-std=c++11 -O2 -fopenmp
+CFLAGS=-std=c++11 -O2 -fopenmp -I/home/pi/tbbsrc/include/ -Wl,-rpath,/home/pi/tbbsrc/build/linux_armv7_gcc_cc4.9.2_libc2.19_kernel4.1.19_release/ -ltbb
 OBJ = board.o
 DEPS = board.h polyglot.h
 

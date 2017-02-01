@@ -110,8 +110,8 @@ int main(int argc, char *argv[]) {
   if (testPerft) {
     // Initial Position
     // rPi seems to generate ~1.1M nodes / second with pragma on.
-    perft(5, false, "");
-    perft(5, true, "");
+    perft(6, false, "");
+    perft(6, true, "");
 
     // "Position 2 - Kiwipete"
     // rPi seems to generate ~1.5M nodes / second with pragma on.
