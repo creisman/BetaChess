@@ -16,6 +16,7 @@
 #include "tbb/concurrent_hash_map.h"
 
 #include "polyglot.h"
+#include "polyglot2.h"
 #include "board.h"
 
 using namespace std;
@@ -256,6 +257,10 @@ void Board::printBoard(void) {
 
 uint64_t Board::getZobrist(void) {
   return zobrist;
+}
+
+uint64_t Board::getZobrist2(void) {
+  return zobrist2;
 }
 
 move_t Board::getLastMove(void) {
@@ -656,7 +661,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
 
     state[a][d] = 0;
     // Note that we captured a pawn.
-    get<5>(lastMove) = theirPawn; 
+    get<5>(lastMove) = theirPawn;
     updateMaterialDiff(theirPawn);
     updateZobristPiece(a, d, theirPawn);
     halfMoves = 0;
@@ -703,7 +708,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
       castleStatus ^= BLACK_OO;
       updateZobristCastle(BLACK_OO);
     }
-  } else { 
+  } else {
     bool kingMove = (a == 7 && b == 4 && moving == -KING);
     bool longRookMove  = (a == 7 && b == 0 && moving == -ROOK);
     bool shortRookMove = (a == 7 && b == 7 && moving == -ROOK);
@@ -741,7 +746,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
     updateZobristPiece(c, d, removed);
   }
 
-  if (abs(moving) == PAWN || removed != 0) { 
+  if (abs(moving) == PAWN || removed != 0) {
     halfMoves = 0;
   }
 }
@@ -786,6 +791,7 @@ string Board::algebraicNotation_slow(move_t child_move) {
       if (equalFile && equalRank) {
         // the move itself.
         assert(c.getZobrist() == child_board.getZobrist());
+        assert(c.getZobrist2() == child_board.getZobrist2());
         continue;
       }
       mult = true;
@@ -894,10 +900,12 @@ void Board::updateZobristPiece(board_s a, board_s b, board_s piece) {
   short index = 64 * kindOfPiece + 8 * a + b; // a = rank, b = file
   assert (0 <= index && index < 768);
   zobrist ^= POLYGLOT_RANDOM[index];
+  zobrist2 ^= POLYGLOT_RANDOM_V2[index];
 }
 
 void Board::updateZobristTurn(bool isWTurn) {
   zobrist ^= (isWTurn == true) * POLYGLOT_RANDOM[780];
+  zobrist2 ^= (isWTurn == true) * POLYGLOT_RANDOM_V2[780];
 }
 
 void Board::updateZobristCastle(char castleStatus) {
@@ -905,10 +913,16 @@ void Board::updateZobristCastle(char castleStatus) {
   zobrist ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM[768 + 1];
   zobrist ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM[768 + 2];
   zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
+
+  zobrist2 ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM_V2[768 + 0];
+  zobrist2 ^= ((castleStatus & WHITE_OOO) > 0) * POLYGLOT_RANDOM_V2[768 + 1];
+  zobrist2 ^= ((castleStatus & BLACK_OO)  > 0) * POLYGLOT_RANDOM_V2[768 + 2];
+  zobrist2 ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM_V2[768 + 3];
 }
 
 uint64_t Board::getZobrist_slow(void) {
   zobrist = 0;
+  zobrist2 = 0;
   for (int r = 0; r < 8; r++) {
     for (int f = 0; f < 8; f++) {
       board_s piece = state[r][f];
@@ -925,7 +939,6 @@ uint64_t Board::getZobrist_slow(void) {
   return zobrist;
 }
 
-
 pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
@@ -937,9 +950,8 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
   return make_pair(-1, -1);
 }
 
-typedef tbb::concurrent_hash_map<uint64_t, uint64_t> perfter;
+typedef tbb::concurrent_hash_map<pair<uint64_t, uint64_t>, uint64_t> perfter;
 
-//unordered_map<uint64_t, uint64_t> perftLookup[10];
 perfter lookupTBB[10];
 
 uint64_t Board::perftMoveOnly(int ply) {
@@ -948,22 +960,19 @@ uint64_t Board::perftMoveOnly(int ply) {
   }
 
   vector<Board> children = getLegalChildren();
-  uint64_t key = getZobrist();
-  //auto lookup = perftLookup[ply].find(key);
-  //if (lookup != perftLookup[ply].end()) {
-  //  return lookup->second;
-  //}
+  pair<uint64_t,uint64_t> key = make_pair(getZobrist(), getZobrist2());
 
   perfter::accessor a;
+  uint64_t lookedup = 0;
   if (lookupTBB[ply].find(a, key)) {
-    uint64_t count = a->second;
-    return count;
-  } 
+    lookedup = a->second;
+    return lookedup;
+  }
   a.release();
 
   atomic<uint64_t> count(0);
   if (ply == 1) {
-    count = children.size(); 
+    count = children.size();
   } else {
     #pragma omp parallel for
     for (int ci = 0; ci < children.size(); ci++) {
@@ -976,10 +985,9 @@ uint64_t Board::perftMoveOnly(int ply) {
     lookupTBB[ply].insert(b, key);
     b->second = count;
     b.release();
-  //  perftLookup[ply][key] = count;
   }
 
-  if (ply >= 4) {
+  if (ply >= 5) {
     cout << "db: " << lookupTBB[2].size() << " " << lookupTBB[1].size() << endl;
   }
 

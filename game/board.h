@@ -71,6 +71,7 @@ namespace board {
       void printBoard(void);
 
       uint64_t getZobrist(void);
+      uint64_t getZobrist2(void);
 
       move_t getLastMove(void);
       vector<Board> getChildren(void);
@@ -124,7 +125,7 @@ namespace board {
       void updateZobristTurn(bool isWTurn);
       void updateZobristCastle(char castleStatus);
       uint64_t getZobrist_slow(void);
-
+      uint64_t getZobrist2_slow(void);
 
       void promoHelper(
           vector<Board> *all_moves,
@@ -153,6 +154,7 @@ namespace board {
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
       uint64_t zobrist;
+      uint64_t zobrist2;
   };
 }
 #endif // BOARD_H
