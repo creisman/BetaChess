@@ -124,6 +124,7 @@ namespace board {
       void updateZobristPiece(board_s a, board_s b, board_s piece);
       void updateZobristTurn(bool isWTurn);
       void updateZobristCastle(char castleStatus);
+      void updateZobristEnPassant(move_t &move);
       uint64_t getZobrist_slow(void);
       uint64_t getZobrist2_slow(void);
 

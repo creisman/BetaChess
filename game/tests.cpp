@@ -8,6 +8,7 @@
 #include <string>
 
 #include "board.h"
+#include "polyglot.h"
 
 using namespace std;
 using namespace board;
@@ -28,7 +29,11 @@ bool verifySeriesOfMoves(
     //for (Board c : b.getLegalChildren()) {
     //  cout << "\t" << b.algebraicNotation_slow(c.getLastMove()) << endl;
     //}
-    assert( b.makeAlgebraicMove_slow(move) );
+    bool valid = b.makeAlgebraicMove_slow(move);
+    if (!valid) {
+      cout << "Move: " << move << endl;
+      assert( false ); // unknown move.
+    }
   //  cout << "after " << move << "\t| " << b.generateFen_slow() << endl;
   }
 
@@ -151,6 +156,19 @@ int main(int argc, char *argv[]) {
         "Qe2  Qxe2    Ng5  Qxf2+   Kh1   Qxf1#",
         "1r3bnr/p2ppppp/2k5/R5N1/8/4P3/1PPP2PP/1NB2q1K w - - 0 14",
         0x7aa9d458c3cd289f));
+
+
+    // En Passant verification.
+    assert (verifySeriesOfMoves(
+        "a4 h6   a5 b5",
+        "rnbqkbnr/p1ppppp1/7p/Pp6/8/8/1PPPPPPP/RNBQKBNR w KQkq - 0 3",
+        0xde68558cff2df99c));
+
+    // Same board position but with no En Passant.
+    assert (verifySeriesOfMoves(
+        "a4 h6   a5 b5   Nf3 Nf6   Ng1 Ng8",
+        "rnbqkbnr/p1ppppp1/7p/Pp6/8/8/1PPPPPPP/RNBQKBNR w KQkq - 4 5",
+        0xde68558cff2df99c ^ POLYGLOT_RANDOM[772 + 1]));
   }
 
   return 0;

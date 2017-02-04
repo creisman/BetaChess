@@ -739,8 +739,11 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   halfMoves++;
   isWhiteTurn = !isWhiteTurn;
   updateZobristTurn(true); //Toggle turn.
+  updateZobristEnPassant(lastMove); // Toggle off last move.
 
   lastMove = make_tuple(a, b, c, d, moving, removed, 0);
+  updateZobristEnPassant(lastMove); // Toggle on this move.
+
   if (removed != 0) {
     updateMaterialDiff(removed);
     updateZobristPiece(c, d, removed);
@@ -920,6 +923,14 @@ void Board::updateZobristCastle(char castleStatus) {
   zobrist2 ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM_V2[768 + 3];
 }
 
+void Board::updateZobristEnPassant(move_t &move) {
+  // We don't follow the Polyglot standard and choose to always include the
+  // enpassant after a double pawn push.
+  if (abs(get<4>(move)) == PAWN && abs(get<0>(move) - get<2>(move)) == 2) {
+    zobrist ^= POLYGLOT_RANDOM[772 + get<1>(move)];
+  }
+}
+
 uint64_t Board::getZobrist_slow(void) {
   zobrist = 0;
   zobrist2 = 0;
@@ -935,6 +946,7 @@ uint64_t Board::getZobrist_slow(void) {
   // TODO enpassant.
   updateZobristTurn(isWhiteTurn);
   updateZobristCastle(castleStatus);
+  updateZobristEnPassant(lastMove);
 
   return zobrist;
 }
