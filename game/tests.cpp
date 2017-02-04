@@ -129,9 +129,9 @@ int main(int argc, char *argv[]) {
     //perft(5, false, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 0");
 
     // From "perf(7) challange" - 14,794,751,816
-    //perft(6, false, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
-    // incorrect: 14795736235
-    //perft(7, true, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
+    // Work-Linux with true generates correct answer in ~140s (~100M nodes/s)
+    perft(6, false, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
+    perft(7, true, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
   }
 
 

@@ -963,9 +963,7 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
 }
 
 typedef tbb::concurrent_hash_map<pair<uint64_t, uint64_t>, uint64_t> perfter;
-
 perfter lookupTBB[10];
-
 uint64_t Board::perftMoveOnly(int ply) {
   if (ply == 0) {
     return 1;
@@ -986,7 +984,7 @@ uint64_t Board::perftMoveOnly(int ply) {
   if (ply == 1) {
     count = children.size();
   } else {
-    #pragma omp parallel for
+    #pragma omp parallel for if (ply > 3)
     for (int ci = 0; ci < children.size(); ci++) {
       count += children[ci].perftMoveOnly(ply - 1);
     }
