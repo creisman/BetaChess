@@ -10,11 +10,13 @@
 using namespace std;
 
 #define BOARD_SIZE 8
-#define IS_ANTICHESS false
+#define IS_ANTICHESS true
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
   typedef signed char board_s;
+
+  typedef uint64_t board_hash_t;
 
   // (a, b) to (c, d), piece that moving, piece that was captured removing, special_status
   typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s, unsigned char> move_t;
@@ -83,7 +85,7 @@ namespace board {
       string generateFen_slow(void);
       void printBoard(void);
 
-      uint64_t getZobrist(void);
+      board_hash_t getZobrist(void);
 
       move_t getLastMove(void);
       vector<Board> getChildren(void);
@@ -141,7 +143,7 @@ namespace board {
       void updateZobristPiece(board_s a, board_s b, board_s piece);
       void updateZobristTurn(bool isWTurn);
       void updateZobristCastle(char castleStatus);
-      uint64_t getZobrist_slow(void);
+      board_hash_t getZobrist_slow(void);
 
 
       void promoHelper(
@@ -176,7 +178,7 @@ namespace board {
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
-      uint64_t zobrist;
+      board_hash_t zobrist;
   };
 }
 #endif // BOARD_H

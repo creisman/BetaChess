@@ -271,7 +271,7 @@ void Board::printBoard(void) {
   cout << boardStr() << endl;
 }
 
-uint64_t Board::getZobrist(void) {
+board_hash_t Board::getZobrist(void) {
   return zobrist;
 }
 
@@ -863,19 +863,28 @@ string Board::algebraicNotation_slow(move_t child_move) {
     }
   }
 
-  pair<board_s, board_s> oppKingPos =
-      child_board.findPiece_slow(isWhiteTurn ? -KING : KING);
-  assert( child_board.onBoard(get<0>(oppKingPos), get<1>(oppKingPos)) );
 
-  // Assume We are currently white.
-  // After our move check if blackKing is under attack by white (not byBlack).
-  bool isCheck = child_board.checkAttack_medium(
-      !isWhiteTurn /* byBlack */,
-      get<0>(oppKingPos),
-      get<1>(oppKingPos)) != 0;
-//  // Note assumes self move can't result in mate.
-  bool isMate = isCheck && 
-      ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow());
+  bool isCheck, isMate;
+  if (!IS_ANTICHESS) {
+    pair<board_s, board_s> oppKingPos =
+        child_board.findPiece_slow(isWhiteTurn ? -KING : KING);
+    assert( child_board.onBoard(get<0>(oppKingPos), get<1>(oppKingPos)) );
+
+    // Assume We are currently white.
+    // After our move check if blackKing is under attack by white (not byBlack).
+    isCheck = child_board.checkAttack_medium(
+        !isWhiteTurn /* byBlack */,
+        get<0>(oppKingPos),
+        get<1>(oppKingPos)) != 0;
+    // Note assumes self move can't result in mate.
+    isMate = isCheck && 
+        ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow());
+  } else {
+    isCheck = false;
+    bool old = (isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow();
+    isMate = children.empty();
+    assert(isMate == old );
+  }
   string check = isMate ? "#" : (isCheck ? "+" : "");
 
   string capture = get<5>(child_move) == 0 ? "" : "x";
@@ -1011,7 +1020,7 @@ void Board::updateZobristCastle(char castleStatus) {
   zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
 }
 
-uint64_t Board::getZobrist_slow(void) {
+board_hash_t Board::getZobrist_slow(void) {
   zobrist = 0;
   for (int r = 0; r < 8; r++) {
     for (int f = 0; f < 8; f++) {
@@ -1246,7 +1255,7 @@ void Board::perft(
     board_s moveSpecial = get<6>(move);
 
     count->fetch_add(1);
-//    uint64_t test = zobrist;
+//    board_hash_t test = zobrist;
 //    assert( test == getZobrist_slow() );
 
     if (get<5>(move) != 0) { captures->fetch_add(1); }

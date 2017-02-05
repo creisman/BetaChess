@@ -15,7 +15,7 @@ using namespace board;
 bool verifySeriesOfMoves(
     string stringOfMoves,
     string fen,
-    uint64_t zobrist) {
+    board_hash_t zobrist) {
   Board b(true /* init */);
   
   stringstream ss(stringOfMoves);
@@ -38,7 +38,7 @@ bool verifySeriesOfMoves(
     cout << "expected: " << fen.size() << ": \"" << fen << "\"" << endl;
   };
 
-  uint64_t genZ = b.getZobrist();
+  board_hash_t genZ = b.getZobrist();
 
   cout << "          " << hex << genZ << " matches: " << (genZ == zobrist) << dec << endl;
   if (genZ != zobrist) {

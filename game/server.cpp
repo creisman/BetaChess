@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cassert>
 #include <cstdint>
 #include <evhttp.h>
 #include <iostream>
@@ -47,13 +48,24 @@ string repLoop(int ply) {
   }
 
   if (!foundBookResponse) {
-    suggest = boardT.findMove(ply);
+    // Number of nodes that can be evaled quickly.
+    suggest = boardT.findMove(425000);
+  }
+
+  // Check if game is over
+  board_s result = boardT.getGameResult_slow();
+  if (result != Board::RESULT_IN_PROGRESS) {
+    cout << "Server update, game result: " << (int) result << endl;
+
+    // Update some of the book (let Book figure out how much).
+    bookT.updateResult(moves, result /* for white */);
+    bookT.write();
   }
 
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
   string coords = boardT.coordinateNotation(move);
-  string alg = boardT.algebraicNotation(move);
+  string alg = boardT.algebraicNotation_slow(move);
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
   return coords;
@@ -65,39 +77,14 @@ string update(string move) {
     move.pop_back();
   }
 
-  bool foundMove = false;
-  for (Board c : boardT.getLegalChildren()) {
-    string moveToGetC = boardT.algebraicNotation(c.getLastMove());
-    if (moveToGetC == move) {
-      cout << "found move(" << move << ")!" << endl;
-      foundMove = true;
-      boardT = c;
-      moves.push_back(c.getLastMove());
-      moveNames.push_back(moveToGetC);
-      break;
-    }
-  }
-
-  if (foundMove) {
-    // Check if game is over
-    //TODO(creisman): pass result from server to double check.
-
-    board_s result = boardT.getGameResult();
-    if (result != Board::RESULT_IN_PROGRESS) {
-      cout << "Server update, game result: " << (int) result << endl;
-
-      // Update some of the book (let Book figure out how much).
-      bookT.updateResult(moves, result /* for white */);
-    }
-    bookT.write();
-  }
-
+  bool foundMove = boardT.makeAlgebraicMove_slow(move);
   if (!foundMove) {
-    cout << "Didn't find move: " << move << endl;
+    cout << "Didn't find move( " << (move.size() + 1) <<  "): " << move << endl;
     for (Board c : boardT.getLegalChildren()) {
-      string moveToGetC = boardT.algebraicNotation(c.getLastMove());
+      string moveToGetC = boardT.algebraicNotation_slow(c.getLastMove());
       cout << "\twasn't " << moveToGetC << endl;
     }
+    assert(false);
   }
 
   boardT.printBoard();
