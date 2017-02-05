@@ -144,6 +144,7 @@ namespace board {
       void updateZobristPiece(board_s a, board_s b, board_s piece);
       void updateZobristTurn(bool isWTurn);
       void updateZobristCastle(char castleStatus);
+      void updateZobristEnPassant(move_t &move);
       board_hash_t getZobrist_slow(void);
 
 
