@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
+#include <map>
 
 #include "book.h"
 
@@ -28,70 +28,37 @@ Book::Book() {
 }
 
 bool Book::load(void) {
-  positionsLoaded = 0;
+  bookMap.clear();
 
-  // read some lines do some stuff build a tree.
-  root.move = make_tuple(0, 0, 0, 0, 0, 0, 0);
-  root.played = 0;
-  root.wins = 0;
-  root.losses = 0;
-  root.children.clear();
-
+  // read some lines do some stuff build a map.
   fstream fs(ANTICHESS_FILE, fstream::in);
 
   string line;
-  vector<BetaChessBookEntry*> path;
-  path.push_back(&root);
   while (fs.good()) {
     getline(fs, line);
     if (line.empty()) {
       continue;
     }
 
-    positionsLoaded++;
-
-    size_t depth = 0;
-    while (line.size() && line.front() == ' ') {
-      line.erase(0, 1); // erase first character.
-      depth += 1;
+    istringstream input(line);
+    string part[4];
+    for (int i = 0; i < 4; i++) {
+      assert( getline( input, part[i], ',') );
     }
-
-    //cout << "depth: " << depth << "\tline: \"" << line << "\"" << endl;
-
-    int raw[10];
-    istringstream strStream(line);
-    for (int i = 0; i < 10; i++) {
-      char comma;
-      strStream >> raw[i];
-      strStream >> comma;
-      assert(comma == ',' || i == 9);
-    }
+    // TODO assert about input being fully consumed.
 
     BetaChessBookEntry *entry = new BetaChessBookEntry();
-    entry->move = make_tuple(raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6]);
-    entry->played = raw[7];
-    entry->wins = raw[8];
-    entry->losses = raw[9];
+    entry->hash = stoull(part[0], nullptr, 16);
+    entry->played = stoul(part[1]);
+    entry->wins = stoul(part[2]);
+    entry->losses = stoul(part[3]);
 
-    assert( depth <= path.size() );
-
-    while (depth < path.size() - 1) {
-      path.pop_back();
-    }
-
-    if (depth == 0) {
-      root.played += entry->played;
-    }
-
-    assert (depth == path.size() - 1);
-    (path.back()->children).push_back(entry);
-
-    path.push_back(entry);
+    assert(bookMap.count(entry->hash) == 0);
+    bookMap[entry->hash] = entry;
   }
 
-
   // Print book for debug purpose.
-  //cout << "Loaded book with " << positionsLoaded << " positions" << endl;
+  //cout << "Loaded book with " << bookMap.size() << " positions" << endl;
   //printBook();
 
   return true;
@@ -99,108 +66,109 @@ bool Book::load(void) {
 
 
 
-bool writeHelper(ostream& fs, string prefix, BetaChessBookEntry *entry) {
+bool writeHelper(ostream& fs, BetaChessBookEntry *entry) {
   assert (entry != nullptr);
-  move_t m = entry->move;
-  fs << prefix;
-  fs << (int)get<0>(m) << "," << (int)get<1>(m) << ","
-       << (int)get<2>(m) << "," << (int)get<3>(m) << ","
-       << (int)get<4>(m) << "," << (int)get<5>(m) << ","
-       << (int)get<6>(m) << ",";
+  fs << hex << entry->hash << dec << ",";
   fs << entry->played << ",";
   fs << entry->wins << ",";
   fs << entry->losses << endl;
-
-  // TODO sort by child game count.
-  for (auto child : entry->children) {
-    writeHelper(fs, prefix + " ", child);
-  }
 }
 
 
 bool Book::write(void) {
+  // TODO sort by hash or something.
   string outFile = ANTICHESS_FILE + ".tmp";
   fstream fs(outFile, fstream::out);
-  for (auto child : root.children) {
-    writeHelper(fs, "", child);
+  for (auto entryPair : bookMap) {
+    writeHelper(fs, entryPair.second);
   }
 }
 
 
-bool Book::updateResult(vector<move_t> moves, board_s result) {
-  BetaChessBookEntry *entry = &root;
+bool Book::updateResult(vector<string> moves, board_s result) {
+  cout << "End result was " << (int) result << " (for white)" << endl;
+
   Board b(true /* init */);
 
-  cout << "End result was " << (int) result << " (for white)" << endl;
+  // Update starting position.
+  BetaChessBookEntry *entry = findOrCreateEntry(b.getZobrist());
+  updateEntry(entry, result);
+
   for (int i = 0; i < min(MAX_DEPTH, moves.size()); i++) {
-    move_t move = moves[i];
-    b.makeMove(move);
+    // Play a move.
+    Board test = b.copy();
+    assert( test.makeAlgebraicMove_slow(moves[i]) );
+    assert( moves[i] == b.algebraicNotation_slow(test.getLastMove()) );
+    b = test;
 
-    assert (b.getLastMove() == moves[i]);
-    string moveName = b.algebraicNotation_slow(b.getLastMove());
-
-    BetaChessBookEntry *newEntry = recurseMove(entry, move);
-    if (newEntry != nullptr) {
-      cout << "\tUpdate (" << i << "): " << moveName <<
-              "\t +" << newEntry->wins <<
-                " -" << newEntry->losses <<
-                " (from " << newEntry->played << ")" << endl;
+    // Find or create an entry for this board hash.
+    entry = findOrCreateEntry(b.getZobrist());
+    if (entry->played == 0) {
+      cout << "\tAdding entry for move(" << i << "): " << moves[i] << endl;
     } else {
-      cout << "\tAdding entry for move(" << i << "): " << moveName << endl;
-      newEntry = new BetaChessBookEntry();
-      newEntry->move = moves[i];
-      newEntry->played = 0;
-      newEntry->wins = 0;
-      newEntry->losses = 0;
-
-      entry->children.push_back(newEntry);
+      cout << "\tUpdate (" << i << "): " << moves[i] << "\t" << stringRecord(entry) << endl;
     }
-    assert (newEntry != nullptr);
-    entry = newEntry;
 
-    // Update result.
-    entry->played += 1;
+    // Update the entry with game result.
+    updateEntry(entry, result);
+  }
+}
 
-    if (result == Board::RESULT_WHITE_WIN) {
-      entry->wins += 1;
-    } else if (result == Board::RESULT_BLACK_WIN) {
-      entry->losses += 1;
-    } else if (result == Board::RESULT_TIE) {
-      // pass.
-    } else {
-      cerr << "Got invalid result: " << result << endl;
-      assert (false); // Invalid result.
-    }
+
+BetaChessBookEntry* Book::findOrCreateEntry(board_hash_t hash) {
+  auto lookup = bookMap.find(hash);
+  if (lookup != bookMap.end()) {
+    return lookup->second;
+  } else {
+    BetaChessBookEntry *entry = new BetaChessBookEntry();
+    entry->hash = hash;
+    entry->played = entry->wins = entry->losses = 0;
+    bookMap[entry->hash] = entry;
+    return entry;
+  }
+}
+
+
+void Book::updateEntry(BetaChessBookEntry *entry, board_s result) {
+  assert( entry != nullptr );
+
+  entry->played += 1;
+
+  if (result == Board::RESULT_WHITE_WIN) {
+    entry->wins += 1;
+  } else if (result == Board::RESULT_BLACK_WIN) {
+    entry->losses += 1;
+  } else if (result == Board::RESULT_TIE) {
+    // pass.
+  } else {
+    cerr << "Got invalid result: " << result << endl;
+    assert (false); // Invalid result.
   }
 }
 
 void Book::printBook() {
   Board b(true /* init */);
-  printBook(b, &root, 0, 10);
+  printBook(b, "START", 0, 10);
 }
 
-void Book::printBook(Board &b, BetaChessBookEntry *entry, int depth, int recurse) {
-  if (entry != nullptr) {
+void Book::printBook(Board &b, string moveName, int depth, int recurse) {
+  auto lookup = bookMap.find(b.getZobrist());
+  if (lookup != bookMap.end()) {
+    BetaChessBookEntry *entry = lookup->second;
     string start = "";
     start.resize(depth, ' ');
 
-    Board c = b.copy();
-    if (entry != &root) {
-      c.makeMove(entry->move);
-    }
-    start += (entry == &root) ? "START" : b.algebraicNotation_slow(entry->move);
+    start += moveName;
 
     // Pad out depth / move data.
     start.resize(20, ' ');
-    cout << start
-    //     << " (" << stringMove(entry->move) << ") "
-         << stringRecord(entry)
-         << " record " << entry->played << " +" << entry->wins << " -" << entry->losses
-         << " with " << entry->children.size() << " children" << endl;
+    cout << start << stringRecord(entry) << endl;
+    // Figure out how to count children again.
     if (recurse > 0) {
-      for (auto child : entry->children) {
+      for (auto c : b.getLegalChildren()) {
         // Consider sorting by # played or success.
-        printBook(c, child, depth + 1, recurse - 1);
+        string newMoveName = b.algebraicNotation_slow(c.getLastMove());
+        printBook(c, newMoveName, depth + 1, recurse - 1);
       }
     }
   }
@@ -208,31 +176,36 @@ void Book::printBook(Board &b, BetaChessBookEntry *entry, int depth, int recurse
 
 
 string Book::stringRecord(BetaChessBookEntry *entry) {
-  return "p: " + to_string(entry->played) +
-    " w: " + to_string(entry->wins) +
-    " l: " + to_string(entry->losses);
+  return "+" + to_string(entry->wins) +
+    " -" + to_string(entry->losses) +
+    " from " + to_string(entry->played);
 }
 
 
-string Book::stringMove(move_t move) {
-  return to_string(get<0>(move)) + to_string(get<1>(move)) + " to " +
-         to_string(get<2>(move)) + to_string(get<3>(move)) + " p: " +
-         to_string(get<4>(move)) + " c: " +
-         to_string(get<5>(move)) + " s: " +
-         to_string(get<6>(move));
-}
-
-move_t* Book::multiArmBandit(vector<move_t> moves) {
-  BetaChessBookEntry *entry = recurseMoves(&root, moves);
-  if (entry == nullptr) {
-    return nullptr;
+string Book::multiArmBandit(Board &b) {
+  auto lookup = bookMap.find(b.getZobrist());
+  if (lookup == bookMap.end()) {
+    return "";
   }
+  cout << "\tFound book position for: "
+         << hex << b.getZobrist() << dec << endl;
 
-  vector<pair<double, move_t*>> sortedMoves;
-  for (auto child : entry->children) {
+  BetaChessBookEntry *entry = lookup->second;
+  assert(entry != nullptr);
+
+  vector<pair<double, string>> sortedMoves;
+  for (auto c : b.getLegalChildren()) {
+    lookup = bookMap.find(c.getZobrist());
+    if (lookup == bookMap.end()) {
+      continue;
+    }
+    BetaChessBookEntry *child = lookup->second;
+    string moveName = b.algebraicNotation_slow(c.getLastMove());
+
     // See "How Not To Sort By Average Rating".
     double score = 0;
 
+    // TODO account for percent of ties or something.
     int wins = child->wins;
     int losses = child->losses;
     int n = wins + losses;
@@ -240,19 +213,19 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
       double z = 1.96;
       double zt = z*z / n;
 
-      int goodResult = (moves.size() % 2 == 0) ? wins : losses;
+      int goodResult = b.getIsWhiteTurn() ? wins : losses;
+      double tieMult = b.getIsWhiteTurn() ? 0.4 : 0.6;
       double pHat = (1.0 * goodResult) / n;
       score = (pHat + zt/2 - z * sqrt( (pHat * (1 - pHat) + zt/4) / n )) / (1 + zt);
     }
 
     // TODO verify this with real data later.
-    // TODO add move name.
     cout << "\t" << n << " = " << wins << " - " << losses << " with score: " << score << endl;
-    sortedMoves.push_back(make_pair(score, &child->move));
+    sortedMoves.push_back(make_pair(score, moveName));
   }
 
   if (sortedMoves.empty()) {
-    return nullptr;
+    return "";
   }
 
   sort(sortedMoves.begin(), sortedMoves.end());
@@ -264,7 +237,7 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
   if (bestWinRate < 0.3 || randomGenerator() % 5 == 0) {
     cout << "\tMAB is exploring" << endl;
     if (randomGenerator() % 2 == 0 && sortedMoves.size() < 3) {
-      return nullptr;
+      return "";
     }
     return sortedMoves[randomGenerator() % sortedMoves.size()].second;
   }
@@ -274,40 +247,19 @@ move_t* Book::multiArmBandit(vector<move_t> moves) {
 }
 
 
-BetaChessBookEntry* Book::recurseMove(BetaChessBookEntry *entry, move_t move) {
-  for (auto child : entry->children) {
-    if (child->move == move) {
-      return child;
-    }
-  }
-  //cout << "couldn't find move: " << stringMove(move) << endl;
-  return nullptr;
-}
-
-
-BetaChessBookEntry* Book::recurseMoves(BetaChessBookEntry *entry, vector<move_t> moves) {
-  BetaChessBookEntry *result = entry;
-  for (move_t move : moves) {
-    result = recurseMove(result, move);
-    if (result == nullptr) {
-      return result;
-    }
-  }
-  return result;
-}
-
-
 /*
 int main(void) {
   cout << "In Book Main!" << endl;
 
   Book book;
   book.load();
-  book.printBook();
+  cout << "\tLoaded" << endl << endl;
 
-  vector<move_t> moves;
-  moves.push_back(make_tuple(1,6,2,6,1,0,0));
-  book.incrementPlayed(moves);
+  book.printBook();
+  cout << endl << endl;
+
+  vector<string> moves = { "Na3", "b5", "Nxb5", "a6", "Nxc7", "Qxc7" };
+  book.updateResult(moves, Board::RESULT_WHITE_WIN);
 
   book.write();
 }

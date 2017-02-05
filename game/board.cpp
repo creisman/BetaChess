@@ -271,6 +271,10 @@ void Board::printBoard(void) {
   cout << boardStr() << endl;
 }
 
+bool Board::getIsWhiteTurn(void) {
+  return isWhiteTurn;
+}
+
 board_hash_t Board::getZobrist(void) {
   return zobrist;
 }

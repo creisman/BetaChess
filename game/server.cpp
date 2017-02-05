@@ -16,8 +16,7 @@ using namespace book;
 
 Book bookT;
 Board boardT(true /* init */);
-vector<move_t> moves;
-vector<string> moveNames;
+vector<string> moves;
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply) {
@@ -26,22 +25,22 @@ string repLoop(int ply) {
   // Some Book stuff here.
   scored_move_t suggest;
 
-  move_t *bookMove = bookT.multiArmBandit(moves);
+  string bookMove = bookT.multiArmBandit(boardT);
   bool foundBookResponse = false;
-  if (bookMove != nullptr) {
-    cout << "Got move from book" << endl;
-    suggest = make_pair(NAN, *bookMove);
+  if (bookMove != "") {
+    cout << "Got move(" << bookMove << ") from book" << endl;
 
     // Verify it's a real move
     for (Board c : boardT.getLegalChildren()) {
-      if (*bookMove == c.getLastMove()) {
+      if (bookMove == boardT.algebraicNotation_slow(c.getLastMove())) {
+        suggest = make_pair(NAN, c.getLastMove());
         foundBookResponse = true;
         break;
       }
     }
     if (!foundBookResponse) {
       cout << "Got bad suggestion from book after: " << endl;
-      for (string moveName : moveNames) {
+      for (string moveName : moves) {
         cout << "\t" << moveName << endl;
       }
     }
@@ -50,16 +49,6 @@ string repLoop(int ply) {
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
     suggest = boardT.findMove(425000);
-  }
-
-  // Check if game is over
-  board_s result = boardT.getGameResult_slow();
-  if (result != Board::RESULT_IN_PROGRESS) {
-    cout << "Server update, game result: " << (int) result << endl;
-
-    // Update some of the book (let Book figure out how much).
-    bookT.updateResult(moves, result /* for white */);
-    bookT.write();
   }
 
   double score = get<0>(suggest);
@@ -86,6 +75,17 @@ string update(string move) {
     }
     assert(false);
   }
+  moves.push_back(move);
+
+  // Check if game is over
+  board_s result = boardT.getGameResult_slow();
+  if (result != Board::RESULT_IN_PROGRESS) {
+    cout << "Server updating, game result: " << (int) result << endl;
+
+    // Update some of the book (let Book figure out how much).
+    bookT.updateResult(moves, result /* for white */);
+    bookT.write();
+  }
 
   boardT.printBoard();
   string reply = foundMove ? "found" : "not found";
@@ -106,11 +106,10 @@ void genericHandler(evhttp_request * req, void *args) {
   auto *inBuffer = evhttp_request_get_input_buffer(req);
   size_t inSize = evbuffer_get_length(inBuffer);
   size_t readSize = min(inSize, (size_t) 1000);
-  char data[readSize+1];
-  memset(data, '\0', readSize+1);
-  cout << "\tdata size: " << inSize << endl;
-
-  evbuffer_copyout(inBuffer, data, readSize);
+  //char data[readSize+1];
+  //memset(data, '\0', readSize+1);
+  //cout << "\tdata size: " << inSize << endl;
+  //evbuffer_copyout(inBuffer, data, readSize);
 
   struct evkeyvalq uriParams;
   evhttp_parse_query_str(evhttp_uri_get_query(uriParsed), &uriParams);
@@ -118,16 +117,14 @@ void genericHandler(evhttp_request * req, void *args) {
   string startHeader = null2Empty( evhttp_find_header(&uriParams, "start") );
   string moveHeader  = null2Empty( evhttp_find_header(&uriParams, "move") );
 
-  cout << "\tparsed args:" << endl
-       << "\t\tstart: \"" << startHeader << "\"" << endl
-       << "\t\tmove: \"" << moveHeader << "\"" << endl << endl;
-
+  cout << "\tparsed args: "
+       << "( start: \"" << startHeader << "\" ) "
+       << "( move: \"" << moveHeader << "\" )" << endl << endl;
 
   string reply;
   if (!startHeader.empty()) {
     boardT = Board(true /* init */);
     moves.clear();
-    moveNames.clear();
 
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";

@@ -85,6 +85,7 @@ namespace board {
       string generateFen_slow(void);
       void printBoard(void);
 
+      bool getIsWhiteTurn(void);
       board_hash_t getZobrist(void);
 
       move_t getLastMove(void);
