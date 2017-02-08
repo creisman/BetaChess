@@ -147,6 +147,8 @@ void genericHandler(evhttp_request * req, void *args) {
 
 
 int main() {
+  assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
+
   if (!event_init()) {
     cerr << "Failed to init libevent." << endl;
     return -1;

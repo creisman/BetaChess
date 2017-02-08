@@ -1,7 +1,7 @@
 # Dear heavenly father we pray for our eternal soul.
 # We have made a makefile and are sinful.
 
-CFLAGS=-std=c++11 -O2 -fopenmp
+CFLAGS=-std=c++11 -fopenmp -O2
 OBJ = board.o book.o
 DEPS = board.h polyglot.h
 

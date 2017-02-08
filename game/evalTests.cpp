@@ -376,8 +376,8 @@ void evalWinAtChess(void) {
   eval("1n2rr2/1pk3pp/pNn2p2/2N1p3/8/6P1/PP2PPKP/2RR4 w - - bm Nca4; id \"WAC.299\";");
   eval("b2b1r1k/3R1ppp/4qP2/4p1PQ/4P3/5B2/4N1K1/8 w - - bm g6; id \"WAC.300\";");
 
-  // With nodes = 100k and only the trivial heuristic 72 of 300.
-  // This doesn't improve by increasing nodes up to 4M.
+  // With nodes = 100k and only the trivial heuristic, 72 of 300.
+  // With nodes = 1000k (~40 minutes), 76 of 300.
   printStats("Win at Chess");
 };
 
