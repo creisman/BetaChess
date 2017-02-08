@@ -552,9 +552,8 @@ void Board::promoHelper(
       board_s signedPiece = selfColor * newPiece;
       c.state[y][x] = signedPiece;
 
-      c.materialDiff += getPieceValue(signedPiece) - getPieceValue(movingPawn);
-      c.updateZobristPiece(y, x, movingPawn);
-      c.updateZobristPiece(y, x, signedPiece);
+      updatePiece(y, x, movingPawn, false /* movingTo */);
+      updatePiece(y, x, signedPiece, true /* movingTo */);
 
       c.makeMove(y,x,    y2, x2, SPECIAL_PROMOTION);
       all_moves->push_back(c);
@@ -686,8 +685,9 @@ void Board::makeMove(move_t move) {
   if (special == SPECIAL_PROMOTION) {
     board_s moving  = get<4>(move);
     state[a][b] = moving;
-    updateZobristPiece(a, b, peaceSign(moving) * PAWN);
-    updateZobristPiece(a, b, moving);
+
+    updatePiece(a, b, peaceSign(moving) * PAWN, false /* movingTo */);
+    updatePiece(a, b, moving, true /* movingTo */);
     // This is the special magic for promotions.
   }
   makeMove(a, b, c, d, special);
@@ -705,15 +705,15 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
       state[a][3] = state[a][0];
       state[a][0] = 0;
 
-      updateZobristPiece(a, 0, ourRook);
-      updateZobristPiece(a, 3, ourRook);
+      updatePiece(a, 0, ourRook, false /* movingTo */);
+      updatePiece(a, 3, ourRook, true /* movingTo */);
     } else if (d == 6) {
       assert( state[a][7] == ourRook );
       state[a][5] = state[a][7];
       state[a][7] = 0;
 
-      updateZobristPiece(a, 5, ourRook);
-      updateZobristPiece(a, 7, ourRook);
+      updatePiece(a, 7, ourRook, false /* movingTo */);
+      updatePiece(a, 5, ourRook, true /* movingTo */);
     } else {
       assert (false); // unknown destination;
     }
@@ -729,8 +729,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
     state[a][d] = 0;
     // Note that we captured a pawn.
     get<5>(lastMove) = theirPawn;
-    updateMaterialDiff(theirPawn);
-    updateZobristPiece(a, d, theirPawn);
+    updatePiece(a, d, theirPawn, false /* movingTo */);
     halfMoves = 0;
   }
 }
@@ -747,8 +746,9 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
 
   state[a][b] = 0;
   state[c][d] = moving;
-  updateZobristPiece(a, b, moving);
-  updateZobristPiece(c, d, moving);
+
+  updatePiece(a, b, moving, false /* movingTo */);
+  updatePiece(c, d, moving, true /* movingTo */);
 
   // update castling.
   if (isWhiteTurn) {
@@ -812,8 +812,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   updateZobristEnPassant(lastMove); // Toggle on this move.
 
   if (removed != 0) {
-    updateMaterialDiff(removed);
-    updateZobristPiece(c, d, removed);
+    updatePiece(c, d, removed, false /* movingTo */);
   }
 
   if (abs(moving) == PAWN || removed != 0) {
@@ -989,9 +988,13 @@ bool Board::onBoard(board_s a, board_s b) {
 }
 
 
-void Board::updateMaterialDiff(board_s removed) {
-  assert(removed != 0);
-  materialDiff -= getPieceValue(removed);
+void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
+  assert(piece != 0);
+
+  // TODO test optimization (-1 + 2 * movingTo);
+  materialDiff += (movingTo ? 1 : -1) * getPieceValue(piece);
+
+  updateZobristPiece(a, b, piece);
 }
 
 int Board::getPiecesValue_slow(void) {
@@ -1055,6 +1058,7 @@ uint64_t Board::getZobrist_slow(void) {
 
 
 double Board::heuristic() {
+  // NOTE: Used to test that updatePiece is doing incremental updates correctly.
   //int pieceValue = getPiecesValue_slow();
   //assert( pieceValue == materialDiff );
   int pieceValue = materialDiff;

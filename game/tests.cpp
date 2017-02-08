@@ -122,7 +122,7 @@ void playGame(int moves, int ply, string fen) {
 
 
 int main(int argc, char *argv[]) {
-  bool testPlay = false;
+  bool testPlay = true;
   bool testPerft = true;
   bool testHash = true;
 

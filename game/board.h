@@ -137,8 +137,7 @@ namespace board {
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
 
-      void updateMaterialDiff(board_s removed);
-      // Note the added s in Piece(s), this sums all pieces (using 8x8 search)
+      void updatePiece(board_s a, board_s b, board_s piece, bool movingTo);
       int getPiecesValue_slow(void);
 
       void updateZobristPiece(board_s a, board_s b, board_s piece);
