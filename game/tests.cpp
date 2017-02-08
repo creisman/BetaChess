@@ -54,7 +54,7 @@ bool verifySeriesOfMoves(
   return (gen == fen) && (genZ == zobrist);
 }
 
-void perft(int ply, string fen) {
+void perft(int ply, map<int, long> countToVerify, string fen) {
   Board b(true /* init */);
   if (!fen.empty()) {
     b = Board(fen);
@@ -86,6 +86,13 @@ void perft(int ply, string fen) {
           "\tpromotions: " << promotions <<
           "\tmates: " << mates << endl;
   printf("\tevaled: %.0f knodes/s (%.2f seconds)\n", (count / duration_s / 1000), duration_s);
+
+  long expected = countToVerify[ply];
+  if (expected > 0 && expected != count) {
+    cout << "Count mismatch " << count << " != " << expected << " (expected)" << endl;
+    assert( false );
+  }
+
   cout << endl << endl;
 }
 
@@ -116,7 +123,7 @@ void playGame(int moves, int ply, string fen) {
 
 int main(int argc, char *argv[]) {
   bool testPlay = false;
-  bool testPerft = false;
+  bool testPerft = true;
   bool testHash = true;
 
   if (argc > 1){
@@ -133,21 +140,37 @@ int main(int argc, char *argv[]) {
   if (testPerft) {
     // Initial Position
     // rPi seems to generate ~1.1M nodes / second with pragma on.
-    perft(5, "");
+    perft(5,
+          {{1, 20},
+           {2, 400},
+           {3, 8902},
+           {4, 197281},
+           {5, 4865609},
+           {6, 119060324},
+           {7, 3195901860}},
+          "");
 
     // "Position 2 - Kiwipete"
     // rPi seems to generate ~1.5M nodes / second with pragma on.
     // perf 5 had a miss by a couple thousand.
-    perft(4, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0");
+    perft(4,
+          {{4, 4085603}, {5, 193690690}},
+          "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0");
 
     // "Position 3"
-    perft(6, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0");
+    perft(6,
+          {{5, 674624}, {6, 11030083}, {7, 178633661}},
+          "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0");
 
     // "Position 4"
-    perft(5, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 0");
+    perft(5,
+          {{4, 422333}, {5, 15833292}},
+          "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 0");
 
-    // From "perf(7) challange" - 14,794,751,816
-    // perft(7, "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
+    // From "a perf(7) challange"
+    perft(5,
+          {{5, 17251342}, {6, 490103130}, {7, 14794751816}},
+          "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
   }
 
 
