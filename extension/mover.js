@@ -27,15 +27,12 @@
       console.log("doesn't make sense to request suggest with mismatched move numbers");
     }
 
-    let isOurAccount = /peace-call|betachess/.test($('.username .text').text())
-    let isOurFirstTurn = (moves.length < 2) && isOurAccount;
-    let hasNoResult = $('.moves .result').length == 0;
-    let isActive = ($('.clock.running').length != 0 || isOurFirstTurn) && hasNoResult;
-    
+    let isOurAccount = /peace-call|betachess/i.test($('#user_tag').text())
+    let isGameOver = $('.moves .result').length != 0;
     let isWhite = $('.cg-board-wrap').hasClass('orientation-white');
-    let isWhiteTurn = $('.clock_white').hasClass('running');
+    let isWhiteTurn = $('.moves move:not(.empty)').length % 2 == 0;
 
-    let isOurTurn = (isActive && isWhite == isWhiteTurn) || (isOurFirstTurn && isWhite);
+    let isOurTurn = isOurAccount && isWhite == isWhiteTurn && !isGameOver;
   
     // TODO this seems to request a 0-th move for white when we are black.
   
@@ -93,8 +90,9 @@
           let charCode1 = "1".charCodeAt(0);
           response.src = {x: d.charCodeAt(0) - charCodeA, y: d.charCodeAt(1) - charCode1};
           response.dest = {x: d.charCodeAt(5) - charCodeA, y: d.charCodeAt(6) - charCode1};
-          if (/\([NBRQK]\)$/.test(d)) {      
-            response.promo = d.charCodeAt(9);
+          let promoIndex = d.search(/\([NBRQK]\)$/);
+          if (promoIndex != -1) {
+            response.promo = d.charAt(promoIndex + 1);
           }
         } else {
           console.log("response was not parsed: " + response.data);
@@ -109,7 +107,7 @@
   
   checkForStart() {
     // TODO update with all supported variants or something
-    let isGame = $('.lichess_game.variant_antichess')
+    let isGame = $('.lichess_game.variant_antichess');
     let isActive = $('.clock.running').length != 0;
 
     // TODO re add isActive
