@@ -63,7 +63,6 @@ Board::Board(string fen) {
   istream_iterator<string> begin(ss);
   istream_iterator<string> end;
   vector<string> parts(begin, end);
-
   assert (parts.size() == 6);
 
   lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
@@ -1245,7 +1244,6 @@ board_s Board::getGameResult_slow(void) {
 
   // Loss conditions: no moves + in check.
   if (!hasChildren && inCheck) {
-    printBoard();
     return isWhiteTurn ? RESULT_BLACK_WIN : RESULT_WHITE_WIN;
   }
 

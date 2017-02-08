@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <iterator>
+#include <set>
+#include <vector>
 
 #include "board.h"
 
@@ -12,7 +15,8 @@ using namespace board;
 
 // TODO: come up with some constants or enum for this.
 int K_NODES = 1000;
-int TEST_SHALLOW = 1000 * K_NODES;
+int TEST_INSTANT =   100 * K_NODES;
+int TEST_SHALLOW =  1000 * K_NODES;
 
 
 vector<string> getBestMoves(Board &b, string epd);
@@ -22,15 +26,14 @@ bool verifyIsInLegal(Board &b, vector<string> moves);
 int success = 0;
 int missed = 0;
 
-void printStats(void) {
-  cout << success << " out of (" << success << " + " << missed << ")" << endl;
+void printStats(string setName) {
+  int total = success + missed;
+  cout << success << " out of (" << total << ") for set \"" << setName << "\"" << endl;
 }
 
 
 bool eval(string epd) {
   // Extended Position Description.
-
-  // TODO: verify this plan.
 
   // Step 1: Parse position
   // Step 2: Parse best moves.
@@ -39,7 +42,11 @@ bool eval(string epd) {
 
 
   // Step 1.
-  Board b(epd);
+  // The epd's parsed here general start with "<FEN> bm Ke3; id set.012;".
+  string fen = epd.substr(0, epd.find(" bm"));
+  // They also tend to be missing move counts.
+  fen += " 0 0";
+  Board b(fen);
 
   // Step 2.
   vector<string> bestMoves = getBestMoves(b, epd);
@@ -51,8 +58,8 @@ bool eval(string epd) {
   cout << "\"" << endl;
 
   // Step 3.
-  move_t move = get<1>(b.findMove(TEST_SHALLOW));
-  string moveName = b.algebraicNotation(move);
+  move_t move = get<1>(b.findMove(TEST_INSTANT));
+  string moveName = b.algebraicNotation_slow(move);
 
   bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
 
@@ -68,7 +75,7 @@ bool eval(string epd) {
 
 
 
-float evalStandardChess(void) {
+float evalQuiteMoves(void) {
   eval("1qr3k1/p2nbppp/bp2p3/3p4/3P4/1P2PNP1/P2Q1PBP/1N2R1K1 b - - bm Qc7; id \"sbd.001\";");
   eval("1r2r1k1/3bnppp/p2q4/2RPp3/4P3/6P1/2Q1NPBP/2R3K1 w - - bm Rc7; id \"sbd.002\";");
   eval("2b1k2r/2p2ppp/1qp4n/7B/1p2P3/5Q2/PPPr2PP/R2N1R1K b k - bm O-O; id \"sbd.003\";");
@@ -206,12 +213,12 @@ float evalStandardChess(void) {
 
   // With nodes = 1M and only the trivial heuristic 15 of 132.
   // This doesn't improve by increasing nodes up to 4M.
-  printStats();
+  printStats("silent but deadly");
 }
 
 
 int main(void) {
-  evalStandardChess();
+  evalQuiteMoves();
 
 }
 
@@ -246,29 +253,38 @@ vector<string> getBestMoves(Board &b, string epd) {
 }
 
 
-bool verifyIsInLegal(Board &b, vector<string> moves) {
-  for (Board c : b.getLegalChildren()) {
-    string moveName = b.algebraicNotation(c.getLastMove());
-    auto it = find(moves.begin(), moves.end(), moveName);
-    if (it != moves.end()) {
-      moves.erase(it);
-    }
+bool verifyIsInLegal(Board &b, vector<string> verify) {
+  // Step 2a.
+  vector<string> children;
+  for (auto c : b.getLegalChildren()) {
+    children.push_back(b.algebraicNotation_slow(c.getLastMove()));
   }
 
-  if (moves.empty()) {
+  sort(verify.begin(), verify.end());
+  sort(children.begin(), children.end());
+
+  vector<string> diff;
+  set_difference(verify.begin(), verify.end(),
+                 children.begin(),  children.end(),
+                 inserter(diff, diff.end()));
+
+  if (diff.empty()) {
     return true;
   }
 
-  cout << "\t";
-  for (string move : moves) {
-    cout << move << ((move == moves.back()) ? "" : ", ");
-  }
+  b.printBoard();
 
-  cout << " not in move list (";
-  for (Board c : b.getLegalChildren()) {
-    string moveName = b.algebraicNotation(c.getLastMove());
-    cout << moveName << ", ";
+  cout << "getLegalChildren: ";
+  for (auto move : children) {
+    cout << move << (move == children.back() ? "" : ", ");
   }
-  cout << ")" << endl;
+  cout << endl;
+
+  cout << "getLegalChildren didn't include: ";
+  for (auto move : diff) {
+    cout << move << (move == diff.back() ? "" : ", ");
+  }
+  cout << endl;
+
   return false;
 }
