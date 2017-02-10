@@ -13,6 +13,19 @@
 using namespace std;
 using namespace board;
 
+bool verifyUpdates() {
+  // TODO more.
+  string fen = "1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - 0 0";
+  Board b(fen);
+
+  for (auto c : b.getLegalChildren()) {
+    Board d = b.copy();
+    d.makeMove(c.getLastMove());
+    assert( d.getZobrist() == c.getZobrist() );
+  }
+};
+
+
 bool verifySeriesOfMoves(
     string stringOfMoves,
     string fen,
@@ -122,6 +135,7 @@ void playGame(int moves, int ply, string fen) {
 
 
 int main(int argc, char *argv[]) {
+  bool testUpdates = true;
   bool testPlay = true;
   bool testPerft = true;
   bool testHash = true;
@@ -131,6 +145,10 @@ int main(int argc, char *argv[]) {
   }
 
   cout << "Size of Board class: " << sizeof(Board) << endl << endl;
+
+  if (testUpdates) {
+    verifyUpdates();
+  }
 
   if (testPlay) {
     playGame(4, 5, "");

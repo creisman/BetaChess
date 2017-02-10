@@ -1,7 +1,7 @@
 // From
 // http://www.talkchess.com/forum/viewtopic.php?topic_view=threads&p=551989&t=50840
 
-const short PST_PIECE_VALUE[] = {0, 100, 300, 300, 500, 950, 8000}
+const int PST_PIECE_VALUE[] = {0, 100, 300, 300, 500, 950, 10000}
 
 // TODO use these values in board.cpp
 

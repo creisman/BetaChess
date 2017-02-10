@@ -305,7 +305,7 @@ vector<Board> Board::getChildren(void) {
           moveTest = attemptMove(y + pawnDirection, x + lr);
           if (moveTest.first && moveTest.second == oppColor) {
             // Pawn Capture (plus potential promotion)
-            promoHelper(&all_moves, isWhiteTurn, selfColor, x, y, x + lr, y + pawnDirection);
+            promoHelper(&all_moves, selfColor, x, y, x + lr, y + pawnDirection);
             hasCapture = true;
           }
         }
@@ -318,7 +318,7 @@ vector<Board> Board::getChildren(void) {
         // pawn move: if next space is empty.
         if (moveTest.first && moveTest.second == 0) {
           // Normal move forward && promo
-          promoHelper(&all_moves, isWhiteTurn, selfColor, x, y, x, y + pawnDirection);
+          promoHelper(&all_moves, selfColor, x, y, x, y + pawnDirection);
 
           // double move (only if nothing in the way for single move)
           if ((isWhiteTurn && y == 1) || (!isWhiteTurn && y == 6)) {
@@ -532,7 +532,6 @@ vector<Board> Board::getLegalChildren(void) {
 // inline
 void Board::promoHelper(
   vector<Board> *all_moves,
-  bool isWhiteTurn,
   board_s selfColor,
   board_s x,
   board_s y,
@@ -552,10 +551,11 @@ void Board::promoHelper(
       board_s signedPiece = selfColor * newPiece;
       c.state[y][x] = signedPiece;
 
-      updatePiece(y, x, movingPawn, false /* movingTo */);
-      updatePiece(y, x, signedPiece, true /* movingTo */);
+      c.updatePiece(y, x, movingPawn, false /* movingTo */);
+      c.updatePiece(y, x, signedPiece, true /* movingTo */);
 
       c.makeMove(y,x,    y2, x2, SPECIAL_PROMOTION);
+
       all_moves->push_back(c);
     }
   } else {
@@ -684,9 +684,11 @@ void Board::makeMove(move_t move) {
 
   if (special == SPECIAL_PROMOTION) {
     board_s moving  = get<4>(move);
+    board_s disappearingPawn = peaceSign(moving) * PAWN;
+    assert(state[a][b] ==  disappearingPawn);
     state[a][b] = moving;
 
-    updatePiece(a, b, peaceSign(moving) * PAWN, false /* movingTo */);
+    updatePiece(a, b, disappearingPawn, false /* movingTo */);
     updatePiece(a, b, moving, true /* movingTo */);
     // This is the special magic for promotions.
   }
@@ -736,10 +738,9 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
-  bool isWhiteP = isWhitePiece(moving);
   board_s removed = state[c][d];
 
-  assert( isWhiteP == isWhiteTurn );
+  assert( isWhitePiece(moving) == isWhiteTurn );
   if (removed != 0) {
     assert( isWhitePiece(removed) != isWhiteTurn );
   }
@@ -850,10 +851,11 @@ string Board::algebraicNotation_slow(move_t child_move) {
   // NOTE(seth): It appears disambigous is only looking at "valid" moves.
   vector<Board> children = getLegalChildren();
   for (Board c : children) {
-    // same piece, same destination
+    // same piece, same destination, same special.
     if ((get<2>(child_move) == get<2>(c.lastMove)) &&
         (get<3>(child_move) == get<3>(c.lastMove)) &&
-        (get<4>(child_move) == get<4>(c.lastMove))) {
+        (get<4>(child_move) == get<4>(c.lastMove)) &&
+        (get<6>(child_move) == get<6>(c.lastMove))) {
       bool equalFile = get<1>(child_move) == get<1>(c.lastMove);
       bool equalRank = get<0>(child_move) == get<0>(c.lastMove);
 
@@ -997,6 +999,7 @@ void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
   updateZobristPiece(a, b, piece);
 }
 
+
 int Board::getPiecesValue_slow(void) {
   int pieceValue = 0;
   for (int r = 0; r < 8; r++) {
@@ -1114,7 +1117,6 @@ scored_move_t Board::findMove(int minNodes) {
   // Check if game has a result
   board_s result = getGameResult_slow();
   if (result != RESULT_IN_PROGRESS) {
-    cout << "Game Result: " << (int) result << endl;
     move_t emptyMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
     return make_pair(result, emptyMove);
   }

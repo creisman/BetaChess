@@ -149,7 +149,6 @@ namespace board {
 
       void promoHelper(
           vector<Board> *all_moves,
-          bool isWhiteTurn,
           board_s selfColor,
           board_s pawnDirection,
           board_s x,

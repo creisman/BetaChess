@@ -59,7 +59,7 @@ bool eval(string epd) {
   cout << "\"" << endl;
 
   // Step 3.
-  move_t move = get<1>(b.findMove(TEST_SHALLOW));
+  move_t move = get<1>(b.findMove(TEST_INSTANT));
   string moveName = b.algebraicNotation_slow(move);
 
   bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
