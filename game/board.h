@@ -22,7 +22,7 @@ namespace board {
   typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s, unsigned char> move_t;
 
   // score concatonated to end of move_t
-  typedef pair<double, move_t> scored_move_t;
+  typedef pair<int, move_t> scored_move_t;
 
   typedef vector<pair<board_s, board_s>> movements_t;
 
@@ -88,6 +88,7 @@ namespace board {
 
       bool getIsWhiteTurn(void);
       board_hash_t getZobrist(void);
+      int  getEvaluation(void);
 
       move_t getLastMove(void);
       vector<Board> getChildren(void);
@@ -102,12 +103,16 @@ namespace board {
       // ~Coordinate notation.
       static string coordinateNotation(move_t move);
 
-      // NOTE(seth): a is y 0-7, b is x 0-7
+      // NOTE(seth): a is y (0-7), b is x (0-7)
       static string squareName(board_s a, board_s b);
       static string rankName(board_s a);
       static string fileName(board_s b);
 
-      double heuristic(void);
+      // VisibileForTesting (safe to call but slow and silly).
+      void recalculateEvaluations_slow(void);
+      void recalculateZobrist_slow(void);
+
+      int heuristic(void);
 
       scored_move_t findMove(int minNodes);
 
@@ -140,14 +145,11 @@ namespace board {
       int getPSTValue(board_s a, board_s b, board_s piece);
 
       void updatePiece(board_s a, board_s b, board_s piece, bool movingTo);
-      void recalculateEvaluations_slow(void);
 
       void updateZobristPiece(board_s a, board_s b, board_s piece);
       void updateZobristTurn(bool isWTurn);
       void updateZobristCastle(char castleStatus);
       void updateZobristEnPassant(move_t &move);
-      void recalculateZobrist_slow(void);
-
 
       void promoHelper(
           vector<Board> *all_moves,
@@ -158,7 +160,7 @@ namespace board {
           board_s x2);
 
       // 1-arg version is public.
-      scored_move_t findMoveHelper(int ply, double alpha, double beta);
+      scored_move_t findMoveHelper(int ply, int alpha, int beta);
 
       // Behavior is not defined if multiple pieces exist.
       pair<board_s, board_s> findPiece_slow(board_s piece);

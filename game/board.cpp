@@ -50,7 +50,7 @@ const map<board_s, int> Board::ANTICHESS_PIECE_VALUE = {
 };
 
 // NOTE doesn't include king.
-const int Board::PIECE_VALUE_SUM = IS_ANTICHESS ? 
+const int Board::PIECE_VALUE_SUM = IS_ANTICHESS ?
   2 * (900 + 2 * 200 + 2 * 200 + 2 * 400 + 8 * 100) :
   2 * (900 + 2 * 500 + 2 * 300 + 2 * 300 + 8 * 100);
 
@@ -754,6 +754,8 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
   board_s removed = state[c][d];
 
+  assert( moving != 0 );
+
   assert( isWhitePiece(moving) == isWhiteTurn );
   if (removed != 0) {
     assert( isWhitePiece(removed) != isWhiteTurn );
@@ -898,7 +900,7 @@ string Board::algebraicNotation_slow(move_t child_move) {
         get<0>(oppKingPos),
         get<1>(oppKingPos)) != 0;
     // Note assumes self move can't result in mate.
-    isMate = isCheck && 
+    isMate = isCheck &&
         ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow());
   } else {
     isCheck = false;
@@ -1007,41 +1009,45 @@ bool Board::onBoard(board_s a, board_s b) {
 int Board::getPSTValue(board_s a, board_s b, board_s piece) {
   char index;
   if (peaceSign(piece) == WHITE) {
-      index = 8 * a     + b; // a = rank, b = file
+    index = 8 * a     + b; // a = rank, b = file
   } else {
-      index = 8 * (7-a) + b; // a = rank, b = file
+    // Rotate the board for black (not just rank (y) mirror).
+    index = 8 * (7-a) + (7-b); // a = rank, b = file
   }
   assert (0 <= index && index < 64);
 
   board_s absPiece = abs(piece);
+  int signMult = peaceSign(piece);
 
   // TODO optimize game phase / materialRatio somehow.
   //float materialRatio = (totalMaterial - 2 * getPieceValue(KING)) / PIECE_VALUE_SUM;
-  float materialRatio = 0.5;
-  assert (0 <= materialRatio && materialRatio <= 1.0);
+  //float materialRatio = 0.5;
+  //assert (0 <= materialRatio && materialRatio <= 1.0);
 
-  float ratioMG = materialRatio;
-  float ratioEG = 1.0 - materialRatio;
-
-  if        (absPiece == PAWN) { 
-    return ratioMG * PST_PAWN_MG[index]   + ratioEG * PST_PAWN_EG[index];
+  int val;
+  if        (absPiece == PAWN) {
+    val = PST_PAWN_MG[index];
 
   } else if (absPiece == KNIGHT) {
-    return ratioMG * PST_KNIGHT_MG[index] + ratioEG * PST_KNIGHT_EG[index];
+    val = PST_KNIGHT_MG[index];
 
   } else if (absPiece == BISHOP) {
-    return ratioMG * PST_BISHOP_MG[index] + ratioEG * PST_BISHOP_EG[index];
+    val = PST_BISHOP_MG[index];
 
   } else if (absPiece == ROOK) {
-    return ratioMG * PST_ROOK_MG[index]   + ratioEG * PST_ROOK_EG[index];
+    val = PST_ROOK_MG[index];
 
   } else if (absPiece == QUEEN) {
-    return ratioMG * PST_QUEEN_MG[index]  + ratioEG * PST_QUEEN_EG[index];
+    val = PST_QUEEN_MG[index];
 
   } else if (absPiece == KING) {
-    return ratioMG *PST_KING_MG[index]    + ratioEG * PST_KING_EG[index];
+    val = PST_KING_MG[index];
+
+  } else {
+    assert( false );
   }
-  assert( false );
+
+  return signMult * val;
 }
 
 
@@ -1068,6 +1074,7 @@ void Board::recalculateEvaluations_slow(void) {
   int oldMaterial = material;
   int oldTotalMaterial = totalMaterial;
   int oldPosition = position;
+  board_hash_t oldZobrist = zobrist;
 
   material = 0;
   totalMaterial = 0;
@@ -1076,7 +1083,7 @@ void Board::recalculateEvaluations_slow(void) {
     for (int c = 0; c < 8; c++) {
       board_s piece = state[r][c];
       if (piece != 0) {
-        updatePiece(r, c, piece, true /* movingTo */); 
+        updatePiece(r, c, piece, true /* movingTo */);
 
         // Note: have to undo updateZobrist.
         updateZobristPiece(r, c, piece);
@@ -1086,7 +1093,8 @@ void Board::recalculateEvaluations_slow(void) {
 
   assert( oldMaterial == 0      | oldMaterial == material           );
   assert( oldTotalMaterial == 0 | oldTotalMaterial == totalMaterial );
-  assert( oldPosition == 0      | oldPosition == material           );
+  assert( oldPosition == 0      | oldPosition == position           );
+  assert( oldZobrist == zobrist );
 }
 
 
@@ -1138,7 +1146,7 @@ void Board::recalculateZobrist_slow(void) {
 }
 
 
-double Board::heuristic() {
+int Board::heuristic() {
   // NOTE: Used to test that updatePiece is doing incremental updates correctly.
   // tuple<short, short> marco = make_tuple(material, position);
   // getPiecesValue_slow();
@@ -1152,7 +1160,7 @@ double Board::heuristic() {
 
     // Was lastmove a capture?
     int heuristicSign = isWhiteTurn ? 1 : -1;
-    double haveTempo = heuristicSign * 6.0 * (get<5>(lastMove) != 0);
+    int haveTempo = heuristicSign * 600 * (get<5>(lastMove) != 0);
 
     // TODO check if we also have to capture.
 
@@ -1203,6 +1211,7 @@ scored_move_t Board::findMove(int minNodes) {
   }
 
   // Check if we only have one move (if so no real choice).
+  // Really useful for anti chess where this happens often.
   auto c = getLegalChildren();
   if (c.size() == 1) {
     return make_pair(NAN, c[0].getLastMove());
@@ -1212,8 +1221,8 @@ scored_move_t Board::findMove(int minNodes) {
   int plyR = 4;
   scored_move_t scoredMove;
   while (true) {
-    scoredMove = findMoveHelper(plyR, -1000.0, 1000);
-    if (abs(scoredMove.first) > 400 || dbgCounter > minNodes) {
+    scoredMove = findMoveHelper(plyR, -10000, 10000);
+    if (abs(scoredMove.first) >= 5000 || dbgCounter > minNodes) {
       break;
     }
     plyR += 1;
@@ -1227,24 +1236,24 @@ scored_move_t Board::findMove(int minNodes) {
 }
 
 
-scored_move_t Board::findMoveHelper(int plyR, double alpha, double beta) {
+scored_move_t Board::findMoveHelper(int plyR, int alpha, int beta) {
   Board::dbgCounter += 1;
   if (plyR == 0) {
     return make_pair(heuristic(), lastMove);
   }
-  double bestInGen = isWhiteTurn ? -1000.0 : 1000.0 ;
+  int bestInGen = isWhiteTurn ? -100000 : 100000 ;
   move_t suggestion;
   vector<Board> children = getLegalChildren();
 
   if (children.empty()) {
     // TODO callGameResultStatus
     // Node is a winner!
-    double score = isWhiteTurn ? 500 : -500;
+    int score = isWhiteTurn ? 50000 : -50000;
     return make_pair(score, lastMove);
   }
 
-  atomic<double> atomic_alpha(alpha);
-  atomic<double> atomic_beta(beta);
+  atomic<int> atomic_alpha(alpha);
+  atomic<int> atomic_beta(beta);
   atomic<bool> shouldBreak(false);
   #pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
@@ -1253,7 +1262,7 @@ scored_move_t Board::findMoveHelper(int plyR, double alpha, double beta) {
     }
 
     auto suggest = children[ci].findMoveHelper(plyR - 1, atomic_alpha, atomic_beta);
-    double value = suggest.first;
+    int value = suggest.first;
 
     if (isWhiteTurn) {
      if (value > bestInGen) {

@@ -13,15 +13,45 @@
 using namespace std;
 using namespace board;
 
-bool verifyUpdates() {
-  // TODO more.
-  string fen = "1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - 0 0";
-  Board b(fen);
+void assertEqualBoardState(Board &expected, Board &test) {
+  // Verify they agree on where pieces are.
+  assert( expected.getZobrist() == test.getZobrist() );
+  assert( expected.heuristic() == test.heuristic() );
+}
 
-  for (auto c : b.getLegalChildren()) {
-    Board d = b.copy();
-    d.makeMove(c.getLastMove());
-    assert( d.getZobrist() == c.getZobrist() );
+bool verifyUpdates() {
+  //string fen = "1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - 0 0";
+  //Board a(fen);
+
+  Board a(true /* init */);
+//  a.printBoard();
+//  cout << "eval: " << a.heuristic() << endl << endl << endl;
+
+  // Four depth = ~100k to 1M positions
+  for (auto b : a.getLegalChildren()) {
+    //b.printBoard();
+    //cout << "eval: " << b.heuristic() << endl << endl << endl;
+    for (auto c : b.getLegalChildren()) {
+      for (auto d : c.getLegalChildren()) {
+        for (auto e : d.getLegalChildren()) {
+          // Verify makeMove in a couple of ways.
+          Board test = a.copy();
+          test.makeMove(b.getLastMove());
+          test.makeMove(c.getLastMove());
+          test.makeMove(d.getLastMove());
+          test.makeMove(e.getLastMove());
+
+          assertEqualBoardState(e, test);
+
+          // Call the verify update methods.
+          e.recalculateEvaluations_slow();
+          e.recalculateZobrist_slow();
+
+          // Call all the slow methods I guess.
+          e.generateFen_slow();
+        }
+      }
+    }
   }
 };
 

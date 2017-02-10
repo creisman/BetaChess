@@ -606,3 +606,9 @@ bool verifyIsInLegal(Board &b, vector<string> verify) {
 
   return false;
 }
+
+
+// Small note tracking.
+//    WAC 72/300 with Alpha/Beta | evaluation = materialDiff    (450s but not improved by adding time)
+//    WAC 62     with Alpha/Beta | evaluation = material + PST  (160s)
+
