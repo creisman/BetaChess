@@ -70,6 +70,7 @@ namespace board {
       static const map<board_s, movements_t> MOVEMENTS;
       static const map<board_s, int> PIECE_VALUE;
       static const map<board_s, int> ANTICHESS_PIECE_VALUE;
+      static const int PIECE_VALUE_SUM;
 
       // Constructors
       Board(bool initState);
@@ -136,6 +137,7 @@ namespace board {
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
+      int getPSTValue(board_s a, board_s b, board_s piece);
 
       void updatePiece(board_s a, board_s b, board_s piece, bool movingTo);
       void recalculateEvaluations_slow(void);
@@ -164,7 +166,7 @@ namespace board {
       // Used for counting moves in findMove
       static atomic<int> dbgCounter;
 
-      // Size per instance ~= 2 + 2 + 1 + 64 + 1 + 1 + 7 + 1 + 4 = 82 bytes.
+      // Size per instance ~= 2 + 2 + 7 + 1 + 64 + 4 + 4 + 4 + 1 + 1 + 8 = 98 bytes.
 
       // (full move count * 2 + isBlack)
       short gameMoves;
@@ -181,6 +183,9 @@ namespace board {
       //  +042 for tiny advantage for white, +842 is mate very soon, -310 is good for black
       // Sum of material. (- for black, + for white)
       int material;
+      // Sum of all material on board.
+      int totalMaterial;
+
       // Piece square value table lookup.
       int position;
 

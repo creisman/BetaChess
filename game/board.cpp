@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "pst.h"
 #include "polyglot.h"
 #include "board.h"
 
@@ -47,6 +48,11 @@ const map<board_s, int> Board::ANTICHESS_PIECE_VALUE = {
   {KNIGHT, 400 },
   {PAWN,   100 },
 };
+
+// NOTE doesn't include king.
+const int Board::PIECE_VALUE_SUM = IS_ANTICHESS ? 
+  2 * (900 + 2 * 200 + 2 * 200 + 2 * 400 + 8 * 100) :
+  2 * (900 + 2 * 500 + 2 * 300 + 2 * 300 + 8 * 100);
 
 
 Board::Board(bool initState) {
@@ -138,6 +144,7 @@ Board::Board(string fen) {
   gameMoves = 2 * (stoul(parts[5]) - 1) + !isWhiteTurn;
 
   material = 0;
+  totalMaterial = 0;
   position = 0;
   zobrist = 0;
   recalculateEvaluations_slow();
@@ -182,6 +189,7 @@ void Board::resetBoard(void) {
 
   // Special don't validate setting.
   material = 0;
+  totalMaterial = 0;
   position = 0;
   zobrist = 0;
   recalculateEvaluations_slow();
@@ -996,11 +1004,61 @@ bool Board::onBoard(board_s a, board_s b) {
 }
 
 
+int Board::getPSTValue(board_s a, board_s b, board_s piece) {
+  char index;
+  if (peaceSign(piece) == WHITE) {
+      index = 8 * a     + b; // a = rank, b = file
+  } else {
+      index = 8 * (7-a) + b; // a = rank, b = file
+  }
+  assert (0 <= index && index < 64);
+
+  board_s absPiece = abs(piece);
+
+  // TODO optimize game phase / materialRatio somehow.
+  //float materialRatio = (totalMaterial - 2 * getPieceValue(KING)) / PIECE_VALUE_SUM;
+  float materialRatio = 0.5;
+  assert (0 <= materialRatio && materialRatio <= 1.0);
+
+  float ratioMG = materialRatio;
+  float ratioEG = 1.0 - materialRatio;
+
+  if        (absPiece == PAWN) { 
+    return ratioMG * PST_PAWN_MG[index]   + ratioEG * PST_PAWN_EG[index];
+
+  } else if (absPiece == KNIGHT) {
+    return ratioMG * PST_KNIGHT_MG[index] + ratioEG * PST_KNIGHT_EG[index];
+
+  } else if (absPiece == BISHOP) {
+    return ratioMG * PST_BISHOP_MG[index] + ratioEG * PST_BISHOP_EG[index];
+
+  } else if (absPiece == ROOK) {
+    return ratioMG * PST_ROOK_MG[index]   + ratioEG * PST_ROOK_EG[index];
+
+  } else if (absPiece == QUEEN) {
+    return ratioMG * PST_QUEEN_MG[index]  + ratioEG * PST_QUEEN_EG[index];
+
+  } else if (absPiece == KING) {
+    return ratioMG *PST_KING_MG[index]    + ratioEG * PST_KING_EG[index];
+  }
+  assert( false );
+}
+
+
 void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
   assert(piece != 0);
 
   // TODO test optimization (-1 + 2 * movingTo);
-  material += (movingTo ? 1 : -1) * getPieceValue(piece);
+  int mult = (movingTo ? 1 : -1);
+  int value = getPieceValue(piece);
+
+  material += mult * value;
+  totalMaterial += mult * abs(value);
+
+  if (!IS_ANTICHESS) {
+    int pst = getPSTValue(a, b, piece);
+    position += mult * pst;
+  }
 
   updateZobristPiece(a, b, piece);
 }
@@ -1008,23 +1066,27 @@ void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
 
 void Board::recalculateEvaluations_slow(void) {
   int oldMaterial = material;
+  int oldTotalMaterial = totalMaterial;
   int oldPosition = position;
 
   material = 0;
+  totalMaterial = 0;
   position = 0;
   for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
       board_s piece = state[r][c];
       if (piece != 0) {
-        material += getPieceValue(piece);
-        // TODO PST.
-        //position +=
+        updatePiece(r, c, piece, true /* movingTo */); 
+
+        // Note: have to undo updateZobrist.
+        updateZobristPiece(r, c, piece);
       }
     }
   }
 
-  assert( oldMaterial == 0 | oldMaterial == material );
-  assert( oldPosition == 0 | oldPosition == material );
+  assert( oldMaterial == 0      | oldMaterial == material           );
+  assert( oldTotalMaterial == 0 | oldTotalMaterial == totalMaterial );
+  assert( oldPosition == 0      | oldPosition == material           );
 }
 
 

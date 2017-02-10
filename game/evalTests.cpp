@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <chrono>
 #include <cassert>
+#include <cstdio>
 #include <iostream>
 #include <iterator>
 #include <set>
@@ -66,11 +68,12 @@ bool eval(string epd) {
 
   if (found) {
     success += 1;
-    cout << "Found: " << moveName << endl;
+    cout << "Found: " << moveName;
   } else {
     missed += 1;
-    cout << "Missed (" << moveName << " instead of " << bestMoves[0] << ")" << endl;
+    cout << "Missed (" << moveName << " instead of " << bestMoves[0] << ")";
   }
+  cout << "\t(" << success << "/" << (success + missed) << ")" << endl;
   cout << endl;
 }
 
@@ -524,9 +527,17 @@ void evalQuiteMoves(void) {
 
 
 int main(void) {
+  auto T0 = chrono::system_clock().now();
+
   // Saving for later after tactics have been refined a little.
   //evalQuiteMoves();
   evalWinAtChess();
+
+  auto T1 = chrono::system_clock().now();
+  chrono::duration<double> duration = T1 - T0;
+  double duration_s = duration.count();
+
+  printf("\t(%.2f seconds)\n", duration_s);
 }
 
 
