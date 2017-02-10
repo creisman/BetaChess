@@ -30,22 +30,22 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
 };
 
 const map<board_s, int> Board::PIECE_VALUE = {
-  {KING, 100},
-  {QUEEN, 9 },
-  {ROOK, 5 },
-  {BISHOP, 3 },
-  {KNIGHT, 3 },
-  {PAWN, 1},
+  {KING,   10000},
+  {QUEEN,  900 },
+  {ROOK,   500 },
+  {BISHOP, 300 },
+  {KNIGHT, 300 },
+  {PAWN,   100 },
 };
 
 
 const map<board_s, int> Board::ANTICHESS_PIECE_VALUE = {
-  {KING, 5},
-  {QUEEN, 9 },
-  {ROOK, 2 },
-  {BISHOP, 2 },
-  {KNIGHT, 4 },
-  {PAWN, 1},
+  {KING,   500 },
+  {QUEEN,  900 },
+  {ROOK,   200 },
+  {BISHOP, 200 },
+  {KNIGHT, 400 },
+  {PAWN,   100 },
 };
 
 
@@ -137,8 +137,11 @@ Board::Board(string fen) {
   // TODO verify off by one is correct.
   gameMoves = 2 * (stoul(parts[5]) - 1) + !isWhiteTurn;
 
-  materialDiff = getPiecesValue_slow();
-  zobrist = getZobrist_slow();
+  material = 0;
+  position = 0;
+  zobrist = 0;
+  recalculateEvaluations_slow();
+  recalculateZobrist_slow();
 }
 
 
@@ -146,7 +149,6 @@ void Board::resetBoard(void) {
   gameMoves = 0;
   halfMoves = 0;
   isWhiteTurn = true;
-  materialDiff = 0;
 
   castleStatus = WHITE_OO | WHITE_OOO | BLACK_OO | BLACK_OOO;
 
@@ -178,8 +180,12 @@ void Board::resetBoard(void) {
   state[7][6] = -KNIGHT;
   state[7][7] = -ROOK;
 
-  materialDiff = getPiecesValue_slow();
-  zobrist = getZobrist_slow();
+  // Special don't validate setting.
+  material = 0;
+  position = 0;
+  zobrist = 0;
+  recalculateEvaluations_slow();
+  recalculateZobrist_slow();
 }
 
 
@@ -965,7 +971,7 @@ string Board::fileName(board_s b) {
 }
 
 
-board_s Board::getPieceValue(board_s piece) {
+int Board::getPieceValue(board_s piece) {
   assert(piece != 0);
   board_s absPiece = abs(piece);
   if (IS_ANTICHESS) {
@@ -994,23 +1000,31 @@ void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
   assert(piece != 0);
 
   // TODO test optimization (-1 + 2 * movingTo);
-  materialDiff += (movingTo ? 1 : -1) * getPieceValue(piece);
+  material += (movingTo ? 1 : -1) * getPieceValue(piece);
 
   updateZobristPiece(a, b, piece);
 }
 
 
-int Board::getPiecesValue_slow(void) {
-  int pieceValue = 0;
+void Board::recalculateEvaluations_slow(void) {
+  int oldMaterial = material;
+  int oldPosition = position;
+
+  material = 0;
+  position = 0;
   for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
       board_s piece = state[r][c];
       if (piece != 0) {
-        pieceValue += getPieceValue(piece);
+        material += getPieceValue(piece);
+        // TODO PST.
+        //position +=
       }
     }
   }
-  return pieceValue;
+
+  assert( oldMaterial == 0 | oldMaterial == material );
+  assert( oldPosition == 0 | oldPosition == material );
 }
 
 
@@ -1040,7 +1054,9 @@ void Board::updateZobristEnPassant(move_t &move) {
   }
 }
 
-uint64_t Board::getZobrist_slow(void) {
+void Board::recalculateZobrist_slow(void) {
+  board_hash_t oldZobrist = zobrist;
+
   zobrist = 0;
   for (int r = 0; r < 8; r++) {
     for (int f = 0; f < 8; f++) {
@@ -1056,15 +1072,18 @@ uint64_t Board::getZobrist_slow(void) {
   updateZobristCastle(castleStatus);
   updateZobristEnPassant(lastMove);
 
-  return zobrist;
+  assert( oldZobrist == 0 || zobrist == oldZobrist );
 }
 
 
 double Board::heuristic() {
   // NOTE: Used to test that updatePiece is doing incremental updates correctly.
-  //int pieceValue = getPiecesValue_slow();
-  //assert( pieceValue == materialDiff );
-  int pieceValue = materialDiff;
+  // tuple<short, short> marco = make_tuple(material, position);
+  // getPiecesValue_slow();
+  // tuple<short, short> polo = make_tuple(material, position);
+  //assert( marco == polo );
+
+  int evaluation = material + position;
 
   if (IS_ANTICHESS) {
     // TODO cache between boards.
@@ -1075,7 +1094,7 @@ double Board::heuristic() {
 
     // TODO check if we also have to capture.
 
-    return haveTempo + pieceValue;
+    return haveTempo + evaluation;
   }
 
   /*
@@ -1091,11 +1110,11 @@ double Board::heuristic() {
   //int whiteMobility = 0
   //int blackMobility = 0
 
-  if (pieceValue > 50) {
+  if (evaluation > 8000) {
     // black is missing king.
-    materialDiff = RESULT_WHITE_WIN;
-  } else if (pieceValue < -50) {
-    materialDiff = RESULT_BLACK_WIN;
+    resultStatus = RESULT_WHITE_WIN;
+  } else if (evaluation < -8000) {
+    resultStatus = RESULT_BLACK_WIN;
   }
 
   //sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
@@ -1105,7 +1124,7 @@ double Board::heuristic() {
   //# TODO Determine doubled, blocked, and isolated pawns
 
   //return sumValueWhite - sumValueBlack + mobilityBonus
-  return pieceValue;
+  return evaluation;
 }
 
 
@@ -1215,7 +1234,8 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
 
 
 board_s Board::getGameResult_slow(void) {
-  // TODO: Tie a lot of moves since pawn move.
+  // TODO: Add 50 move rule and repeated position.
+  // TODO: cache gameresult from heuristic and here.
 
   if (IS_ANTICHESS) {
     bool hasMove = !getLegalChildren().empty();

@@ -132,19 +132,19 @@ namespace board {
       void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       // Helper methods.
-      static board_s getPieceValue(board_s piece);
+      static int getPieceValue(board_s piece);
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
 
       void updatePiece(board_s a, board_s b, board_s piece, bool movingTo);
-      int getPiecesValue_slow(void);
+      void recalculateEvaluations_slow(void);
 
       void updateZobristPiece(board_s a, board_s b, board_s piece);
       void updateZobristTurn(bool isWTurn);
       void updateZobristCastle(char castleStatus);
       void updateZobristEnPassant(move_t &move);
-      board_hash_t getZobrist_slow(void);
+      void recalculateZobrist_slow(void);
 
 
       void promoHelper(
@@ -171,10 +171,21 @@ namespace board {
       // Used to count 50 move rule.
       short halfMoves;
 
-      bool isWhiteTurn;
-      board_t state;
-      board_s materialDiff;
       move_t lastMove;
+
+      bool isWhiteTurn;
+
+      board_t state;
+
+      // Evaluations, measured in centipawns (100th of a pawn)
+      //  +042 for tiny advantage for white, +842 is mate very soon, -310 is good for black
+      // Sum of material. (- for black, + for white)
+      int material;
+      // Piece square value table lookup.
+      int position;
+
+      // Stores game result (and potentially phase).
+      char resultStatus;
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
