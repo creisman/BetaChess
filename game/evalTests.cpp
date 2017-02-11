@@ -16,10 +16,11 @@ using namespace board;
 
 
 // TODO: come up with some constants or enum for this.
-int K_NODES = 1000;
-int TEST_INSTANT =   100 * K_NODES;
-int TEST_SHALLOW =  1000 * K_NODES;
+const int K_NODES = 1000;
+const int TEST_INSTANT =   100 * K_NODES;
+const int TEST_SHALLOW =  1000 * K_NODES;
 
+int testSize  = -1;
 
 vector<string> getBestMoves(Board &b, string epd);
 bool verifyIsInLegal(Board &b, vector<string> moves);
@@ -61,7 +62,7 @@ bool eval(string epd) {
   cout << "\"" << endl;
 
   // Step 3.
-  move_t move = get<1>(b.findMove(TEST_INSTANT));
+  move_t move = get<1>(b.findMove(testSize));
   string moveName = b.algebraicNotation_slow(move);
 
   bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
@@ -526,8 +527,17 @@ void evalQuiteMoves(void) {
 }
 
 
-int main(void) {
+int main(int argc, char** argv) {
   auto T0 = chrono::system_clock().now();
+
+  if (argc == 2) {
+    testSize = atoi(argv[1]);
+    assert( testSize > K_NODES && testSize < 10 * K_NODES * K_NODES + 1 );
+    cout << "\twith custom test size: " << testSize << endl;;
+  } else {
+    testSize = TEST_INSTANT;
+    cout << "\twith test size: " << testSize << endl;;
+  }
 
   // Saving for later after tactics have been refined a little.
   //evalQuiteMoves();
@@ -611,4 +621,4 @@ bool verifyIsInLegal(Board &b, vector<string> verify) {
 // Small note tracking.
 //    WAC 72/300 with Alpha/Beta | evaluation = materialDiff    (450s but not improved by adding time)
 //    WAC 62     with Alpha/Beta | evaluation = material + PST  (160s)
-
+//    WAC 91!    with Alpha/Beta | evaluation = material + PST  (1800s on work machine = 7M)
