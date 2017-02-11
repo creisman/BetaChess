@@ -12,7 +12,6 @@ using namespace std;
 using namespace board;
 
 namespace book {
-  // TODO book isn't smart enough to allow transpositions (e4, e5, d4, d5 = d4, d5, e4, e5).
   struct BetaChessBookEntry {
     board_hash_t hash;
     short played;
@@ -39,7 +38,7 @@ namespace book {
       void printBook(void);
 
     private:
-      // class variables
+      // Book is great because it allows for transpositions (but not path).
       map<board_hash_t, BetaChessBookEntry*> bookMap;
       mt19937 randomGenerator;
 

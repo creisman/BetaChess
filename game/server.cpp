@@ -9,6 +9,7 @@
 
 #include "board.h"
 #include "book.h"
+#include "flags.h"
 
 using namespace std;
 using namespace board;

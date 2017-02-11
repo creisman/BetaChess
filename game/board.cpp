@@ -12,12 +12,14 @@
 #include <utility>
 #include <vector>
 
-#include "pst.h"
-#include "polyglot.h"
 #include "board.h"
+#include "polyglot.h"
+#include "pst.h"
+#include "ttable.h"
 
-using namespace std;
 using namespace board;
+using namespace std;
+using namespace ttable;
 
 
 const string Board::PIECE_SYMBOL = "?pnbrqk";
@@ -1153,6 +1155,7 @@ int Board::heuristic() {
   // tuple<short, short> polo = make_tuple(material, position);
   //assert( marco == polo );
 
+  // TODO testing ttable.
   int evaluation = material + position;
 
   if (IS_ANTICHESS) {
@@ -1200,8 +1203,12 @@ int Board::heuristic() {
 
 // Public method that setups and calls helper method.
 atomic<int> Board::dbgCounter(0);
+atomic<int> Board::ttCounter(0);
+atomic<int> Board::plyCounter(0);
 scored_move_t Board::findMove(int minNodes) {
   Board::dbgCounter = 0;
+  Board::ttCounter = 0;
+  global_tt.clear();
 
   // Check if game has a result
   board_s result = getGameResult_slow();
@@ -1218,7 +1225,8 @@ scored_move_t Board::findMove(int minNodes) {
   }
 
 
-  int plyR = 4;
+  // It might make more sense to reverse depth at somepoint but IDK how.
+  int plyR = 2;
   scored_move_t scoredMove;
   while (true) {
     scoredMove = findMoveHelper(plyR, -10000, 10000);
@@ -1229,18 +1237,47 @@ scored_move_t Board::findMove(int minNodes) {
   }
 
   // scoredMove.first == NAN when it's a forced move.
-
-  cout << "\t\tplyR " << plyR << "=> " << Board::dbgCounter << " nodes" << endl;
+  Board::plyCounter += plyR;
+  cout << "\t\tplyR " << plyR << "=> "
+       <<  Board::dbgCounter << " nodes (ttable "
+       <<  global_tt.size() << ", "
+       <<  Board::ttCounter << ")" << endl;
 
   return scoredMove;
 }
 
 
-scored_move_t Board::findMoveHelper(int plyR, int alpha, int beta) {
+scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   Board::dbgCounter += 1;
+
+  if (USE_T_TABLE) {
+    auto test = global_tt.find(getZobrist());
+    if (test != global_tt.end()) {
+      TTableEntry* lookup = test->second;
+      if (lookup->depth >= plyR) {
+        Board::ttCounter += 1;
+        if (lookup->type == TYPE_EXACT) {
+          return make_pair(lookup->score, lookup->suggested);
+
+        } else if (lookup->type == TYPE_ALPHA_CUTOFF) {
+          alpha = max(alpha, lookup->score);
+
+        } else if (lookup->type == TYPE_BETA_CUTOFF) {
+          beta = max(beta, lookup->score);
+        }
+
+        // After updating alpha/beta potentially outside search window.
+        if (beta <= alpha) {
+          return make_pair(lookup->score, lookup->suggested);
+        }
+      }
+    }
+  }
+
   if (plyR == 0) {
     return make_pair(heuristic(), lastMove);
   }
+
   int bestInGen = isWhiteTurn ? -100000 : 100000 ;
   move_t suggestion;
   vector<Board> children = getLegalChildren();
@@ -1255,7 +1292,10 @@ scored_move_t Board::findMoveHelper(int plyR, int alpha, int beta) {
   atomic<int> atomic_alpha(alpha);
   atomic<int> atomic_beta(beta);
   atomic<bool> shouldBreak(false);
-  #pragma omp parallel for
+  atomic<bool> wasAlphaCutOff(false);
+  atomic<bool> wasBetaCutOff(false);
+
+  //#pragma omp parallel for
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
@@ -1272,6 +1312,7 @@ scored_move_t Board::findMoveHelper(int plyR, int alpha, int beta) {
         if (atomic_beta <= atomic_alpha) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
           shouldBreak = true;
+          wasBetaCutOff = true;
           //break;
         }
       }
@@ -1283,11 +1324,20 @@ scored_move_t Board::findMoveHelper(int plyR, int alpha, int beta) {
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
           shouldBreak = true;
+          wasAlphaCutOff = true;
           //break;
         }
       }
     }
   }
+
+  if (USE_T_TABLE && plyR >= 1) { 
+    char ttType = wasBetaCutOff ? TYPE_BETA_CUTOFF :
+        (wasAlphaCutOff ? TYPE_ALPHA_CUTOFF : TYPE_EXACT);
+    TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};
+    global_tt[getZobrist()] = entry;
+  }
+
   return make_pair(bestInGen, suggestion);
 };
 

@@ -32,6 +32,7 @@ int missed = 0;
 void printStats(string setName) {
   int total = success + missed;
   cout << success << " out of (" << total << ") for set \"" << setName << "\"" << endl;
+  cout << "\t\tplys searched: " << Board::plyCounter << endl;
 }
 
 
@@ -55,11 +56,14 @@ bool eval(string epd) {
   // Step 2.
   vector<string> bestMoves = getBestMoves(b, epd);
   cout << epd << endl;
+  // Print best moves 
+  /*
   cout << "\tbm: \"";
   for (string move : bestMoves) {
     cout << move << ((move == bestMoves.back()) ? "" : ", ");
   }
   cout << "\"" << endl;
+  // */
 
   // Step 3.
   move_t move = get<1>(b.findMove(testSize));
@@ -72,13 +76,13 @@ bool eval(string epd) {
     cout << "Found: " << moveName;
   } else {
     missed += 1;
-    cout << "Missed (" << moveName << " instead of " << bestMoves[0] << ")";
+    cout << "Missed (played " << moveName << " instead of " << bestMoves[0] << ")";
   }
   cout << "\t(" << success << "/" << (success + missed) << ")" << endl;
   cout << endl;
 }
 
-void evalWinAtChess(void) {
+void evalWinAtChess100(void) {
   eval("2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - - bm Qg6; id \"WAC.001\";");
   eval("8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - - bm Rxb2; id \"WAC.002\";");
   eval("5rk1/1ppb3p/p1pb4/6q1/3P1p1r/2P1R2P/PP1BQ1P1/5RKN w - - bm Rg3; id \"WAC.003\";");
@@ -179,6 +183,10 @@ void evalWinAtChess(void) {
   eval("1r3rk1/5pb1/p2p2p1/Q1n1q2p/1NP1P3/3p1P1B/PP1R3P/1K2R3 b - - bm Nxe4; id \"WAC.098\";");
   eval("r1bq1r1k/1pp1Np1p/p2p2pQ/4R3/n7/8/PPPP1PPP/R1B3K1 w - - bm Rh5; id \"WAC.099\";");
   eval("8/k1b5/P4p2/1Pp2p1p/K1P2P1P/8/3B4/8 w - - bm Be3 b6+; id \"WAC.100\";");
+}
+
+
+void evalWinAtChess200(void) {
   eval("5rk1/p5pp/8/8/2Pbp3/1P4P1/7P/4RN1K b - - bm Bc3; id \"WAC.101\";");
   eval("2Q2n2/2R4p/1p1qpp1k/8/3P3P/3B2P1/5PK1/r7 w - - bm Qxf8+; id \"WAC.102\";");
   eval("6k1/2pb1r1p/3p1PpQ/p1nPp3/1q2P3/2N2P2/PrB5/2K3RR w - - bm Qxg6+; id \"WAC.103\";");
@@ -279,6 +287,10 @@ void evalWinAtChess(void) {
   eval("2br2k1/ppp2p1p/4p1p1/4P2q/2P1Bn2/2Q5/PP3P1P/4R1RK b - - bm Rd3; id \"WAC.198\";");
   eval("r1br2k1/pp2nppp/2n5/1B1q4/Q7/4BN2/PP3PPP/2R2RK1 w - - bm Bxc6 Rcd1 Rfd1; id \"WAC.199\";");
   eval("2rqrn1k/pb4pp/1p2pp2/n2P4/2P3N1/P2B2Q1/1B3PPP/2R1R1K1 w - - bm Bxf6; id \"WAC.200\";");
+}
+
+
+void evalWinAtChess300(void) {
   eval("2b2r1k/4q2p/3p2pQ/2pBp3/8/6P1/1PP2P1P/R5K1 w - - bm Ra7; id \"WAC.201\";");
   eval("QR2rq1k/2p3p1/3p1pPp/8/4P3/8/P1r3PP/1R4K1 b - - bm Rxa2; id \"WAC.202\";");
   eval("r4rk1/5ppp/p3q1n1/2p2NQ1/4n3/P3P3/1B3PPP/1R3RK1 w - - bm Qh6; id \"WAC.203\";");
@@ -379,11 +391,8 @@ void evalWinAtChess(void) {
   eval("3Q4/p3b1k1/2p2rPp/2q5/4B3/P2P4/7P/6RK w - - bm Qh8+; id \"WAC.298\";");
   eval("1n2rr2/1pk3pp/pNn2p2/2N1p3/8/6P1/PP2PPKP/2RR4 w - - bm Nca4; id \"WAC.299\";");
   eval("b2b1r1k/3R1ppp/4qP2/4p1PQ/4P3/5B2/4N1K1/8 w - - bm g6; id \"WAC.300\";");
+}
 
-  // With nodes = 100k and only the trivial heuristic, 72 of 300.
-  // With nodes = 1000k (~40 minutes), 76 of 300.
-  printStats("Win at Chess");
-};
 
 void evalQuiteMoves(void) {
   eval("1qr3k1/p2nbppp/bp2p3/3p4/3P4/1P2PNP1/P2Q1PBP/1N2R1K1 b - - bm Qc7; id \"sbd.001\";");
@@ -527,9 +536,26 @@ void evalQuiteMoves(void) {
 }
 
 
+void evalMain() {
+  Board::plyCounter = 0;
+
+  //eval("1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - bm Ka5 Kc5 b7; id \"WAC.500\";");
+  //eval("1k6/8/8/1K6/8/8/8/8 w - - bm Ka5 Kc5; id \"WAC.500\";");
+
+  evalWinAtChess100();
+  //evalWinAtChess200();
+  //evalWinAtChess300();
+  printStats("Win at Chess");
+
+  // Saving for later after tactics have been refined a little.
+  //evalQuiteMoves();
+}
+
+
 int main(int argc, char** argv) {
   auto T0 = chrono::system_clock().now();
 
+  // TODO move this into flags.h / flags.cpp
   if (argc == 2) {
     testSize = atoi(argv[1]);
     assert( testSize > K_NODES && testSize < 10 * K_NODES * K_NODES + 1 );
@@ -539,9 +565,9 @@ int main(int argc, char** argv) {
     cout << "\twith test size: " << testSize << endl;;
   }
 
-  // Saving for later after tactics have been refined a little.
-  //evalQuiteMoves();
-  evalWinAtChess();
+
+  evalMain();
+
 
   auto T1 = chrono::system_clock().now();
   chrono::duration<double> duration = T1 - T0;

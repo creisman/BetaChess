@@ -165,6 +165,7 @@ void playGame(int moves, int ply, string fen) {
 
 
 int main(int argc, char *argv[]) {
+  // move this into flags.h
   bool testUpdates = true;
   bool testPlay = true;
   bool testPerft = true;
