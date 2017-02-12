@@ -65,12 +65,9 @@ namespace board {
       static const board_s RESULT_WHITE_WIN = 100;
       static const board_s RESULT_IN_PROGRESS = 0;
 
-
+      static const move_t NULL_MOVE;
       static const string PIECE_SYMBOL;
       static const map<board_s, movements_t> MOVEMENTS;
-      static const map<board_s, int> PIECE_VALUE;
-      static const map<board_s, int> ANTICHESS_PIECE_VALUE;
-      static const int PIECE_VALUE_SUM;
 
       // Constructors
       Board(void);

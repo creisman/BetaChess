@@ -165,7 +165,7 @@ void playGame(int moves, int nodes, string fen) {
 
 
 int main(int argc, char *argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);  
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
 
   bool testAll = !FLAGS_test_perft && !FLAGS_test_simple && !FLAGS_test_play;
 

@@ -25,6 +25,8 @@ using namespace ttable;
 
 const string Board::PIECE_SYMBOL = "?pnbrqk";
 
+const move_t Board::NULL_MOVE = make_tuple(0, 0, 0, 0, 0, 0, 0);
+
 const map<board_s, movements_t> Board::MOVEMENTS = {
   {KNIGHT, {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}},
   {BISHOP, {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}},
@@ -47,7 +49,7 @@ Board::Board(string fen) {
   vector<string> parts(begin, end);
   assert (parts.size() == 6);
 
-  lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
+  lastMove = Board::NULL_MOVE;
   memset(&state, '\0', sizeof(state));
   int y = 7;
   int x = 0;
@@ -140,7 +142,7 @@ void Board::resetBoard(void) {
   memset(&state, '\0', sizeof(state));
 
   // TODO figure out what this should be.
-  lastMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
+  lastMove = Board::NULL_MOVE;
 
   for (int i = 0; i < 8; i++) {
     state[1][i] = PAWN;
@@ -1186,8 +1188,7 @@ scored_move_t Board::findMove(int minNodes) {
   // Check if game has a result
   board_s result = getGameResult_slow();
   if (result != RESULT_IN_PROGRESS) {
-    move_t emptyMove = make_tuple(0, 0, 0, 0, 0, 0, 0);
-    return make_pair(result, emptyMove);
+    return make_pair(result, Board::NULL_MOVE);
   }
 
   // Check if we only have one move (if so no real choice).
@@ -1209,6 +1210,11 @@ scored_move_t Board::findMove(int minNodes) {
     plyR += 1;
   }
 
+  if (abs(scoredMove.first) < 5000) {
+    assert( scoredMove.second != Board::NULL_MOVE );
+  }
+
+
   // scoredMove.first == NAN when it's a forced move.
   Board::plyCounter += plyR;
   cout << "\t\tplyR " << plyR << "=> "
@@ -1229,18 +1235,19 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
       TTableEntry* lookup = test->second;
       if (lookup->depth >= plyR) {
         Board::ttCounter += 1;
-        if (lookup->type == TYPE_EXACT) {
-          return make_pair(lookup->score, lookup->suggested);
 
-        } else if (lookup->type == TYPE_ALPHA_CUTOFF) {
+        // TODO verify this is correct code cause I'm struggling at 3am.
+        if (lookup->type == LOWER_BOUND) {
           alpha = max(alpha, lookup->score);
 
-        } else if (lookup->type == TYPE_BETA_CUTOFF) {
+        } else if (lookup->type == UPPER_BOUND) {
           beta = max(beta, lookup->score);
         }
 
-        // After updating alpha/beta potentially outside search window.
-        if (beta <= alpha) {
+        // TODO it seems like this can return outside the bounds which is not allowed? (fail hard?)
+
+        // If we have the old exact score or are out of the search window return move.
+        if (alpha >= beta || lookup->type == EXACT_BOUND) {
           return make_pair(lookup->score, lookup->suggested);
         }
       }
@@ -1251,8 +1258,6 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     return make_pair(heuristic(), lastMove);
   }
 
-  int bestInGen = isWhiteTurn ? -100000 : 100000 ;
-  move_t suggestion;
   vector<Board> children = getLegalChildren();
 
   if (children.empty()) {
@@ -1262,13 +1267,13 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     return make_pair(score, lastMove);
   }
 
-  atomic<int> atomic_alpha(alpha);
-  atomic<int> atomic_beta(beta);
-  atomic<bool> shouldBreak(false);
-  atomic<bool> wasAlphaCutOff(false);
-  atomic<bool> wasBetaCutOff(false);
+  atomic<int>    bestIndex(-1);
+  atomic<int>    bestInGen(isWhiteTurn ? -100000 : 100000);
+  atomic<int>    atomic_alpha(alpha);
+  atomic<int>    atomic_beta(beta);
+  atomic<bool>   shouldBreak(false);
 
-  //#pragma omp parallel for
+  #pragma omp parallel for if (!FLAGS_use_t_table)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
@@ -1279,39 +1284,52 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
 
     if (isWhiteTurn) {
      if (value > bestInGen) {
-        suggestion = children[ci].getLastMove();
+        bestIndex = ci;
         bestInGen = value;
-        atomic_alpha = max(atomic_alpha.load(), bestInGen);
-        if (atomic_beta <= atomic_alpha) {
+        atomic_alpha = max(atomic_alpha.load(), bestInGen.load());
+        if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
           shouldBreak = true;
-          wasBetaCutOff = true;
           //break;
         }
       }
     } else {
      if (value < bestInGen) {
-        suggestion = children[ci].getLastMove();
+        bestIndex = ci;
         bestInGen = value;
-        atomic_beta = min(atomic_beta.load(), bestInGen);
+        atomic_beta = min(atomic_beta.load(), bestInGen.load());
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
           shouldBreak = true;
-          wasAlphaCutOff = true;
           //break;
         }
       }
     }
   }
 
-  if (FLAGS_use_t_table && plyR >= 1) { 
-    char ttType = wasBetaCutOff ? TYPE_BETA_CUTOFF :
-        (wasAlphaCutOff ? TYPE_ALPHA_CUTOFF : TYPE_EXACT);
-    TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};
+  // Black found a position with score < alpha (strong position for black with black to move).
+  // White won't choose to play this path, will instead play whatever path had alpha > score.
+  // Score is an hence an upperbound (as black didn't finish the search).
+  bool wasAlphaCutoff = bestInGen <= alpha;
+
+  // Found position > beta (strong position for white with white to move).
+  // Black won't choose to play this path, will instead play whatever path had beta < score.
+  // Score is an hence an lowerbound (as white didn't finish the search).
+  bool wasBetaCutoff  = bestInGen >= beta;
+
+  // TODO figure out why people want me to store refuting move (later searches maybe?)
+  move_t suggestion = (wasAlphaCutoff || wasBetaCutoff) ?
+      Board::NULL_MOVE : children[bestIndex].getLastMove();
+
+  if (FLAGS_use_t_table && plyR >= 1) {
+    char ttType = wasAlphaCutoff ? UPPER_BOUND :
+                      (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
+
+    TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen.load(), suggestion};
     global_tt[getZobrist()] = entry;
   }
 
-  return make_pair(bestInGen, suggestion);
+  return make_pair(bestInGen.load(), suggestion);
 };
 
 

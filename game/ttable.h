@@ -9,10 +9,9 @@ using namespace std;
 using namespace board;
 
 namespace ttable {
-  // TODO good explanations.
-  const char TYPE_ALPHA_CUTOFF = 1;
-  const char TYPE_BETA_CUTOFF = 2;
-  const char TYPE_EXACT = 3;
+  const char LOWER_BOUND = 1;
+  const char UPPER_BOUND = 2;
+  const char EXACT_BOUND = 3;
 
   // TODO book isn't smart enough to allow transpositions (e4, e5, d4, d5 = d4, d5, e4, e5).
   struct TTableEntry {

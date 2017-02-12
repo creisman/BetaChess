@@ -59,7 +59,7 @@ bool eval(string epd) {
   // Step 2.
   vector<string> bestMoves = getBestMoves(b, epd);
   cout << epd << endl;
-  // Print best moves 
+  // Print best moves
   /*
   cout << "\tbm: \"";
   for (string move : bestMoves) {
@@ -85,7 +85,7 @@ bool eval(string epd) {
   cout << endl;
 }
 
-void evalWinAtChess100(void) {
+void evalWinAtChess0(void) {
   eval("2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - - bm Qg6; id \"WAC.001\";");
   eval("8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - - bm Rxb2; id \"WAC.002\";");
   eval("5rk1/1ppb3p/p1pb4/6q1/3P1p1r/2P1R2P/PP1BQ1P1/5RKN w - - bm Rg3; id \"WAC.003\";");
@@ -136,6 +136,9 @@ void evalWinAtChess100(void) {
   eval("1rbq1rk1/p1p1bppp/2p2n2/8/Q1BP4/2N5/PP3PPP/R1B2RK1 b - - bm Rb4; id \"WAC.048\";");
   eval("2b3k1/4rrpp/p2p4/2pP2RQ/1pP1Pp1N/1P3P1P/1q6/6RK w - - bm Qxh7+; id \"WAC.049\";");
   eval("k4r2/1R4pb/1pQp1n1p/3P4/5p1P/3P2P1/r1q1R2K/8 w - - bm Rxb6+; id \"WAC.050\";");
+}
+
+void evalWinAtChess50(void) {
   eval("r1bq1r2/pp4k1/4p2p/3pPp1Q/3N1R1P/2PB4/6P1/6K1 w - - bm Rg4+; id \"WAC.051\";");
   eval("r1k5/1p3q2/1Qpb4/3N1p2/5Pp1/3P2Pp/PPPK3P/4R3 w - - bm Re7 c4; id \"WAC.052\";");
   eval("6k1/6p1/p7/3Pn3/5p2/4rBqP/P4RP1/5QK1 b - - bm Re1; id \"WAC.053\";");
@@ -186,10 +189,11 @@ void evalWinAtChess100(void) {
   eval("1r3rk1/5pb1/p2p2p1/Q1n1q2p/1NP1P3/3p1P1B/PP1R3P/1K2R3 b - - bm Nxe4; id \"WAC.098\";");
   eval("r1bq1r1k/1pp1Np1p/p2p2pQ/4R3/n7/8/PPPP1PPP/R1B3K1 w - - bm Rh5; id \"WAC.099\";");
   eval("8/k1b5/P4p2/1Pp2p1p/K1P2P1P/8/3B4/8 w - - bm Be3 b6+; id \"WAC.100\";");
+  // */
 }
 
 
-void evalWinAtChess200(void) {
+void evalWinAtChess100(void) {
   eval("5rk1/p5pp/8/8/2Pbp3/1P4P1/7P/4RN1K b - - bm Bc3; id \"WAC.101\";");
   eval("2Q2n2/2R4p/1p1qpp1k/8/3P3P/3B2P1/5PK1/r7 w - - bm Qxf8+; id \"WAC.102\";");
   eval("6k1/2pb1r1p/3p1PpQ/p1nPp3/1q2P3/2N2P2/PrB5/2K3RR w - - bm Qxg6+; id \"WAC.103\";");
@@ -293,7 +297,7 @@ void evalWinAtChess200(void) {
 }
 
 
-void evalWinAtChess300(void) {
+void evalWinAtChess200(void) {
   eval("2b2r1k/4q2p/3p2pQ/2pBp3/8/6P1/1PP2P1P/R5K1 w - - bm Ra7; id \"WAC.201\";");
   eval("QR2rq1k/2p3p1/3p1pPp/8/4P3/8/P1r3PP/1R4K1 b - - bm Rxa2; id \"WAC.202\";");
   eval("r4rk1/5ppp/p3q1n1/2p2NQ1/4n3/P3P3/1B3PPP/1R3RK1 w - - bm Qh6; id \"WAC.203\";");
@@ -545,9 +549,10 @@ void evalMain() {
   //eval("1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - bm Ka5 Kc5 b7; id \"WAC.500\";");
   //eval("1k6/8/8/1K6/8/8/8/8 w - - bm Ka5 Kc5; id \"WAC.500\";");
 
+  evalWinAtChess0();
+  evalWinAtChess50();
   evalWinAtChess100();
-  //evalWinAtChess200();
-  //evalWinAtChess300();
+  evalWinAtChess200();
   printStats("Win at Chess");
 
   // Saving for later after tactics have been refined a little.
@@ -556,7 +561,7 @@ void evalMain() {
 
 
 int main(int argc, char** argv) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);  
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (FLAGS_eval_test_custom_size > 0) {
     testSize = FLAGS_eval_test_custom_size;
   } else {
