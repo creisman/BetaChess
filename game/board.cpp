@@ -33,31 +33,6 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
   {KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
 };
 
-const map<board_s, int> Board::PIECE_VALUE = {
-  {KING,   10000},
-  {QUEEN,  900 },
-  {ROOK,   500 },
-  {BISHOP, 300 },
-  {KNIGHT, 300 },
-  {PAWN,   100 },
-};
-
-
-const map<board_s, int> Board::ANTICHESS_PIECE_VALUE = {
-  {KING,   500 },
-  {QUEEN,  900 },
-  {ROOK,   200 },
-  {BISHOP, 200 },
-  {KNIGHT, 400 },
-  {PAWN,   100 },
-};
-
-// NOTE doesn't include king.
-const int Board::PIECE_VALUE_SUM = IS_ANTICHESS ?
-  2 * (900 + 2 * 200 + 2 * 200 + 2 * 400 + 8 * 100) :
-  2 * (900 + 2 * 500 + 2 * 300 + 2 * 300 + 8 * 100);
-
-
 Board::Board(void) {
   resetBoard();
 }
@@ -988,12 +963,8 @@ string Board::fileName(board_s b) {
 int Board::getPieceValue(board_s piece) {
   assert(piece != 0);
   board_s absPiece = abs(piece);
-  if (IS_ANTICHESS) {
-    // Pieces have negative value. This might be a bad idea but it simplifies right now.
-    return  -peaceSign(piece) * ANTICHESS_PIECE_VALUE.at(absPiece);
-  } else {
-    return  peaceSign(piece) * PIECE_VALUE.at(absPiece);
-  }
+  assert(0 <= absPiece && absPiece <= 6);
+  return peaceSign(piece) * PST_PIECE_VALUE[absPiece];
 }
 
 bool Board::isWhitePiece(board_s piece) {
@@ -1024,7 +995,7 @@ int Board::getPSTValue(board_s a, board_s b, board_s piece) {
   int signMult = peaceSign(piece);
 
   // TODO optimize game phase / materialRatio somehow.
-  //float materialRatio = (totalMaterial - 2 * getPieceValue(KING)) / PIECE_VALUE_SUM;
+  //float materialRatio = (totalMaterial - 2 * getPieceValue(KING)) / PST_PIECE_VALUE_SUM;
   //float materialRatio = 0.5;
   //assert (0 <= materialRatio && materialRatio <= 1.0);
 

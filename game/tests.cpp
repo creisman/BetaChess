@@ -6,6 +6,7 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include "board.h"
 #include "polyglot.h"
@@ -14,11 +15,31 @@
 using namespace std;
 using namespace board;
 
+Board boardAfterMoves(string stringOfMoves) {
+  Board b;
+
+  stringstream ss(stringOfMoves);
+  istream_iterator<string> begin(ss);
+  istream_iterator<string> end;
+  vector<string> moves(begin, end);
+
+  for (string move : moves) {
+    bool valid = b.makeAlgebraicMove_slow(move);
+    if (!valid) {
+      cout << "Move: " << move << endl;
+      assert( false ); // unknown move.
+    }
+  }
+  return b;
+}
+
+
 void assertEqualBoardState(Board &expected, Board &test) {
   // Verify they agree on where pieces are.
   assert( expected.getZobrist() == test.getZobrist() );
   assert( expected.heuristic() == test.heuristic() );
 }
+
 
 bool verifyUpdates() {
   //string fen = "1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - 0 0";
@@ -57,29 +78,8 @@ bool verifyUpdates() {
 };
 
 
-bool verifySeriesOfMoves(
-    string stringOfMoves,
-    string fen,
-    board_hash_t zobrist) {
-  Board b;
-
-  stringstream ss(stringOfMoves);
-  istream_iterator<string> begin(ss);
-  istream_iterator<string> end;
-  vector<string> moves(begin, end);
-
-  for (string move : moves) {
-  //  cout << move << endl;
-    //for (Board c : b.getLegalChildren()) {
-    //  cout << "\t" << b.algebraicNotation_slow(c.getLastMove()) << endl;
-    //}
-    bool valid = b.makeAlgebraicMove_slow(move);
-    if (!valid) {
-      cout << "Move: " << move << endl;
-      assert( false ); // unknown move.
-    }
-  //  cout << "after " << move << "\t| " << b.generateFen_slow() << endl;
-  }
+bool verifySeriesOfMoves(string stringOfMoves, string fen, board_hash_t zobrist) {
+  Board b = boardAfterMoves(stringOfMoves);
 
   string gen = b.generateFen_slow();
   cout << "          " << gen.size() << ": \"" << gen << "\" matches: " << (gen == fen) << endl;
@@ -88,7 +88,6 @@ bool verifySeriesOfMoves(
   };
 
   board_hash_t genZ = b.getZobrist();
-
   cout << "          " << hex << genZ << " matches: " << (genZ == zobrist) << dec << endl;
   if (genZ != zobrist) {
     cout << "expected: " << hex << zobrist << dec << endl;

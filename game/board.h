@@ -11,7 +11,6 @@
 
 using namespace std;
 
-#define BOARD_SIZE 8
 
 namespace board {
   // NOTE(seth): It appears that my RPi assumes unsigned char by default so call it out specifically.
@@ -27,7 +26,7 @@ namespace board {
 
   typedef vector<pair<board_s, board_s>> movements_t;
 
-  typedef board_s board_t[BOARD_SIZE][BOARD_SIZE];
+  typedef board_s board_t[8][8];
 
 
   // Board Class

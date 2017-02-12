@@ -1,9 +1,25 @@
+#ifndef PST_H
+#define PST_H
+
+#include "flags.h"
+
 // From
 // http://www.talkchess.com/forum/viewtopic.php?topic_view=threads&p=551989&t=50840
 
-const int PST_PIECE_VALUE[] = {0, 100, 300, 300, 500, 950, 10000};
+// Pieces are bad to have in antichess so we give them negative value.
+#define ANTI_CHESS_PST {0, -100, -300, -200, -200, -900, -300}
+#define REGULAR_PST    {0, 100, 320, 330, 500, 900, 20000}
 
-// TODO use these values in board.cpp
+#if IS_ANTICHESS
+  const short PST_PIECE_VALUE[] = ANTI_CHESS_PST;
+#else
+  const short PST_PIECE_VALUE[] = REGULAR_PST;
+#endif
+
+//const int PST_PIECE_VALUE_SUM = 2 * (IS_ANTICHESS ?
+//  (8*100 + 2*(300+200+200) + 900 + 300) :
+//  (8*100 + 2*(320+330+500) + 900 + 20000));
+
 
 const short PST_PAWN_MG[64] =
 {
@@ -150,3 +166,5 @@ const short PST_KING_EG[64] =
   38,  41,  44,  45,  45,  44,  41,  38,
   42,  46,  48,  50,  50,  48,  46,  42,
 };
+
+#endif // PST_H
