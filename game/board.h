@@ -74,10 +74,8 @@ namespace board {
       static const int PIECE_VALUE_SUM;
 
       // Constructors
-      Board(bool initState);
+      Board(void);
       Board(string fen);
-      // Included to avoid bool/string ambiguity.
-      Board(char const* s) : Board(string(s)) {};
 
       void resetBoard(void);
 

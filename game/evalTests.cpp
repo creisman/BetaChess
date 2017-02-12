@@ -8,26 +8,29 @@
 #include <vector>
 
 #include "board.h"
+#include "flags.h"
 
 using namespace std;
 using namespace board;
 
 // The general idea is that these test tricky problems.
 
+// Gloabl State variables
+int testSize;
+int success = 0;
+int missed = 0;
 
-// TODO: come up with some constants or enum for this.
 const int K_NODES = 1000;
-const int TEST_INSTANT =   100 * K_NODES;
-const int TEST_SHALLOW =  1000 * K_NODES;
-
-int testSize  = -1;
+const map<string, int> predefinedTestSizes = {
+  {"",        100  * K_NODES}, // default is small.
+  {"instant", 10   * K_NODES},
+  {"small",   100  * K_NODES},
+  {"medium",  200  * K_NODES},
+  {"large",  1000  * K_NODES},
+};
 
 vector<string> getBestMoves(Board &b, string epd);
 bool verifyIsInLegal(Board &b, vector<string> moves);
-
-
-int success = 0;
-int missed = 0;
 
 void printStats(string setName) {
   int total = success + missed;
@@ -553,21 +556,17 @@ void evalMain() {
 
 
 int main(int argc, char** argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);  
+  if (FLAGS_eval_test_custom_size > 0) {
+    testSize = FLAGS_eval_test_custom_size;
+  } else {
+    testSize = predefinedTestSizes.at(FLAGS_eval_test_size);
+  }
+  cout << "\twith test size: " << testSize << endl;;
+
   auto T0 = chrono::system_clock().now();
 
-  // TODO move this into flags.h / flags.cpp
-  if (argc == 2) {
-    testSize = atoi(argv[1]);
-    assert( testSize > K_NODES && testSize < 10 * K_NODES * K_NODES + 1 );
-    cout << "\twith custom test size: " << testSize << endl;;
-  } else {
-    testSize = TEST_INSTANT;
-    cout << "\twith test size: " << testSize << endl;;
-  }
-
-
   evalMain();
-
 
   auto T1 = chrono::system_clock().now();
   chrono::duration<double> duration = T1 - T0;

@@ -85,7 +85,7 @@ void playGame(void) {
   if (boardT != nullptr) {
     free(boardT);
   }
-  boardT = new Board(true /* init */);
+  boardT = new Board();
   moves.clear();
 
   while (!boardT->getGameResult_slow() != Board::RESULT_IN_PROGRESS) {

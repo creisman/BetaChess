@@ -9,6 +9,7 @@
 
 #include "board.h"
 #include "polyglot.h"
+#include "flags.h"
 
 using namespace std;
 using namespace board;
@@ -23,7 +24,7 @@ bool verifyUpdates() {
   //string fen = "1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - 0 0";
   //Board a(fen);
 
-  Board a(true /* init */);
+  Board a;
 //  a.printBoard();
 //  cout << "eval: " << a.heuristic() << endl << endl << endl;
 
@@ -60,7 +61,7 @@ bool verifySeriesOfMoves(
     string stringOfMoves,
     string fen,
     board_hash_t zobrist) {
-  Board b(true /* init */);
+  Board b;
 
   stringstream ss(stringOfMoves);
   istream_iterator<string> begin(ss);
@@ -98,7 +99,7 @@ bool verifySeriesOfMoves(
 }
 
 void perft(int ply, map<int, long> countToVerify, string fen) {
-  Board b(true /* init */);
+  Board b;
   if (!fen.empty()) {
     b = Board(fen);
     cout << "Loaded from fen: \"" << fen << "\"" << endl;
@@ -140,8 +141,8 @@ void perft(int ply, map<int, long> countToVerify, string fen) {
 }
 
 
-void playGame(int moves, int ply, string fen) {
-  Board b(true /* init */);
+void playGame(int moves, int nodes, string fen) {
+  Board b;
   if (!fen.empty()) {
     b = Board(fen);
     cout << "Loaded from fen: \"" << fen << "\"" << endl;
@@ -150,9 +151,9 @@ void playGame(int moves, int ply, string fen) {
   auto T0 = chrono::system_clock().now();
 
   for (int move = 0; move < moves; move++) {
-    auto scoredMove = b.findMove(ply);
+    auto scoredMove = b.findMove(nodes);
     move_t m = scoredMove.second;
-    cout << "iter: " << ply << "\tScore: " << scoredMove.first << endl;
+    cout << "iter: " << move << "\tScore: " << scoredMove.first << endl;
     b.makeMove(m);
     //b.printBoard();
   }
@@ -165,28 +166,22 @@ void playGame(int moves, int ply, string fen) {
 
 
 int main(int argc, char *argv[]) {
-  // move this into flags.h
-  bool testUpdates = true;
-  bool testPlay = true;
-  bool testPerft = true;
-  bool testHash = true;
+  gflags::ParseCommandLineFlags(&argc, &argv, true);  
 
-  if (argc > 1){
-    cout << "Called with " << argc << " args" << endl;
-  }
+  bool testAll = !FLAGS_test_perft && !FLAGS_test_simple && !FLAGS_test_play;
 
   cout << "Size of Board class: " << sizeof(Board) << endl << endl;
 
-  if (testUpdates) {
+  if (testAll || FLAGS_test_simple) {
     verifyUpdates();
   }
 
-  if (testPlay) {
-    playGame(4, 5, "");
-    //playGame(10, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+  if (testAll || FLAGS_test_play) {
+    playGame(4,  120000, "");
+    playGame(10, 200000, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0");
   }
 
-  if (testPerft) {
+  if (testAll || FLAGS_test_perft) {
     // Initial Position
     // rPi seems to generate ~1.1M nodes / second with pragma on.
     perft(5,
@@ -223,8 +218,8 @@ int main(int argc, char *argv[]) {
   }
 
 
-  if (testHash) {
-    Board b(true /* init */);
+  if (testAll || FLAGS_test_simple) {
+    Board b;
     assert (b.getZobrist() == 0x463b96181691fc9c);
 
     b = Board("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3");
@@ -244,7 +239,6 @@ int main(int argc, char *argv[]) {
         "Qe2  Qxe2    Ng5  Qxf2+   Kh1   Qxf1#",
         "1r3bnr/p2ppppp/2k5/R5N1/8/4P3/1PPP2PP/1NB2q1K w - - 0 14",
         0x7aa9d458c3cd289f));
-
 
     // En Passant verification.
     assert (verifySeriesOfMoves(

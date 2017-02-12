@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "board.h"
+#include "flags.h"
 #include "polyglot.h"
 #include "pst.h"
 #include "ttable.h"
@@ -57,10 +58,8 @@ const int Board::PIECE_VALUE_SUM = IS_ANTICHESS ?
   2 * (900 + 2 * 500 + 2 * 300 + 2 * 300 + 8 * 100);
 
 
-Board::Board(bool initState) {
-  if (initState) {
-      resetBoard();
-  }
+Board::Board(void) {
+  resetBoard();
 }
 
 Board::Board(string fen) {
@@ -145,6 +144,8 @@ Board::Board(string fen) {
   // TODO verify off by one is correct.
   gameMoves = 2 * (stoul(parts[5]) - 1) + !isWhiteTurn;
 
+  resultStatus = 0;
+  // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
   position = 0;
@@ -189,7 +190,8 @@ void Board::resetBoard(void) {
   state[7][6] = -KNIGHT;
   state[7][7] = -ROOK;
 
-  // Special don't validate setting.
+  resultStatus = 0;
+  // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
   position = 0;
@@ -1250,7 +1252,7 @@ scored_move_t Board::findMove(int minNodes) {
 scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   Board::dbgCounter += 1;
 
-  if (USE_T_TABLE) {
+  if (FLAGS_use_t_table) {
     auto test = global_tt.find(getZobrist());
     if (test != global_tt.end()) {
       TTableEntry* lookup = test->second;
@@ -1331,7 +1333,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     }
   }
 
-  if (USE_T_TABLE && plyR >= 1) { 
+  if (FLAGS_use_t_table && plyR >= 1) { 
     char ttType = wasBetaCutOff ? TYPE_BETA_CUTOFF :
         (wasAlphaCutOff ? TYPE_ALPHA_CUTOFF : TYPE_EXACT);
     TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};

@@ -88,7 +88,7 @@ bool Book::write(void) {
 bool Book::updateResult(vector<string> moves, board_s result) {
   cout << "End result was " << (int) result << " (for white)" << endl;
 
-  Board b(true /* init */);
+  Board b;
 
   // Update starting position.
   BetaChessBookEntry *entry = findOrCreateEntry(b.getZobrist());
@@ -147,7 +147,7 @@ void Book::updateEntry(BetaChessBookEntry *entry, board_s result) {
 }
 
 void Book::printBook() {
-  Board b(true /* init */);
+  Board b;
   printBook(b, "START", 0, 10);
 }
 

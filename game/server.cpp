@@ -16,7 +16,7 @@ using namespace board;
 using namespace book;
 
 Book bookT;
-Board boardT(true /* init */);
+Board boardT;
 vector<string> moves;
 
 // Read-Evaluate-Play loop.
@@ -124,7 +124,7 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string reply;
   if (!startHeader.empty()) {
-    boardT = Board(true /* init */);
+    boardT = Board();
     moves.clear();
 
     cout << "Reloaded board" << endl;;

@@ -2,23 +2,23 @@
 # We have made a makefile and are sinful.
 
 CFLAGS=-std=c++11 -fopenmp -O2
-OBJ = board.o book.o
-DEPS = board.h polyglot.h
+OBJ = board.o book.o flags.o
+LIBS = -lgflags
 
-%.o: %.cpp $(DEPS)
+%.o: %.cpp
 	g++ -c -o $@ $< $(CFLAGS)
 
 server: $(OBJ) server.cpp
-	g++ -o betachess-server $(CFLAGS) $(OBJ) server.cpp -levent
+	g++ -o betachess-server $(CFLAGS) $(OBJ) server.cpp $(LIBS) -levent
 
 tests: $(OBJ) tests.cpp
-	g++ -o betachess-tests $(CFLAGS) $(OBJ) tests.cpp
+	g++ -o betachess-tests $(CFLAGS) $(OBJ) tests.cpp $(LIBS)
 
 eval-tests: $(OBJ) evalTests.cpp
-	g++ -o betachess-eval-tests $(CFLAGS) $(OBJ) evalTests.cpp
+	g++ -o betachess-eval-tests $(CFLAGS) $(OBJ) evalTests.cpp $(LIBS)
 
 gen-book: $(OBJ) genBook.cpp
-	g++ -o betachess-gen-book $(CFLAGS) $(OBJ) genBook.cpp
+	g++ -o betachess-gen-book $(CFLAGS) $(OBJ) genBook.cpp $(LIBS)
 
 clean:
 	rm -f betachess-* *.o *.gch
