@@ -21,7 +21,8 @@ vector<string> moves;
 
 // Read-Evaluate-Play loop.
 string repLoop(int ply) {
-  cout << "looking for suggestion (" << moves.size() << ") moves in" << endl;
+  cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
+  boardT.printBoard();
 
   // Some Book stuff here.
   scored_move_t suggest;
@@ -57,7 +58,8 @@ string repLoop(int ply) {
   string coords = boardT.coordinateNotation(move);
   string alg = boardT.algebraicNotation_slow(move);
 
-  cout << "Got suggested Move: " << alg << " (raw: " << coords << ") score: " << score << endl;
+  cout << "Got suggested Move: " << alg << " (raw: " << coords << ")" 
+       << " score: " << score / 100.00 << endl;
   return coords;
 }
 
@@ -88,7 +90,6 @@ string update(string move) {
     bookT.write();
   }
 
-  boardT.printBoard();
   string reply = foundMove ? "found" : "not found";
   return reply + " " + move;
 }
@@ -102,7 +103,6 @@ string null2Empty(const char * cStr) {
 void genericHandler(evhttp_request * req, void *args) {
   auto uri = evhttp_request_get_uri(req);
   auto uriParsed = evhttp_request_get_evhttp_uri(req);
-  cout << "request: \"" << uri << "\"" << endl;
 
   auto *inBuffer = evhttp_request_get_input_buffer(req);
   size_t inSize = evbuffer_get_length(inBuffer);
@@ -118,9 +118,9 @@ void genericHandler(evhttp_request * req, void *args) {
   string startHeader = null2Empty( evhttp_find_header(&uriParams, "start") );
   string moveHeader  = null2Empty( evhttp_find_header(&uriParams, "move") );
 
-  cout << "\tparsed args: "
+  cout << "request: \"" << uri << "\"\t"
        << "( start: \"" << startHeader << "\" ) "
-       << "( move: \"" << moveHeader << "\" )" << endl << endl;
+       << "( move: \"" << moveHeader << "\" )" << endl;
 
   string reply;
   if (!startHeader.empty()) {
@@ -137,7 +137,7 @@ void genericHandler(evhttp_request * req, void *args) {
     reply = "Don't know what you want?";
   }
 
-  cout << "return: \"" << reply << "\"" << endl << endl << endl;
+  cout << "return: \"" << reply << "\"" << endl << endl;
 
   auto *outBuffer = evhttp_request_get_output_buffer(req);
   evbuffer_add_printf(outBuffer, "%s", reply.c_str());

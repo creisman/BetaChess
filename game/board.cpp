@@ -838,6 +838,10 @@ string Board::algebraicNotation_slow(move_t child_move) {
   // e is file.
   // 4 is rank.
 
+  if (child_move == NULL_MOVE) {
+    return "NULL_MOVE";
+  }
+
   bool mult = false;
   bool sameFile = false;
   bool sameRank = false;
@@ -1214,13 +1218,18 @@ scored_move_t Board::findMove(int minNodes) {
     assert( scoredMove.second != Board::NULL_MOVE );
   }
 
+  // scoredMove.first == NAN when it's a forced move otherwise in search window.
+  assert (-10000 <= scoredMove.first && scoredMove.first <= 100000);
 
-  // scoredMove.first == NAN when it's a forced move.
+  string name = algebraicNotation_slow(scoredMove.second);
+  string ttableDebug = !FLAGS_use_t_table ?
+    "" : ("(tt " + to_string(global_tt.size()) + ", " + to_string(Board::ttCounter) + ")");
+
   Board::plyCounter += plyR;
   cout << "\t\tplyR " << plyR << "=> "
-       <<  Board::dbgCounter << " nodes (ttable "
-       <<  global_tt.size() << ", "
-       <<  Board::ttCounter << ")" << endl;
+       << Board::dbgCounter << " nodes "
+       << ttableDebug
+       << " => " << name << " (@ " << scoredMove.first << ")" << endl;
 
   return scoredMove;
 }
@@ -1263,12 +1272,13 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   if (children.empty()) {
     // TODO callGameResultStatus
     // Node is a winner!
-    int score = isWhiteTurn ? 50000 : -50000;
+    int score = isWhiteTurn ? 5000 : -5000;
+    assert( lastMove != NULL_MOVE );
     return make_pair(score, lastMove);
   }
 
   atomic<int>    bestIndex(-1);
-  atomic<int>    bestInGen(isWhiteTurn ? -100000 : 100000);
+  atomic<int>    bestInGen(isWhiteTurn ? -10000 : 10000);
   atomic<int>    atomic_alpha(alpha);
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
