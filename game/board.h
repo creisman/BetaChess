@@ -60,10 +60,12 @@ namespace board {
       //  Uses RESULT_{BLACK,WHITE}_WIN
 
       // Game result
-      static const board_s RESULT_TIE = -2; // TODO reconsider value later
-      static const board_s RESULT_BLACK_WIN = -100;
-      static const board_s RESULT_WHITE_WIN = 100;
-      static const board_s RESULT_IN_PROGRESS = 0;
+      static const board_s RESULT_IN_PROGRESS = -100;
+      static const board_s RESULT_TIE = -101;
+      static const board_s RESULT_WHITE_WIN = -102;
+      static const board_s RESULT_BLACK_WIN = -103;
+      static const board_s RESULT_WHITE_CHECK = -80;
+      static const board_s RESULT_BLACK_CHECK = -81;
 
       static const move_t NULL_MOVE;
       static const string PIECE_SYMBOL;
@@ -86,8 +88,8 @@ namespace board {
       int  getEvaluation(void);
 
       move_t getLastMove(void);
-      vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
+      vector<Board> getLegalChildren(bool onlyCaptures, bool fewAsPossible);
 
       void makeMove(move_t move);
       bool makeAlgebraicMove_slow(string move);
@@ -125,6 +127,7 @@ namespace board {
 
       static atomic<int> plyCounter;
     private:
+      vector<Board> getChildren(void);
       board_s checkAttack_medium(bool byBlack, board_s a, board_s b);
 
       pair<bool, board_s> attemptMove(board_s a, board_s b);
@@ -179,7 +182,7 @@ namespace board {
       board_t state;
 
       // Evaluations, measured in centipawns (100th of a pawn)
-      //  +042 for tiny advantage for white, +842 is mate very soon, -310 is good for black
+      //  +42 is tiny advantage for white, +842 is a white a queen up, -310 is a minor up for black.
       // Sum of material. (- for black, + for white)
       int material;
       // Sum of all material on board.
@@ -189,7 +192,8 @@ namespace board {
       int position;
 
       // Stores game result (and potentially phase).
-      char resultStatus;
+      // See RESULT_
+      char gameStatus;
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;

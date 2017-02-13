@@ -121,7 +121,7 @@ Board::Board(string fen) {
   // TODO verify off by one is correct.
   gameMoves = 2 * (stoul(parts[5]) - 1) + !isWhiteTurn;
 
-  resultStatus = 0;
+  gameStatus = 0;
   // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
@@ -167,7 +167,7 @@ void Board::resetBoard(void) {
   state[7][6] = -KNIGHT;
   state[7][7] = -ROOK;
 
-  resultStatus = 0;
+  gameStatus = 0;
   // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
@@ -454,7 +454,7 @@ vector<Board> Board::getLegalChildren(void) {
 
     bool hasCapture = get<5>(all_moves.back().getLastMove()) != 0;
     auto test = all_moves.begin();
-    for (; test != all_moves.end(); test++) {
+    for (auto test : all_moves) {
       bool isCapture = get<5>(test->getLastMove()) != 0;
       if (isCapture) {
         break;
@@ -913,7 +913,7 @@ string Board::algebraicNotation_slow(move_t child_move) {
   if (special == SPECIAL_PROMOTION) {
     // Piece handly records what we promoted to!
     // But it's not a recorded as a pawn move so add capture logic again.
-    if (!capture.empty()) {
+    if (capture.size() > 0) {
       return fileName(get<1>(child_move)) + capture + dest +  "=" + pieceName + check;
     }
     return dest + "=" + pieceName + check;
@@ -923,7 +923,7 @@ string Board::algebraicNotation_slow(move_t child_move) {
   }
 
   // Pawn captures get file added.
-  if (piece == PAWN && !capture.empty()) {
+  if (piece == PAWN && capture.size() > 0) {
     // A special (generic) case of disambiguate.
     // Can't be disambigous once we know file.
     pieceName = fileName(get<1>(child_move));
@@ -1149,33 +1149,6 @@ int Board::heuristic() {
     return haveTempo + evaluation;
   }
 
-  /*
-  200(K-K')
-  + 9(Q-Q')
-  + 5(R-R')
-  + 3(B-B' + N-N')
-  + 1(P-P')
-  - 0.5(D-D' + S-S' + I-I')
-  + 0.1(M-M')
-  */
-
-  //int whiteMobility = 0
-  //int blackMobility = 0
-
-  if (evaluation > 8000) {
-    // black is missing king.
-    resultStatus = RESULT_WHITE_WIN;
-  } else if (evaluation < -8000) {
-    resultStatus = RESULT_BLACK_WIN;
-  }
-
-  //sumValueWhite = sum(pieceValue[piece[0]] for piece in self.whitePieces)
-  //sumValueBlack = sum(pieceValue[-piece[0]] for piece in self.blackPieces)
-
-  //mobilityBonus = 0.1 * (whiteMobility - blackMobility)
-  //# TODO Determine doubled, blocked, and isolated pawns
-
-  //return sumValueWhite - sumValueBlack + mobilityBonus
   return evaluation;
 }
 
@@ -1364,11 +1337,10 @@ board_s Board::getGameResult_slow(void) {
 
     // To win, don't have a valid move.
     if (hasMove) {
-      // TODO check for draw conditions (insufficent material, no move, ...).
+      // TODO check for draw conditions (insufficent material, ...)
       return RESULT_IN_PROGRESS;
     }
 
-    // TODO check stalemate.
     return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
   }
 
@@ -1387,6 +1359,7 @@ board_s Board::getGameResult_slow(void) {
 
 
   if (hasChildren) {
+      // TODO check for draw conditions (insufficent material, ...)
       return RESULT_IN_PROGRESS;
   }
 
