@@ -277,7 +277,7 @@ move_t Board::getLastMove(void) {
   return lastMove;
 }
 
-vector<Board> Board::getChildren(void) {
+vector<Board> Board::getChildrenInternal_slow(void) {
   bool hasCapture = false;
   vector<Board> all_moves;
 
@@ -444,17 +444,17 @@ vector<Board> Board::getChildren(void) {
 }
 
 vector<Board> Board::getLegalChildren(void) {
+  vector<Board> all_moves = getChildrenInternal_slow();
+  if (all_moves.size() == 0) {
+    return all_moves;
+  }
+
+
   if (IS_ANTICHESS) {
     // TODO this is the simple version, could be partially moved into getChildren.
-    vector<Board> all_moves = getChildren();
-
-    if (all_moves.size() == 0) {
-      return all_moves;
-    }
-
     bool hasCapture = get<5>(all_moves.back().getLastMove()) != 0;
     auto test = all_moves.begin();
-    for (auto test : all_moves) {
+    for (; test != all_moves.end(); test++) {
       bool isCapture = get<5>(test->getLastMove()) != 0;
       if (isCapture) {
         break;
@@ -502,7 +502,6 @@ vector<Board> Board::getLegalChildren(void) {
   //      if king didn't move
   //        last move must be in way of single attack.
 
-  vector<Board> all_moves = getChildren();
   for (auto test = all_moves.begin(); test != all_moves.end(); test++) {
     board_s testY = kingY;
     board_s testX = kingX;
@@ -1313,7 +1312,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   }
 
   return make_pair(bestInGen.load(), suggestion);
-};
+}
 
 
 pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
@@ -1356,7 +1355,6 @@ board_s Board::getGameResult_slow(void) {
   // This could be improved (maybe making this _medium) by instead checking move_exists?
   vector<Board> children = getLegalChildren();
   bool hasChildren = !children.empty();
-
 
   if (hasChildren) {
       // TODO check for draw conditions (insufficent material, ...)

@@ -56,16 +56,15 @@ namespace board {
       static const unsigned char SPECIAL_EN_PASSANT = 2;
       static const unsigned char SPECIAL_PROMOTION = 3;
 
-      // Material diff special
-      //  Uses RESULT_{BLACK,WHITE}_WIN
-
       // Game result
-      static const board_s RESULT_IN_PROGRESS = -100;
-      static const board_s RESULT_TIE = -101;
-      static const board_s RESULT_WHITE_WIN = -102;
-      static const board_s RESULT_BLACK_WIN = -103;
-      static const board_s RESULT_WHITE_CHECK = -80;
-      static const board_s RESULT_BLACK_CHECK = -81;
+      static const board_s RESULT_IN_PROGRESS = 100;
+      static const board_s RESULT_TIE         = 101;
+      static const board_s RESULT_WHITE_WIN   = 102;
+      static const board_s RESULT_BLACK_WIN   = 103;
+
+      // Game status
+      static const board_s STATUS_IS_CHECK  = 10;
+      static const board_s STATUS_NOT_CHECK = 11;
 
       static const move_t NULL_MOVE;
       static const string PIECE_SYMBOL;
@@ -127,7 +126,7 @@ namespace board {
 
       static atomic<int> plyCounter;
     private:
-      vector<Board> getChildren(void);
+      vector<Board> getChildrenInternal_slow(void);
       board_s checkAttack_medium(bool byBlack, board_s a, board_s b);
 
       pair<bool, board_s> attemptMove(board_s a, board_s b);
@@ -192,7 +191,7 @@ namespace board {
       int position;
 
       // Stores game result (and potentially phase).
-      // See RESULT_
+      // See STATUS_
       char gameStatus;
 
       // whiteOO, whiteOOO, blackOO, blackOOO

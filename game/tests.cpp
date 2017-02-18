@@ -26,7 +26,8 @@ Board boardAfterMoves(string stringOfMoves) {
   for (string move : moves) {
     bool valid = b.makeAlgebraicMove_slow(move);
     if (!valid) {
-      cout << "Move: " << move << endl;
+      b.printBoard();
+      cout << "Didn't find move: " << move << endl;
       assert( false ); // unknown move.
     }
   }
