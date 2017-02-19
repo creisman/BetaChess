@@ -121,7 +121,6 @@ Board::Board(string fen) {
   // TODO verify off by one is correct.
   gameMoves = 2 * (stoul(parts[5]) - 1) + !isWhiteTurn;
 
-  gameStatus = 0;
   // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
@@ -167,7 +166,6 @@ void Board::resetBoard(void) {
   state[7][6] = -KNIGHT;
   state[7][7] = -ROOK;
 
-  gameStatus = 0;
   // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
@@ -885,12 +883,11 @@ string Board::algebraicNotation_slow(move_t child_move) {
         get<1>(oppKingPos)) != 0;
     // Note assumes self move can't result in mate.
     isMate = isCheck &&
-        ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow());
+        ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN)
+            == child_board.getGameResult_slow());
   } else {
     isCheck = false;
-    bool old = (isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN) == child_board.getGameResult_slow();
     isMate = children.empty();
-    assert(isMate == old );
   }
   string check = isMate ? "#" : (isCheck ? "+" : "");
 
@@ -1348,9 +1345,9 @@ board_s Board::getGameResult_slow(void) {
   assert( onBoard(get<0>(kingPos), get<1>(kingPos)) );
 
   bool inCheck = checkAttack_medium(
-      !isWhiteTurn /* byBlack */,
+      isWhiteTurn /* byBlack */,
       get<0>(kingPos),
-      get<1>(kingPos)) == 0;
+      get<1>(kingPos)) != 0;
 
   // This could be improved (maybe making this _medium) by instead checking move_exists?
   vector<Board> children = getLegalChildren();

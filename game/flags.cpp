@@ -20,6 +20,7 @@ DEFINE_int32(eval_test_custom_size, 0,
 DEFINE_bool(test_perft, false, "only test perft");
 DEFINE_bool(test_play, false, "only test perft");
 DEFINE_bool(test_simple, false, "only test update and hash");
+DEFINE_bool(test_endgame, false, "only test endgame handling");
 
 
 // Try to add a validator here.

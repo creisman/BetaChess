@@ -14,6 +14,7 @@ DECLARE_int32(eval_test_custom_size);
 DECLARE_bool(test_perft);
 DECLARE_bool(test_play);
 DECLARE_bool(test_simple);
+DECLARE_bool(test_endgame);
 
 
 #endif // FLAGS_H

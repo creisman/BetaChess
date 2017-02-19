@@ -85,18 +85,31 @@ bool verifySeriesOfMoves(string stringOfMoves, string fen, board_hash_t zobrist)
   string gen = b.generateFen_slow();
   cout << "          " << gen.size() << ": \"" << gen << "\" matches: " << (gen == fen) << endl;
   if (gen != fen) {
-    cout << "expected: " << fen.size() << ": \"" << fen << "\"" << endl;
+    cout << "SOM expected: " << fen.size() << ": \"" << fen << "\"" << endl;
   };
 
   board_hash_t genZ = b.getZobrist();
   cout << "          " << hex << genZ << " matches: " << (genZ == zobrist) << dec << endl;
   if (genZ != zobrist) {
-    cout << "expected: " << hex << zobrist << dec << endl;
+    cout << "SOM expected: " << hex << zobrist << dec << endl;
   }
 
   cout << endl;
   return (gen == fen) && (genZ == zobrist);
 }
+
+
+bool verifyEndGame(string stringOfMoves, board_s result) {
+  Board b = boardAfterMoves(stringOfMoves);
+  board_s test = b.getGameResult_slow();
+
+  if (test != result) {
+    cout << "EG expected:" << (int) result << " was " << (int) test << endl;
+  }
+
+  return test == result;
+}
+
 
 void perft(int ply, map<int, long> countToVerify, string fen) {
   Board b;
@@ -168,17 +181,16 @@ void playGame(int moves, int nodes, string fen) {
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  bool testAll = !FLAGS_test_perft && !FLAGS_test_simple && !FLAGS_test_play;
+  bool testAll = !(FLAGS_test_perft ||
+      FLAGS_test_simple || FLAGS_test_play ||
+      FLAGS_test_endgame);
 
   cout << "Size of Board class: " << sizeof(Board) << endl << endl;
-
-  if (testAll || FLAGS_test_simple) {
-    verifyUpdates();
-  }
 
   if (testAll || FLAGS_test_play) {
     playGame(4,  120000, "");
     playGame(10, 200000, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0");
+    cout << "Verified play" << endl;
   }
 
   if (testAll || FLAGS_test_perft) {
@@ -215,10 +227,13 @@ int main(int argc, char *argv[]) {
     perft(5,
           {{5, 17251342}, {6, 490103130}, {7, 14794751816}},
           "rnb1kbnr/pp1pp1pp/1qp2p2/8/Q1P5/N7/PP1PPPPP/1RB1KBNR b Kkq - 2 4");
+
+    cout << "Verified Perft" << endl;
   }
 
-
   if (testAll || FLAGS_test_simple) {
+    verifyUpdates();
+
     Board b;
     assert (b.getZobrist() == 0x463b96181691fc9c);
 
@@ -251,6 +266,33 @@ int main(int argc, char *argv[]) {
         "a4 h6   a5 b5   Nf3 Nf6   Ng1 Ng8",
         "rnbqkbnr/p1ppppp1/7p/Pp6/8/8/1PPPPPPP/RNBQKBNR w KQkq - 4 5",
         0xde68558cff2df99c ^ POLYGLOT_RANDOM[772 + 1]));
+
+    cout << "Verified Simple" << endl;
+  }
+
+  if (testAll || FLAGS_test_endgame) {
+    assert (verifyEndGame(
+        "e4 e5",
+        Board::RESULT_IN_PROGRESS));
+
+    assert (verifyEndGame(
+        "e4 f6   Qg4 g5  Qh5#",
+        Board::RESULT_WHITE_WIN));
+
+    assert (verifyEndGame(
+        "f3 e6   g4 Qh4#",
+        Board::RESULT_BLACK_WIN));
+
+    assert (verifyEndGame(
+        "c4 h5     h4 a5       Qa4 Ra6   Qxa5 Rah6 "
+        "Qxc7 f6   Qxd7+ Kf7   Qxb7 Qd3  Qxb8 Qh7 "
+        "Qxc8 Kg6  Qe6",
+        Board::RESULT_TIE));
+
+    // Add three-fold.
+    // Add 50 move.
+
+    cout << "Verified EndGame" << endl;
   }
 
   return 0;

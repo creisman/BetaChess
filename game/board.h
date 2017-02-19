@@ -190,10 +190,6 @@ namespace board {
       // Piece square value table lookup.
       int position;
 
-      // Stores game result (and potentially phase).
-      // See STATUS_
-      char gameStatus;
-
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
       board_hash_t zobrist;
