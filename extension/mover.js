@@ -126,6 +126,9 @@
   }
   
   update(move) {
+    // Deal with unicode.
+    move = move.replace("\u0445", "x");
+
     chrome.runtime.sendMessage(move, function(response) {
       console.log("response to update: " + response.data);
       // TODO make sure that state matches or something

@@ -50,7 +50,7 @@ string repLoop(int ply) {
 
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
-    suggest = boardT.findMove(425000);
+    suggest = boardT.findMove(625000);
   }
 
   double score = get<0>(suggest);
@@ -71,10 +71,10 @@ string update(string move) {
 
   bool foundMove = boardT.makeAlgebraicMove_slow(move);
   if (!foundMove) {
-    cout << "Didn't find move( " << (move.size() + 1) <<  "): " << move << endl;
+    cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
     for (Board c : boardT.getLegalChildren()) {
       string moveToGetC = boardT.algebraicNotation_slow(c.getLastMove());
-      cout << "\twasn't " << moveToGetC << endl;
+      cout << "\twasn't \"" << moveToGetC << "\"" << endl;
     }
     assert(false);
   }
@@ -117,7 +117,6 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string startHeader = null2Empty( evhttp_find_header(&uriParams, "start") );
   string moveHeader  = null2Empty( evhttp_find_header(&uriParams, "move") );
-
   cout << "request: \"" << uri << "\"\t"
        << "( start: \"" << startHeader << "\" ) "
        << "( move: \"" << moveHeader << "\" )" << endl;
