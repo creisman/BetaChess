@@ -28,7 +28,7 @@ clean:
 run-server: server
 	./betachess-server
 
-run-test: tests
+run-tests: tests
 	./betachess-tests
 
 run-eval-test: eval-tests

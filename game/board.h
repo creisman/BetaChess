@@ -95,6 +95,7 @@ namespace board {
 
       // Algebraic notation of legal move from this board.
       string algebraicNotation_slow(move_t child_move);
+      string lastMoveName_slow();
 
       // ~Coordinate notation.
       static string coordinateNotation(move_t move);
@@ -160,11 +161,17 @@ namespace board {
       // 1-arg version is public.
       scored_move_t findMoveHelper(char ply, int alpha, int beta);
 
+      // Quiesce is a search at a leaf node which tries to avoid the horizon effect
+      //   (if Queen just captured pawn make sure the queen can't be recaptured)
+      int quiesce(int alpha, int beta);
+      int evalCaptures(int alpha, int beta, int depth);
+
       // Behavior is not defined if multiple pieces exist.
       pair<board_s, board_s> findPiece_slow(board_s piece);
 
       // Used for counting moves in findMove
-      static atomic<int> dbgCounter;
+      static atomic<int> nodeCounter;
+      static atomic<int> quiesceCounter;
       static atomic<int> ttCounter;
 
       // Size per instance ~= 2 + 2 + 7 + 1 + 64 + 4 + 4 + 4 + 1 + 1 + 8 = 98 bytes.

@@ -929,6 +929,9 @@ string Board::algebraicNotation_slow(move_t child_move) {
   return pieceName + disambiguate + capture + dest + check;
 }
 
+string Board::lastMoveName_slow(void) {
+  return coordinateNotation(lastMove);
+}
 
 string Board::coordinateNotation(move_t move) {
   // This partially (via inference) supports castling, ep
@@ -1150,12 +1153,14 @@ int Board::heuristic() {
 
 
 // Public method that setups and calls helper method.
-atomic<int> Board::dbgCounter(0);
+atomic<int> Board::nodeCounter(0);
 atomic<int> Board::ttCounter(0);
+atomic<int> Board::quiesceCounter(0);
 atomic<int> Board::plyCounter(0);
 scored_move_t Board::findMove(int minNodes) {
-  Board::dbgCounter = 0;
+  Board::nodeCounter = 0;
   Board::ttCounter = 0;
+  Board::quiesceCounter = 0;
   global_tt.clear();
 
   // Check if game has a result
@@ -1177,7 +1182,8 @@ scored_move_t Board::findMove(int minNodes) {
   scored_move_t scoredMove;
   while (true) {
     scoredMove = findMoveHelper(plyR, -10000, 10000);
-    if (abs(scoredMove.first) >= 5000 || dbgCounter > minNodes) {
+    int explored = nodeCounter + quiesceCounter;
+    if (abs(scoredMove.first) >= 5000 || explored > minNodes) {
       break;
     }
     plyR += 1;
@@ -1196,16 +1202,18 @@ scored_move_t Board::findMove(int minNodes) {
 
   Board::plyCounter += plyR;
   cout << "\t\tplyR " << plyR << "=> "
-       << Board::dbgCounter << " nodes "
+       << nodeCounter << " + " << quiesceCounter << " nodes "
        << ttableDebug
        << " => " << name << " (@ " << scoredMove.first << ")" << endl;
+
+  // TODO add some code for PV.
 
   return scoredMove;
 }
 
 
 scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
-  Board::dbgCounter += 1;
+  Board::nodeCounter += 1;
 
   if (FLAGS_use_t_table) {
     auto test = global_tt.find(getZobrist());
@@ -1233,7 +1241,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   }
 
   if (plyR == 0) {
-    return make_pair(heuristic(), lastMove);
+    return make_pair(quiesce(alpha, beta), lastMove);
   }
 
   vector<Board> children = getLegalChildren();
@@ -1262,10 +1270,10 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     int value = suggest.first;
 
     if (isWhiteTurn) {
-     if (value > bestInGen) {
+      if (value > bestInGen) {
         bestIndex = ci;
         bestInGen = value;
-        atomic_alpha = max(atomic_alpha.load(), bestInGen.load());
+        atomic_alpha = max(atomic_alpha.load(), value);
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
           shouldBreak = true;
@@ -1273,10 +1281,10 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         }
       }
     } else {
-     if (value < bestInGen) {
+      if (value < bestInGen) {
         bestIndex = ci;
         bestInGen = value;
-        atomic_beta = min(atomic_beta.load(), bestInGen.load());
+        atomic_beta = min(atomic_beta.load(), value);
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
           shouldBreak = true;
@@ -1302,13 +1310,30 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
 
   if (FLAGS_use_t_table && plyR >= 1) {
     char ttType = wasAlphaCutoff ? UPPER_BOUND :
-                      (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
+        (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
 
     TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen.load(), suggestion};
     global_tt[getZobrist()] = entry;
   }
 
+/*
+  if (alpha > bestInGen.load()) {
+    return make_pair(alpha, NULL_MOVE);
+  }
+  if (bestInGen.load() > beta) {
+    return make_pair(beta, NULL_MOVE);
+  }
+*/
+  assert( alpha <= bestInGen.load() && bestInGen.load() <= beta );
   return make_pair(bestInGen.load(), suggestion);
+}
+
+
+int Board::quiesce(int alpha, int beta) {
+  //quiesceCounter += 1;
+  // TODO more implementations here eventually.
+
+  return heuristic();
 }
 
 
