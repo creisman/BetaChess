@@ -1255,12 +1255,11 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   }
 
   atomic<int>    bestIndex(-1);
-  atomic<int>    bestInGen(isWhiteTurn ? -10000 : 10000);
   atomic<int>    atomic_alpha(alpha);
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  #pragma omp parallel for if (!FLAGS_use_t_table)
+  //#pragma omp parallel for if (!FLAGS_use_t_table)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
@@ -1270,39 +1269,41 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     int value = suggest.first;
 
     if (isWhiteTurn) {
-      if (value > bestInGen) {
+      if (value > atomic_alpha) {
         bestIndex = ci;
-        bestInGen = value;
-        atomic_alpha = max(atomic_alpha.load(), value);
+        atomic_alpha = value;
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
           shouldBreak = true;
-          //break;
+          break;
         }
       }
     } else {
-      if (value < bestInGen) {
+      if (value < atomic_beta) {
         bestIndex = ci;
-        bestInGen = value;
-        atomic_beta = min(atomic_beta.load(), value);
+        atomic_beta = value;
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
           shouldBreak = true;
-          //break;
+          break;
         }
       }
     }
   }
 
   // Black found a position with score < alpha (strong position for black with black to move).
-  // White won't choose to play this path, will instead play whatever path had alpha > score.
+  // White won't choose to play this path, will instead play whatever path had score > alpha.
   // Score is an hence an upperbound (as black didn't finish the search).
-  bool wasAlphaCutoff = bestInGen <= alpha;
+  bool wasAlphaCutoff = shouldBreak && !isWhiteTurn;
 
   // Found position > beta (strong position for white with white to move).
-  // Black won't choose to play this path, will instead play whatever path had beta < score.
+  // Black won't choose to play this path, will instead play whatever path had score < beta.
   // Score is an hence an lowerbound (as white didn't finish the search).
-  bool wasBetaCutoff  = bestInGen >= beta;
+  bool wasBetaCutoff  = shouldBreak && isWhiteTurn;
+
+
+  int bestInGen = isWhiteTurn ? atomic_alpha : atomic_beta;
+
 
   // TODO figure out why people want me to store refuting move (later searches maybe?)
   move_t suggestion = (wasAlphaCutoff || wasBetaCutoff) ?
@@ -1312,20 +1313,12 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     char ttType = wasAlphaCutoff ? UPPER_BOUND :
         (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
 
-    TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen.load(), suggestion};
+    TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};
     global_tt[getZobrist()] = entry;
   }
 
-/*
-  if (alpha > bestInGen.load()) {
-    return make_pair(alpha, NULL_MOVE);
-  }
-  if (bestInGen.load() > beta) {
-    return make_pair(beta, NULL_MOVE);
-  }
-*/
-  assert( alpha <= bestInGen.load() && bestInGen.load() <= beta );
-  return make_pair(bestInGen.load(), suggestion);
+  assert( alpha <= bestInGen && bestInGen <= beta );
+  return make_pair(bestInGen, suggestion);
 }
 
 
@@ -1333,7 +1326,9 @@ int Board::quiesce(int alpha, int beta) {
   //quiesceCounter += 1;
   // TODO more implementations here eventually.
 
-  return heuristic();
+  int score = heuristic();
+
+  return min(beta, max(alpha, score));
 }
 
 
