@@ -16,9 +16,14 @@ using namespace board;
 // The general idea is that these test tricky problems.
 
 // Gloabl State variables
-int testSize;
+int testSize = 0;
+
 int success = 0;
 int missed = 0;
+
+int countPly = 0;
+int countNodes = 0;
+
 
 const int K_NODES = 1000;
 const map<string, int> predefinedTestSizes = {
@@ -34,8 +39,9 @@ bool verifyIsInLegal(Board &b, vector<string> moves);
 
 void printStats(string setName) {
   int total = success + missed;
-  cout << success << " out of (" << total << ") for set \"" << setName << "\"" << endl;
-  cout << "\t\tplys searched: " << Board::plyCounter << endl;
+  cout << success << " out of (" << total << ") for set \"" << setName << "\"" << endl
+       << "\t\tplys searched: " << countPly << endl
+       << "\t\tnodes counted: " << countNodes << endl;
 }
 
 
@@ -58,31 +64,36 @@ bool eval(string epd) {
 
   // Step 2.
   vector<string> bestMoves = getBestMoves(b, epd);
-  cout << epd << endl;
-  // Print best moves
-  /*
-  cout << "\tbm: \"";
-  for (string move : bestMoves) {
-    cout << move << ((move == bestMoves.back()) ? "" : ", ");
-  }
-  cout << "\"" << endl;
-  // */
 
   // Step 3.
-  move_t move = get<1>(b.findMove(testSize));
+  FindMoveStats stats;
+  move_t move = get<1>(b.findMove(testSize, &stats));
   string moveName = b.algebraicNotation_slow(move);
 
-  bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
+  countPly   += stats.plyR;
+  countNodes += stats.nodes;
 
+
+  bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
   if (found) {
     success += 1;
-    cout << "Found: " << moveName;
   } else {
     missed += 1;
-    cout << "Missed (played " << moveName << " instead of " << bestMoves[0] << ")";
   }
-  cout << "\t(" << success << "/" << (success + missed) << ")" << endl;
-  cout << endl;
+
+  if (FLAGS_verbosity >= 2) {
+    cout << epd << endl;
+    if (found) {
+      cout << "Found: " << moveName << endl;
+    } else {
+      cout << "Missed (played " << moveName << " instead of " << bestMoves[0] << ")" << endl;
+    }
+  }
+
+  bool infrequent = (success + missed) % 25 == 0;
+  if (FLAGS_verbosity + infrequent >= 2) {
+    cout << "\t(" << success << "/" << (success + missed) << ")" << endl;
+  }
 }
 
 void evalWinAtChess0(void) {
@@ -544,8 +555,6 @@ void evalQuiteMoves(void) {
 
 
 void evalMain() {
-  Board::plyCounter = 0;
-
   //eval("1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - bm Ka5 Kc5 b7; id \"WAC.500\";");
   //eval("1k6/8/8/1K6/8/8/8/8 w - - bm Ka5 Kc5; id \"WAC.500\";");
 

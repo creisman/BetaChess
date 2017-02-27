@@ -50,7 +50,7 @@ string repLoop(int ply) {
 
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
-    suggest = boardT.findMove(625000);
+    suggest = boardT.findMove(625000, nullptr);
   }
 
   double score = get<0>(suggest);
@@ -58,7 +58,7 @@ string repLoop(int ply) {
   string coords = boardT.coordinateNotation(move);
   string alg = boardT.algebraicNotation_slow(move);
 
-  cout << "Got suggested Move: " << alg << " (raw: " << coords << ")" 
+  cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
        << " score: " << score / 100.00 << endl;
   return coords;
 }

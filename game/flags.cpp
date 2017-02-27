@@ -8,6 +8,7 @@
 
 using namespace std;
 
+DEFINE_int32(verbosity, 0, "print lots of stuff (higher = more)");
 
 DEFINE_bool(use_t_table, false, "Use Transposition table in FindMove");
 
@@ -33,7 +34,9 @@ static bool ValidateEvalTestSize(const char* flagname, const string& flagvalue) 
 
 static bool ValidateEvalTestCustomSize(const char* flagname, int flagvalue) {
   int K = 1000;
-  return flagvalue == 0 || (K <= flagvalue && flagvalue <= 10 * K *K);
+  return flagvalue == 0 ||
+         (2 <= flagvalue && flagvalue <= 10) ||
+         (K <= flagvalue && flagvalue <= 10 * K *K);
 }
 
 // Define validators in a block here.

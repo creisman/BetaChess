@@ -21,6 +21,11 @@ namespace board {
   // (a, b) to (c, d), piece that moving, piece that was captured removing, special_status
   typedef tuple<board_s, board_s, board_s, board_s, board_s, board_s, unsigned char> move_t;
 
+  struct FindMoveStats {
+    int plyR;
+    int nodes;
+  };
+
   // score concatonated to end of move_t
   typedef pair<int, move_t> scored_move_t;
 
@@ -111,7 +116,7 @@ namespace board {
 
       int heuristic(void);
 
-      scored_move_t findMove(int minNodes);
+      scored_move_t findMove(int minNodes, FindMoveStats *info);
 
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
       board_s getGameResult_slow(void);
@@ -125,7 +130,6 @@ namespace board {
           atomic<int> *promotions,
           atomic<int> *mates);
 
-      static atomic<int> plyCounter;
     private:
       vector<Board> getChildrenInternal_slow(void);
       board_s checkAttack_medium(bool byBlack, board_s a, board_s b);

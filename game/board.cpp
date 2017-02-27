@@ -1156,8 +1156,7 @@ int Board::heuristic() {
 atomic<int> Board::nodeCounter(0);
 atomic<int> Board::ttCounter(0);
 atomic<int> Board::quiesceCounter(0);
-atomic<int> Board::plyCounter(0);
-scored_move_t Board::findMove(int minNodes) {
+scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
   Board::nodeCounter = 0;
   Board::ttCounter = 0;
   Board::quiesceCounter = 0;
@@ -1176,14 +1175,16 @@ scored_move_t Board::findMove(int minNodes) {
     return make_pair(NAN, c[0].getLastMove());
   }
 
-
-  // It might make more sense to reverse depth at somepoint but IDK how.
   int plyR = 2;
+  if (minNodes <= 10) {
+    plyR = minNodes;
+  }
   scored_move_t scoredMove;
+  int totalNodes = 0;
   while (true) {
     scoredMove = findMoveHelper(plyR, -10000, 10000);
-    int explored = nodeCounter + quiesceCounter;
-    if (abs(scoredMove.first) >= 5000 || explored > minNodes) {
+    totalNodes = nodeCounter + quiesceCounter;
+    if (abs(scoredMove.first) >= 5000 || totalNodes > minNodes) {
       break;
     }
     plyR += 1;
@@ -1200,12 +1201,17 @@ scored_move_t Board::findMove(int minNodes) {
   string ttableDebug = !FLAGS_use_t_table ?
     "" : ("(tt " + to_string(global_tt.size()) + ", " + to_string(Board::ttCounter) + ")");
 
-  Board::plyCounter += plyR;
-  cout << "\t\tplyR " << plyR << "=> "
-       << nodeCounter << " + " << quiesceCounter << " nodes "
-       << ttableDebug
-       << " => " << name << " (@ " << scoredMove.first << ")" << endl;
+  if (stats) {
+    stats->plyR = plyR;
+    stats->nodes = totalNodes;
+  }
 
+  if (FLAGS_verbosity >= 2) {
+    cout << "\t\tplyR " << plyR << "=> "
+         << nodeCounter << " + " << quiesceCounter << " nodes "
+         << ttableDebug
+         << " => " << name << " (@ " << scoredMove.first << ")" << endl;
+  }
   // TODO add some code for PV.
 
   return scoredMove;
@@ -1301,9 +1307,8 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   // Score is an hence an lowerbound (as white didn't finish the search).
   bool wasBetaCutoff  = shouldBreak && isWhiteTurn;
 
-
   int bestInGen = isWhiteTurn ? atomic_alpha : atomic_beta;
-
+  //assert( alpha <= bestInGen && bestInGen <= beta );
 
   // TODO figure out why people want me to store refuting move (later searches maybe?)
   move_t suggestion = (wasAlphaCutoff || wasBetaCutoff) ?
@@ -1317,7 +1322,6 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     global_tt[getZobrist()] = entry;
   }
 
-  assert( alpha <= bestInGen && bestInGen <= beta );
   return make_pair(bestInGen, suggestion);
 }
 

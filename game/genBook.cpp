@@ -51,7 +51,7 @@ void repLoop(void) {
       nodes += generator() % 2000000;
     }
 
-    suggest = boardT->findMove(nodes);
+    suggest = boardT->findMove(nodes, nullptr);
   }
 
   double score = get<0>(suggest);
