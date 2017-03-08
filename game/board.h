@@ -145,7 +145,7 @@ namespace board {
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
-      int getPSTValue(board_s a, board_s b, board_s piece);
+      void updatePST(board_s a, board_s b, board_s piece, short moveMult);
 
       void updatePiece(board_s a, board_s b, board_s piece, bool movingTo);
 
@@ -199,7 +199,8 @@ namespace board {
       int totalMaterial;
 
       // Piece square value table lookup.
-      int position;
+      short positionMG;
+      short positionEG;
 
       // whiteOO, whiteOOO, blackOO, blackOOO
       char castleStatus;
