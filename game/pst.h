@@ -16,9 +16,10 @@
   const short PST_PIECE_VALUE[] = REGULAR_PST;
 #endif
 
-//const int PST_PIECE_VALUE_SUM = 2 * (IS_ANTICHESS ?
-//  (8*100 + 2*(300+200+200) + 900 + 300) :
-//  (8*100 + 2*(320+330+500) + 900 + 20000));
+const int PST_PIECE_VALUE_SUM = 2 * (IS_ANTICHESS ?
+  (8*100 + 2*(300+200+200) + 900 + 300) :
+  (8*100 + 2*(320+330+500) + 900 + 20000));
+
 
 
 const short PST_PAWN_MG[64] =
