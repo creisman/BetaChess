@@ -124,7 +124,7 @@ Board::Board(string fen) {
   // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
-  positionMG = positionEG = 0;
+  position = 0;
   zobrist = 0;
   recalculateEvaluations_slow();
   recalculateZobrist_slow();
@@ -169,7 +169,7 @@ void Board::resetBoard(void) {
   // Special don't validate settings.
   material = 0;
   totalMaterial = 0;
-  positionMG = positionEG = 0;
+  position = 0;
   zobrist = 0;
   recalculateEvaluations_slow();
   recalculateZobrist_slow();
@@ -986,7 +986,7 @@ bool Board::onBoard(board_s a, board_s b) {
 }
 
 
-void Board::updatePST(board_s a, board_s b, board_s piece, short moveMult) {
+int Board::getPSTValue(board_s a, board_s b, board_s piece) {
   char index;
   if (peaceSign(piece) == WHITE) {
     index = 8 * a     + b; // a = rank, b = file
@@ -997,40 +997,37 @@ void Board::updatePST(board_s a, board_s b, board_s piece, short moveMult) {
   assert (0 <= index && index < 64);
 
   board_s absPiece = abs(piece);
+  int signMult = peaceSign(piece);
 
-  // Note: -98 is not found in pst.h
-  short valMG, valEG;
+  // TODO optimize game phase / materialRatio somehow.
+  //float materialRatio = (totalMaterial - 2 * getPieceValue(KING)) / PST_PIECE_VALUE_SUM;
+  //float materialRatio = 0.5;
+  //assert (0 <= materialRatio && materialRatio <= 1.0);
+
+  int val;
   if        (absPiece == PAWN) {
-    valMG = PST_PAWN_MG[index];
-    valEG = PST_PAWN_EG[index];
+    val = PST_PAWN_MG[index];
 
   } else if (absPiece == KNIGHT) {
-    valMG = PST_KNIGHT_MG[index];
-    valEG = PST_KNIGHT_EG[index];
+    val = PST_KNIGHT_MG[index];
 
   } else if (absPiece == BISHOP) {
-    valMG = PST_BISHOP_MG[index];
-    valEG = PST_BISHOP_EG[index];
+    val = PST_BISHOP_MG[index];
 
   } else if (absPiece == ROOK) {
-    valMG = PST_ROOK_MG[index];
-    valEG = PST_ROOK_EG[index];
+    val = PST_ROOK_MG[index];
 
   } else if (absPiece == QUEEN) {
-    valMG = PST_QUEEN_MG[index];
-    valEG = PST_QUEEN_EG[index];
+    val = PST_QUEEN_MG[index];
 
   } else if (absPiece == KING) {
-    valMG = PST_KING_MG[index];
-    valEG = PST_KING_EG[index];
+    val = PST_KING_MG[index];
 
   } else {
     assert( false );
   }
 
-  short signAndMoveMult = moveMult * peaceSign(piece);
-  positionMG += signAndMoveMult * valMG;
-  positionEG += signAndMoveMult * valEG;
+  return signMult * val;
 }
 
 
@@ -1045,8 +1042,8 @@ void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
   totalMaterial += mult * abs(value);
 
   if (!IS_ANTICHESS) {
-    // TODO do work here
-    updatePST(a, b, piece, mult);
+    int pst = getPSTValue(a, b, piece);
+    position += mult * pst;
   }
 
   updateZobristPiece(a, b, piece);
@@ -1056,13 +1053,12 @@ void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
 void Board::recalculateEvaluations_slow(void) {
   int oldMaterial = material;
   int oldTotalMaterial = totalMaterial;
-  int oldPositionMG = positionMG;
-  int oldPositionEG = positionEG;
+  int oldPosition = position;
   board_hash_t oldZobrist = zobrist;
 
   material = 0;
   totalMaterial = 0;
-  positionMG = positionEG = 0;
+  position = 0;
   for (int r = 0; r < 8; r++) {
     for (int c = 0; c < 8; c++) {
       board_s piece = state[r][c];
@@ -1075,10 +1071,9 @@ void Board::recalculateEvaluations_slow(void) {
     }
   }
 
-  assert( oldMaterial == 0      || oldMaterial == material           );
-  assert( oldTotalMaterial == 0 || oldTotalMaterial == totalMaterial );
-  assert( oldPositionMG == 0    || oldPositionMG == positionMG       );
-  assert( oldPositionEG == 0    || oldPositionEG == positionEG       );
+  assert( oldMaterial == 0      | oldMaterial == material           );
+  assert( oldTotalMaterial == 0 | oldTotalMaterial == totalMaterial );
+  assert( oldPosition == 0      | oldPosition == position           );
   assert( oldZobrist == zobrist );
 }
 
@@ -1139,12 +1134,7 @@ int Board::heuristic() {
   //assert( marco == polo );
 
   // TODO testing ttable.
-  int evaluation = material;
-  float materialRatio = (totalMaterial - 2 * PST_PIECE_VALUE[KING]) /
-                        (PST_PIECE_VALUE_SUM - 2 * PST_PIECE_VALUE[KING]);
-  assert( 0 <= materialRatio && materialRatio <= 1 );
-  evaluation += positionMG * materialRatio +
-                positionEG * (1 - materialRatio);
+  int evaluation = material + position;
 
   if (IS_ANTICHESS) {
     // TODO cache between boards.
