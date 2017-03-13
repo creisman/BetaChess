@@ -1160,7 +1160,8 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
   Board::nodeCounter = 0;
   Board::ttCounter = 0;
   Board::quiesceCounter = 0;
-  global_tt.clear();
+
+  clear_tt();
 
   // Check if game has a result
   board_s result = getGameResult_slow();
@@ -1198,8 +1199,8 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
   assert (-10000 <= scoredMove.first && scoredMove.first <= 100000);
 
   string name = algebraicNotation_slow(scoredMove.second);
-  string ttableDebug = !FLAGS_use_t_table ?
-    "" : ("(tt " + to_string(global_tt.size()) + ", " + to_string(Board::ttCounter) + ")");
+  string ttableDebug = !FLAGS_use_ttable ?
+    "" : ("(tt " + to_string(size_tt()) + ", " + to_string(Board::ttCounter) + ")");
 
   if (stats) {
     stats->plyR = plyR;
@@ -1221,10 +1222,9 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
 scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   Board::nodeCounter += 1;
 
-  if (FLAGS_use_t_table) {
-    auto test = global_tt.find(getZobrist());
-    if (test != global_tt.end()) {
-      TTableEntry* lookup = test->second;
+  if (FLAGS_use_ttable) {
+    TTableEntry* lookup = lookup_tt(getZobrist());
+    if (lookup != nullptr) {
       if (lookup->depth >= plyR) {
         Board::ttCounter += 1;
 
@@ -1265,7 +1265,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  //#pragma omp parallel for if (!FLAGS_use_t_table)
+  #pragma omp parallel for if (!FLAGS_use_ttable)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
@@ -1281,7 +1281,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
           shouldBreak = true;
-          break;
+          //break;
         }
       }
     } else {
@@ -1291,7 +1291,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
           shouldBreak = true;
-          break;
+          //break;
         }
       }
     }
@@ -1314,12 +1314,12 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   move_t suggestion = (wasAlphaCutoff || wasBetaCutoff) ?
       Board::NULL_MOVE : children[bestIndex].getLastMove();
 
-  if (FLAGS_use_t_table && plyR >= 1) {
+  if (FLAGS_use_ttable && plyR >= 0) {
     char ttType = wasAlphaCutoff ? UPPER_BOUND :
         (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
 
     TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};
-    global_tt[getZobrist()] = entry;
+    store_tt(getZobrist(), entry);
   }
 
   return make_pair(bestInGen, suggestion);

@@ -10,7 +10,7 @@ using namespace std;
 
 DEFINE_int32(verbosity, 0, "print lots of stuff (higher = more)");
 
-DEFINE_bool(use_t_table, false, "Use Transposition table in FindMove");
+DEFINE_bool(use_ttable, false, "Use Transposition table in FindMove");
 
 DEFINE_string(eval_test_size, "",
       "Predetermined limits (instant, small, medium, large)");

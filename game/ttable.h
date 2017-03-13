@@ -15,12 +15,17 @@ namespace ttable {
 
   // TODO book isn't smart enough to allow transpositions (e4, e5, d4, d5 = d4, d5, e4, e5).
   struct TTableEntry {
-    char type; 
+    char type;
     char depth;
     int score;
     move_t suggested;
   };
 
-  unordered_map<board_hash_t, TTableEntry*> global_tt;
+  void clear_tt(void);
+  int size_tt(void);
+
+  void store_tt(board_hash_t position, TTableEntry* entry);
+  TTableEntry* lookup_tt(board_hash_t position);
 }
+
 #endif // TTABLE_H
