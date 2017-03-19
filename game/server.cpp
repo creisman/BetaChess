@@ -22,6 +22,7 @@ vector<string> moves;
 // Read-Evaluate-Play loop.
 string repLoop() {
   cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
+  cout << "fen: " << boardT.generateFen_slow() << endl;
   boardT.printBoard();
 
   // Some Book stuff here.
@@ -48,11 +49,11 @@ string repLoop() {
     }
   }
 
-  FindMoveStats stats;
+  FindMoveStats stats = {0, 0};
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
     suggest = boardT.findMove(
-        FLAGS_server_min_depth,
+        FLAGS_server_min_ply,
         FLAGS_server_min_nodes,
         &stats);
   }
@@ -61,12 +62,10 @@ string repLoop() {
   move_t move = get<1>(suggest);
   string coords = boardT.coordinateNotation(move);
   string alg = boardT.algebraicNotation_slow(move);
-  int nodesS = foundBookResponse ? 0 : stats.nodes;
-  int depthS = foundBookResponse ? 0 : stats.plyR;
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
        << " score: " << score / 100.00
-       << " (searched " << nodesS << " nodes in " << depthS << " ply)" << endl;
+       << " (searched " << stats.plyR << " plyR and " << stats.nodes << " nodes)" << endl;
   return coords;
 }
 
@@ -143,7 +142,7 @@ void genericHandler(evhttp_request * req, void *args) {
     reply = "Don't know what you want?";
   }
 
-  cout << "return: \"" << reply << "\"" << endl << endl;
+  //cout << "return: \"" << reply << "\"" << endl << endl;
 
   auto *outBuffer = evhttp_request_get_output_buffer(req);
   evbuffer_add_printf(outBuffer, "%s", reply.c_str());
@@ -173,7 +172,7 @@ int main(int argc, char** argv) {
 
   cout << "Launching Server"
        << "\t(Search with depth = "
-         << FLAGS_server_min_depth << ", "
+         << FLAGS_server_min_ply << ", "
          << FLAGS_server_min_nodes << ")"
        << endl << endl;
   bookT.load();

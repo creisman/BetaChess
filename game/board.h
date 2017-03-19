@@ -83,7 +83,7 @@ namespace board {
 
       Board copy(void);
 
-      string boardStr(void);
+      string boardStr_slow(void);
       string generateFen_slow(void);
       void printBoard(void);
 

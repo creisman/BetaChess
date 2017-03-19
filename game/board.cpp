@@ -183,7 +183,7 @@ Board Board::copy() {
 }
 
 
-string Board::boardStr(void) {
+string Board::boardStr_slow(void) {
   string rep = "";
   for (int row = 7; row >= 0; row--) {
     rep += "|";
@@ -260,7 +260,7 @@ string Board::generateFen_slow(void) {
 }
 
 void Board::printBoard(void) {
-  cout << boardStr() << endl;
+  cout << boardStr_slow() << endl;
 }
 
 bool Board::getIsWhiteTurn(void) {
