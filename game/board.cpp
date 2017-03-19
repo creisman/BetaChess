@@ -1183,20 +1183,20 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {
-    scoredMove = findMoveHelper(plyR, -10000, 10000);
+    scoredMove = findMoveHelper(plyR, -10100, 10100);
     totalNodes = nodeCounter + quiesceCounter;
-    if (abs(scoredMove.first) >= 5000 || totalNodes > minNodes) {
+    if (abs(scoredMove.first) >= 10000 || totalNodes > minNodes) {
       break;
     }
     plyR += 1;
   }
 
-  if (abs(scoredMove.first) < 5000) {
+  if (abs(scoredMove.first) < 10100) {
     assert( scoredMove.second != Board::NULL_MOVE );
   }
 
   // scoredMove.first == NAN when it's a forced move otherwise in search window.
-  assert (-10000 <= scoredMove.first && scoredMove.first <= 100000);
+  assert (-10100 <= scoredMove.first && scoredMove.first <= 10100);
 
   string name = algebraicNotation_slow(scoredMove.second);
   string ttableDebug = !FLAGS_use_ttable ?
@@ -1253,9 +1253,16 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   vector<Board> children = getLegalChildren();
 
   if (children.empty()) {
-    // TODO callGameResultStatus
-    // Node is a winner!
-    int score = isWhiteTurn ? 5000 : -5000;
+    // Node is end of game!
+    board_s status = getGameResult_slow();
+    int score = 0;
+    if        (status == RESULT_BLACK_WIN) {
+      score = -10000;
+    } else if (status == RESULT_WHITE_WIN) {
+      score = 10000;
+    }
+
+    // This might be possible if they load from FEN
     assert( lastMove != NULL_MOVE );
     return make_pair(score, lastMove);
   }

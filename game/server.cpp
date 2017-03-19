@@ -48,26 +48,29 @@ string repLoop(int ply) {
     }
   }
 
+  FindMoveStats stats;
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
-    suggest = boardT.findMove(625000, nullptr);
+    suggest = boardT.findMove(ply, &stats);
   }
 
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
   string coords = boardT.coordinateNotation(move);
   string alg = boardT.algebraicNotation_slow(move);
+  int nodesSearched = foundBookResponse ? 0 : stats.nodes;
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
-       << " score: " << score / 100.00 << endl;
+       << " score: " << score / 100.00
+       << " (searched  " << nodesSearched << " nodes )" << endl;
   return coords;
 }
 
 string update(string move) {
   // TODO fix this (not sure who does it.)
-  if (!move.empty() && move.back() == '+' || move.back() == '#') {
-    move.pop_back();
-  }
+  //if (!move.empty() && move.back() == '+' || move.back() == '#') {
+  //  move.pop_back();
+  //}
 
   bool foundMove = boardT.makeAlgebraicMove_slow(move);
   if (!foundMove) {
@@ -147,7 +150,7 @@ void genericHandler(evhttp_request * req, void *args) {
 
 
 int main() {
-  assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
+  //assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
 
   if (!event_init()) {
     cerr << "Failed to init libevent." << endl;
