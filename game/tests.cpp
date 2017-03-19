@@ -164,7 +164,7 @@ void playGame(int moves, int nodes, string fen) {
   auto T0 = chrono::system_clock().now();
 
   for (int move = 0; move < moves; move++) {
-    auto scoredMove = b.findMove(nodes, nullptr);
+    auto scoredMove = b.findMove(3, nodes, nullptr);
     move_t m = scoredMove.second;
     cout << "iter: " << move << "\tScore: " << scoredMove.first << endl;
     b.makeMove(m);

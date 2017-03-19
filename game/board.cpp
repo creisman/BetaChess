@@ -1156,7 +1156,7 @@ int Board::heuristic() {
 atomic<int> Board::nodeCounter(0);
 atomic<int> Board::ttCounter(0);
 atomic<int> Board::quiesceCounter(0);
-scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
+scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   Board::nodeCounter = 0;
   Board::ttCounter = 0;
   Board::quiesceCounter = 0;
@@ -1181,10 +1181,8 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
     return make_pair(NAN, c[0].getLastMove());
   }
 
-  int plyR = 2;
-  if (minNodes <= 10) {
-    plyR = minNodes;
-  }
+  int plyR = max(2, minPly);
+
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {

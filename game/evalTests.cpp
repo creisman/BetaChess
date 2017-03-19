@@ -16,7 +16,8 @@ using namespace board;
 // The general idea is that these test tricky problems.
 
 // Gloabl State variables
-int testSize = 0;
+int testPlySize = 0;
+int testNodeSize = 0;
 
 int success = 0;
 int missed = 0;
@@ -26,7 +27,15 @@ int countNodes = 0;
 
 
 const int K_NODES = 1000;
-const map<string, int> predefinedTestSizes = {
+const map<string, int> predefinedPlySizes = {
+  {"",        4}, // default is small.
+  {"instant", 3},
+  {"small",   4},
+  {"medium",  4},
+  {"large",   5},
+};
+
+const map<string, int> predefinedNodeSizes = {
   {"",        100  * K_NODES}, // default is small.
   {"instant", 10   * K_NODES},
   {"small",   100  * K_NODES},
@@ -67,7 +76,7 @@ bool eval(string epd) {
 
   // Step 3.
   FindMoveStats stats;
-  move_t move = get<1>(b.findMove(testSize, &stats));
+  move_t move = get<1>(b.findMove(testPlySize, testNodeSize, &stats));
   string moveName = b.algebraicNotation_slow(move);
 
   countPly   += stats.plyR;
@@ -572,11 +581,14 @@ void evalMain() {
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (FLAGS_eval_test_custom_size > 0) {
-    testSize = FLAGS_eval_test_custom_size;
+    int flag = FLAGS_eval_test_custom_size;
+    int testPlySize = flag <= 10 ? flag : 3;
+    int testNodeSize = flag <= 10 ? 10000 : flag;
   } else {
-    testSize = predefinedTestSizes.at(FLAGS_eval_test_size);
+    testPlySize = predefinedPlySizes.at(FLAGS_eval_test_size);
+    testNodeSize = predefinedNodeSizes.at(FLAGS_eval_test_size);
   }
-  cout << "\twith test size: " << testSize << endl;;
+  cout << "\twith test size: " << testPlySize << ", " << testNodeSize << endl;;
 
   auto T0 = chrono::system_clock().now();
 

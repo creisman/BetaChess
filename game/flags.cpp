@@ -10,7 +10,8 @@ using namespace std;
 
 DEFINE_int32(verbosity, 0, "print lots of stuff (higher = more)");
 
-DEFINE_int32(server_search_depth, 4, "depth the server searchs (see findMove)");
+DEFINE_int32(server_min_ply, 4, "min ply for findMove in server");
+DEFINE_int32(server_min_nodes, 75000, "min nodes for findMove in server");
 
 DEFINE_bool(use_ttable, false, "Use Transposition table in FindMove");
 
@@ -42,7 +43,9 @@ static bool ValidateEvalTestCustomSize(const char* flagname, int flagvalue) {
 
 // Define validators in a block here.
 
-DEFINE_validator(server_search_depth, &ValidateEvalTestCustomSize);
+DEFINE_validator(server_min_ply, &ValidateEvalTestCustomSize);
+DEFINE_validator(server_min_nodes, &ValidateEvalTestCustomSize);
+
 DEFINE_validator(eval_test_size, &ValidateEvalTestSize);
 DEFINE_validator(eval_test_custom_size, &ValidateEvalTestCustomSize);
 

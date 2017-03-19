@@ -116,7 +116,7 @@ namespace board {
 
       int heuristic(void);
 
-      scored_move_t findMove(int minNodes, FindMoveStats *info);
+      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
 
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
       board_s getGameResult_slow(void);

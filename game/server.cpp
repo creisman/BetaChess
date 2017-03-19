@@ -20,7 +20,7 @@ Board boardT;
 vector<string> moves;
 
 // Read-Evaluate-Play loop.
-string repLoop(int ply) {
+string repLoop() {
   cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
   boardT.printBoard();
 
@@ -51,7 +51,10 @@ string repLoop(int ply) {
   FindMoveStats stats;
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
-    suggest = boardT.findMove(ply, &stats);
+    suggest = boardT.findMove(
+        FLAGS_server_min_depth,
+        FLAGS_server_min_nodes,
+        &stats);
   }
 
   double score = get<0>(suggest);
@@ -133,7 +136,7 @@ void genericHandler(evhttp_request * req, void *args) {
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (moveHeader == "suggest") {
-    reply = repLoop(FLAGS_server_search_depth);
+    reply = repLoop();
   } else if (!moveHeader.empty()) {
     reply = update(moveHeader);
   } else {
@@ -169,7 +172,9 @@ int main(int argc, char** argv) {
   }
 
   cout << "Launching Server"
-       << "\t(Search with depth = " << FLAGS_server_search_depth << ")"
+       << "\t(Search with depth = "
+         << FLAGS_server_min_depth << ", "
+         << FLAGS_server_min_nodes << ")"
        << endl << endl;
   bookT.load();
 
