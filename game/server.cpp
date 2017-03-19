@@ -58,11 +58,12 @@ string repLoop(int ply) {
   move_t move = get<1>(suggest);
   string coords = boardT.coordinateNotation(move);
   string alg = boardT.algebraicNotation_slow(move);
-  int nodesSearched = foundBookResponse ? 0 : stats.nodes;
+  int nodesS = foundBookResponse ? 0 : stats.nodes;
+  int depthS = foundBookResponse ? 0 : stats.plyR;
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
        << " score: " << score / 100.00
-       << " (searched  " << nodesSearched << " nodes )" << endl;
+       << " (searched " << nodesS << " nodes in " << depthS << " ply)" << endl;
   return coords;
 }
 
@@ -132,7 +133,7 @@ void genericHandler(evhttp_request * req, void *args) {
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (moveHeader == "suggest") {
-    reply = repLoop(4);
+    reply = repLoop(FLAGS_server_search_depth);
   } else if (!moveHeader.empty()) {
     reply = update(moveHeader);
   } else {
@@ -149,7 +150,8 @@ void genericHandler(evhttp_request * req, void *args) {
 }
 
 
-int main() {
+int main(int argc, char** argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   //assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
 
   if (!event_init()) {
@@ -166,7 +168,9 @@ int main() {
     return -1;
   }
 
-  cout << "Launching Server" << endl << endl;
+  cout << "Launching Server"
+       << "\t(Search with depth = " << FLAGS_server_search_depth << ")"
+       << endl << endl;
   bookT.load();
 
   evhttp_set_gencb(server.get(), genericHandler, nullptr);

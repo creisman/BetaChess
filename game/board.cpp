@@ -1163,6 +1163,11 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
 
   clear_tt();
 
+  if (stats) {
+    stats->plyR = 0;
+    stats->nodes = 0;
+  }
+
   // Check if game has a result
   board_s result = getGameResult_slow();
   if (result != RESULT_IN_PROGRESS) {
