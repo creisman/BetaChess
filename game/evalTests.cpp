@@ -23,7 +23,7 @@ int success = 0;
 int missed = 0;
 
 int countPly = 0;
-int countNodes = 0;
+long countNodes = 0;
 
 
 const int K_NODES = 1000;
@@ -81,7 +81,6 @@ bool eval(string epd) {
 
   countPly   += stats.plyR;
   countNodes += stats.nodes;
-
 
   bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
   if (found) {
@@ -209,7 +208,6 @@ void evalWinAtChess50(void) {
   eval("1r3rk1/5pb1/p2p2p1/Q1n1q2p/1NP1P3/3p1P1B/PP1R3P/1K2R3 b - - bm Nxe4; id \"WAC.098\";");
   eval("r1bq1r1k/1pp1Np1p/p2p2pQ/4R3/n7/8/PPPP1PPP/R1B3K1 w - - bm Rh5; id \"WAC.099\";");
   eval("8/k1b5/P4p2/1Pp2p1p/K1P2P1P/8/3B4/8 w - - bm Be3 b6+; id \"WAC.100\";");
-  // */
 }
 
 
@@ -421,7 +419,7 @@ void evalWinAtChess200(void) {
 }
 
 
-void evalQuiteMoves(void) {
+void evalQuietMoves(void) {
   eval("1qr3k1/p2nbppp/bp2p3/3p4/3P4/1P2PNP1/P2Q1PBP/1N2R1K1 b - - bm Qc7; id \"sbd.001\";");
   eval("1r2r1k1/3bnppp/p2q4/2RPp3/4P3/6P1/2Q1NPBP/2R3K1 w - - bm Rc7; id \"sbd.002\";");
   eval("2b1k2r/2p2ppp/1qp4n/7B/1p2P3/5Q2/PPPr2PP/R2N1R1K b k - bm O-O; id \"sbd.003\";");
@@ -557,8 +555,6 @@ void evalQuiteMoves(void) {
   eval("rnbqr1k1/pp1p1ppp/5n2/3Pb3/1P6/P1N3P1/4NPBP/R1BQK2R w KQ - bm O-O; id \"sbd.133\";");
   eval("rnq1nrk1/pp3pbp/6p1/3p4/3P4/5N2/PP2BPPP/R1BQK2R w KQ - bm O-O; id \"sbd.134\";");
 
-  // With nodes = 1M and only the trivial heuristic 15 of 132.
-  // This doesn't improve by increasing nodes up to 4M.
   printStats("silent but deadly");
 }
 
@@ -567,14 +563,16 @@ void evalMain() {
   //eval("1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - bm Ka5 Kc5 b7; id \"WAC.500\";");
   //eval("1k6/8/8/1K6/8/8/8/8 w - - bm Ka5 Kc5; id \"WAC.500\";");
 
+  /*
   evalWinAtChess0();
   evalWinAtChess50();
   evalWinAtChess100();
   evalWinAtChess200();
   printStats("Win at Chess");
+  */
 
   // Saving for later after tactics have been refined a little.
-  //evalQuiteMoves();
+  evalQuietMoves();
 }
 
 
@@ -582,8 +580,8 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (FLAGS_eval_test_custom_size > 0) {
     int flag = FLAGS_eval_test_custom_size;
-    int testPlySize = flag <= 10 ? flag : 3;
-    int testNodeSize = flag <= 10 ? 10000 : flag;
+    testPlySize = flag <= 10 ? flag : 3;
+    testNodeSize = flag <= 10 ? 10000 : flag;
   } else {
     testPlySize = predefinedPlySizes.at(FLAGS_eval_test_size);
     testNodeSize = predefinedNodeSizes.at(FLAGS_eval_test_size);
