@@ -1166,16 +1166,23 @@ int Board::heuristic() {
 atomic<int> Board::nodeCounter(0);
 atomic<int> Board::ttCounter(0);
 atomic<int> Board::quiesceCounter(0);
-scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
+scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   Board::nodeCounter = 0;
   Board::ttCounter = 0;
   Board::quiesceCounter = 0;
-  global_tt.clear();
+
+  clear_tt();
+
+  if (stats) {
+    stats->plyR = 0;
+    stats->nodes = 0;
+  }
 
   // Check if game has a result
   board_s result = getGameResult_slow();
   if (result != RESULT_IN_PROGRESS) {
-    return make_pair(result, Board::NULL_MOVE);
+    int score = getGameResultScore(result);
+    return make_pair(score, Board::NULL_MOVE);
   }
 
   // Check if we only have one move (if so no real choice).
@@ -1185,31 +1192,28 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
     return make_pair(NAN, c[0].getLastMove());
   }
 
-  int plyR = 2;
-  if (minNodes <= 10) {
-    plyR = minNodes;
-  }
+  int plyR = max(2, minPly);
+
+  // Checkmate this turn
+  int maxScore = SCORE_WIN + 100;
+
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {
-    scoredMove = findMoveHelper(plyR, -10000, 10000);
+    scoredMove = findMoveHelper(plyR, -maxScore, maxScore);
     totalNodes = nodeCounter + quiesceCounter;
-    if (abs(scoredMove.first) >= 5000 || totalNodes > minNodes) {
+    if (abs(scoredMove.first) >= SCORE_WIN || totalNodes > minNodes) {
       break;
     }
     plyR += 1;
   }
 
-  if (abs(scoredMove.first) < 5000) {
-    assert( scoredMove.second != Board::NULL_MOVE );
-  }
-
-  // scoredMove.first == NAN when it's a forced move otherwise in search window.
-  assert (-10000 <= scoredMove.first && scoredMove.first <= 100000);
+  // scoredMove.first == NAN when it's a forced move, otherwise the in search window.
+  assert (-maxScore <= scoredMove.first && scoredMove.first <= maxScore);
 
   string name = algebraicNotation_slow(scoredMove.second);
-  string ttableDebug = !FLAGS_use_t_table ?
-    "" : ("(tt " + to_string(global_tt.size()) + ", " + to_string(Board::ttCounter) + ")");
+  string ttableDebug = !FLAGS_use_ttable ?
+    "" : ("(tt " + to_string(size_tt()) + ", " + to_string(Board::ttCounter) + ")");
 
   if (stats) {
     stats->plyR = plyR;
@@ -1222,6 +1226,7 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
          << ttableDebug
          << " => " << name << " (@ " << scoredMove.first << ")" << endl;
   }
+
   // TODO add some code for PV.
 
   return scoredMove;
@@ -1231,10 +1236,9 @@ scored_move_t Board::findMove(int minNodes, FindMoveStats *stats) {
 scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   Board::nodeCounter += 1;
 
-  if (FLAGS_use_t_table) {
-    auto test = global_tt.find(getZobrist());
-    if (test != global_tt.end()) {
-      TTableEntry* lookup = test->second;
+  if (FLAGS_use_ttable) {
+    TTableEntry* lookup = lookup_tt(getZobrist());
+    if (lookup != nullptr) {
       if (lookup->depth >= plyR) {
         Board::ttCounter += 1;
 
@@ -1261,11 +1265,14 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   }
 
   vector<Board> children = getLegalChildren();
-
   if (children.empty()) {
-    // TODO callGameResultStatus
-    // Node is a winner!
-    int score = isWhiteTurn ? 5000 : -5000;
+    // Node is end of game!
+    board_s status = getGameResult_slow();
+
+    // TODO adjust this score for how many moves later it hapens.
+    int score = getGameResultScore(status);
+
+    // This might be possible if they load from FEN
     assert( lastMove != NULL_MOVE );
     return make_pair(score, lastMove);
   }
@@ -1275,7 +1282,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  //#pragma omp parallel for if (!FLAGS_use_t_table)
+  #pragma omp parallel for if (!FLAGS_use_ttable)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
@@ -1291,7 +1298,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
           shouldBreak = true;
-          break;
+          //break;
         }
       }
     } else {
@@ -1301,7 +1308,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
           shouldBreak = true;
-          break;
+          //break;
         }
       }
     }
@@ -1324,12 +1331,12 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   move_t suggestion = (wasAlphaCutoff || wasBetaCutoff) ?
       Board::NULL_MOVE : children[bestIndex].getLastMove();
 
-  if (FLAGS_use_t_table && plyR >= 1) {
+  if (FLAGS_use_ttable && plyR >= 0) {
     char ttType = wasAlphaCutoff ? UPPER_BOUND :
         (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
 
     TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};
-    global_tt[getZobrist()] = entry;
+    store_tt(getZobrist(), entry);
   }
 
   return make_pair(bestInGen, suggestion);
@@ -1403,6 +1410,22 @@ board_s Board::getGameResult_slow(void) {
   }
 
   assert(false);
+}
+
+int Board::getGameResultScore(board_s gameResult) {
+  // Note: Maybe heuristic() would be a good return value but for now disallow.
+  assert( gameResult != RESULT_IN_PROGRESS );
+
+  if (gameResult == RESULT_TIE) {
+    return 0;
+  }
+  if (gameResult == RESULT_BLACK_WIN) {
+    return -SCORE_WIN;
+  }
+  if (gameResult == RESULT_WHITE_WIN) {
+    return SCORE_WIN;
+  }
+
 }
 
 

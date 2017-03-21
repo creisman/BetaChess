@@ -20,8 +20,9 @@ Board boardT;
 vector<string> moves;
 
 // Read-Evaluate-Play loop.
-string repLoop(int ply) {
+string repLoop() {
   cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
+  cout << "fen: " << boardT.generateFen_slow() << endl;
   boardT.printBoard();
 
   // Some Book stuff here.
@@ -48,26 +49,33 @@ string repLoop(int ply) {
     }
   }
 
+  FindMoveStats stats;
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
-    suggest = boardT.findMove(625000, nullptr);
+    suggest = boardT.findMove(
+        FLAGS_server_min_ply,
+        FLAGS_server_min_nodes,
+        &stats);
   }
 
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
   string coords = boardT.coordinateNotation(move);
   string alg = boardT.algebraicNotation_slow(move);
+  int nodesS = foundBookResponse ? 0 : stats.nodes;
+  int depthS = foundBookResponse ? 0 : stats.plyR;
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
-       << " score: " << score / 100.00 << endl;
+       << " score: " << score / 100.00
+       << " (searched " << nodesS << " nodes in " << depthS << " ply)" << endl;
   return coords;
 }
 
 string update(string move) {
   // TODO fix this (not sure who does it.)
-  if (!move.empty() && move.back() == '+' || move.back() == '#') {
-    move.pop_back();
-  }
+  //if (!move.empty() && move.back() == '+' || move.back() == '#') {
+  //  move.pop_back();
+  //}
 
   bool foundMove = boardT.makeAlgebraicMove_slow(move);
   if (!foundMove) {
@@ -129,7 +137,7 @@ void genericHandler(evhttp_request * req, void *args) {
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (moveHeader == "suggest") {
-    reply = repLoop(4);
+    reply = repLoop();
   } else if (!moveHeader.empty()) {
     reply = update(moveHeader);
   } else {
@@ -146,8 +154,9 @@ void genericHandler(evhttp_request * req, void *args) {
 }
 
 
-int main() {
-  assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
+int main(int argc, char** argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  //assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
 
   if (!event_init()) {
     cerr << "Failed to init libevent." << endl;
@@ -163,7 +172,11 @@ int main() {
     return -1;
   }
 
-  cout << "Launching Server" << endl << endl;
+  cout << "Launching Server"
+       << "\t(Search with depth = "
+         << FLAGS_server_min_ply << ", "
+         << FLAGS_server_min_nodes << ")"
+       << endl << endl;
   bookT.load();
 
   evhttp_set_gencb(server.get(), genericHandler, nullptr);

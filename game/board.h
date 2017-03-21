@@ -67,6 +67,10 @@ namespace board {
       static const board_s RESULT_WHITE_WIN   = 102;
       static const board_s RESULT_BLACK_WIN   = 103;
 
+      // Game result scores
+      static const int SCORE_WIN                 = 10000;
+      static const int SCORE_DRAW_WITH_CONTEMPT  =   -16;
+
       // Game status
       static const board_s STATUS_IS_CHECK  = 10;
       static const board_s STATUS_NOT_CHECK = 11;
@@ -116,10 +120,11 @@ namespace board {
 
       int heuristic(void);
 
-      scored_move_t findMove(int minNodes, FindMoveStats *info);
+      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
 
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
       board_s getGameResult_slow(void);
+      int     getGameResultScore(board_s gameResult);
 
       void perft(
           int ply,

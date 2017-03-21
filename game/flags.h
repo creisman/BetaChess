@@ -10,7 +10,10 @@
 // Declare runtime flags here.
 DECLARE_int32(verbosity);
 
-DECLARE_bool(use_t_table);
+DECLARE_int32(server_min_ply);
+DECLARE_int32(server_min_nodes);
+
+DECLARE_bool(use_ttable);
 DECLARE_string(eval_test_size);
 DECLARE_int32(eval_test_custom_size);
 

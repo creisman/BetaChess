@@ -154,7 +154,7 @@ void perft(int ply, map<int, long> countToVerify, string fen) {
 }
 
 
-void playGame(int moves, int nodes, string fen) {
+void playGame(int numMoves, int nodes, string fen) {
   Board b;
   if (!fen.empty()) {
     b = Board(fen);
@@ -163,18 +163,24 @@ void playGame(int moves, int nodes, string fen) {
 
   auto T0 = chrono::system_clock().now();
 
-  for (int move = 0; move < moves; move++) {
-    auto scoredMove = b.findMove(nodes, nullptr);
-    move_t m = scoredMove.second;
-    cout << "iter: " << move << "\tScore: " << scoredMove.first << endl;
-    b.makeMove(m);
+  for (int iter = 0; iter < numMoves; iter++) {
+    FindMoveStats stats;
+    scored_move_t suggest = b.findMove(3, nodes, &stats);
+    double score = get<0>(suggest);
+    move_t move = get<1>(suggest);
+    string alg = b.algebraicNotation_slow(move);
+
+    cout << "iter: " << iter << "\tsuggested Move: " << alg
+         << " score: " << score / 100.00
+         << " (searched " << stats.nodes << " nodes)" << endl;
+    b.makeMove(move);
     //b.printBoard();
   }
 
   auto T1 = chrono::system_clock().now();
   chrono::duration<double> duration = T1 - T0;
   double duration_s = duration.count();
-  printf("evaled: %d moves (%.2f seconds)\n\n", moves, duration_s);
+  printf("evaled: %d moves (%.2f seconds)\n\n", numMoves, duration_s);
 }
 
 

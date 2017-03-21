@@ -16,17 +16,26 @@ using namespace board;
 // The general idea is that these test tricky problems.
 
 // Gloabl State variables
-int testSize = 0;
+int testPlySize = 0;
+int testNodeSize = 0;
 
 int success = 0;
 int missed = 0;
 
 int countPly = 0;
-int countNodes = 0;
+long countNodes = 0;
 
 
 const int K_NODES = 1000;
-const map<string, int> predefinedTestSizes = {
+const map<string, int> predefinedPlySizes = {
+  {"",        4}, // default is small.
+  {"instant", 3},
+  {"small",   4},
+  {"medium",  4},
+  {"large",   5},
+};
+
+const map<string, int> predefinedNodeSizes = {
   {"",        100  * K_NODES}, // default is small.
   {"instant", 10   * K_NODES},
   {"small",   100  * K_NODES},
@@ -67,12 +76,11 @@ bool eval(string epd) {
 
   // Step 3.
   FindMoveStats stats;
-  move_t move = get<1>(b.findMove(testSize, &stats));
+  move_t move = get<1>(b.findMove(testPlySize, testNodeSize, &stats));
   string moveName = b.algebraicNotation_slow(move);
 
   countPly   += stats.plyR;
   countNodes += stats.nodes;
-
 
   bool found = find(bestMoves.begin(), bestMoves.end(), moveName) != bestMoves.end();
   if (found) {
@@ -200,7 +208,6 @@ void evalWinAtChess50(void) {
   eval("1r3rk1/5pb1/p2p2p1/Q1n1q2p/1NP1P3/3p1P1B/PP1R3P/1K2R3 b - - bm Nxe4; id \"WAC.098\";");
   eval("r1bq1r1k/1pp1Np1p/p2p2pQ/4R3/n7/8/PPPP1PPP/R1B3K1 w - - bm Rh5; id \"WAC.099\";");
   eval("8/k1b5/P4p2/1Pp2p1p/K1P2P1P/8/3B4/8 w - - bm Be3 b6+; id \"WAC.100\";");
-  // */
 }
 
 
@@ -412,7 +419,7 @@ void evalWinAtChess200(void) {
 }
 
 
-void evalQuiteMoves(void) {
+void evalQuietMoves(void) {
   eval("1qr3k1/p2nbppp/bp2p3/3p4/3P4/1P2PNP1/P2Q1PBP/1N2R1K1 b - - bm Qc7; id \"sbd.001\";");
   eval("1r2r1k1/3bnppp/p2q4/2RPp3/4P3/6P1/2Q1NPBP/2R3K1 w - - bm Rc7; id \"sbd.002\";");
   eval("2b1k2r/2p2ppp/1qp4n/7B/1p2P3/5Q2/PPPr2PP/R2N1R1K b k - bm O-O; id \"sbd.003\";");
@@ -548,8 +555,6 @@ void evalQuiteMoves(void) {
   eval("rnbqr1k1/pp1p1ppp/5n2/3Pb3/1P6/P1N3P1/4NPBP/R1BQK2R w KQ - bm O-O; id \"sbd.133\";");
   eval("rnq1nrk1/pp3pbp/6p1/3p4/3P4/5N2/PP2BPPP/R1BQK2R w KQ - bm O-O; id \"sbd.134\";");
 
-  // With nodes = 1M and only the trivial heuristic 15 of 132.
-  // This doesn't improve by increasing nodes up to 4M.
   printStats("silent but deadly");
 }
 
@@ -565,18 +570,21 @@ void evalMain() {
   printStats("Win at Chess");
 
   // Saving for later after tactics have been refined a little.
-  //evalQuiteMoves();
+  //evalQuietMoves();
 }
 
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (FLAGS_eval_test_custom_size > 0) {
-    testSize = FLAGS_eval_test_custom_size;
+    int flag = FLAGS_eval_test_custom_size;
+    testPlySize = flag <= 10 ? flag : 3;
+    testNodeSize = flag <= 10 ? 10000 : flag;
   } else {
-    testSize = predefinedTestSizes.at(FLAGS_eval_test_size);
+    testPlySize = predefinedPlySizes.at(FLAGS_eval_test_size);
+    testNodeSize = predefinedNodeSizes.at(FLAGS_eval_test_size);
   }
-  cout << "\twith test size: " << testSize << endl;;
+  cout << "\twith test size: " << testPlySize << ", " << testNodeSize << endl;;
 
   auto T0 = chrono::system_clock().now();
 

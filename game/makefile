@@ -2,12 +2,13 @@
 # We have made a makefile and are sinful.
 
 CFLAGS=-std=c++11 -fopenmp -O2
-SRC = board.cpp book.cpp flags.cpp
+SRC = flags.cpp board.cpp book.cpp ttable.cpp
+HDR = ${SRC:.cpp=.h}
 OBJ = ${SRC:.cpp=.o}
 LIBS = -lgflags
 SERVER_LIBS = -levent
 
-%.o: %.cpp flags.h flags.cpp
+%.o: %.cpp flags.h $(HDR)
 	g++ -c -o $@ $< $(CFLAGS)
 
 server: $(OBJ) server.cpp
