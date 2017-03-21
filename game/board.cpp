@@ -1140,8 +1140,8 @@ int Board::heuristic() {
 
   // TODO testing ttable.
   int evaluation = material;
-  float materialRatio = (totalMaterial - 2 * PST_PIECE_VALUE[KING]) /
-                        (PST_PIECE_VALUE_SUM - 2 * PST_PIECE_VALUE[KING]);
+  float materialRatio = 1.0; //(totalMaterial - 2 * PST_PIECE_VALUE[KING]) /
+                        //(PST_PIECE_VALUE_SUM - 2 * PST_PIECE_VALUE[KING]);
   assert( 0 <= materialRatio && materialRatio <= 1 );
   evaluation += positionMG * materialRatio +
                 positionEG * (1 - materialRatio);
