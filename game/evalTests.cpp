@@ -563,16 +563,14 @@ void evalMain() {
   //eval("1k6/5RP1/1P6/1K6/6r1/8/8/8 w - - bm Ka5 Kc5 b7; id \"WAC.500\";");
   //eval("1k6/8/8/1K6/8/8/8/8 w - - bm Ka5 Kc5; id \"WAC.500\";");
 
-  /*
   evalWinAtChess0();
   evalWinAtChess50();
   evalWinAtChess100();
   evalWinAtChess200();
   printStats("Win at Chess");
-  */
 
   // Saving for later after tactics have been refined a little.
-  evalQuietMoves();
+  //evalQuietMoves();
 }
 
 

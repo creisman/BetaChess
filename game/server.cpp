@@ -22,6 +22,7 @@ vector<string> moves;
 // Read-Evaluate-Play loop.
 string repLoop() {
   cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
+  cout << "fen: " << boardT.generateFen_slow() << endl;
   boardT.printBoard();
 
   // Some Book stuff here.
@@ -52,7 +53,7 @@ string repLoop() {
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
     suggest = boardT.findMove(
-        FLAGS_server_min_depth,
+        FLAGS_server_min_ply,
         FLAGS_server_min_nodes,
         &stats);
   }
@@ -173,7 +174,7 @@ int main(int argc, char** argv) {
 
   cout << "Launching Server"
        << "\t(Search with depth = "
-         << FLAGS_server_min_depth << ", "
+         << FLAGS_server_min_ply << ", "
          << FLAGS_server_min_nodes << ")"
        << endl << endl;
   bookT.load();

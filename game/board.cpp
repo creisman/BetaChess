@@ -1171,7 +1171,8 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   // Check if game has a result
   board_s result = getGameResult_slow();
   if (result != RESULT_IN_PROGRESS) {
-    return make_pair(result, Board::NULL_MOVE);
+    int score = getGameResultScore(result);
+    return make_pair(score, Board::NULL_MOVE);
   }
 
   // Check if we only have one move (if so no real choice).
@@ -1183,23 +1184,22 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
 
   int plyR = max(2, minPly);
 
+  // Checkmate this turn
+  int maxScore = SCORE_WIN + 100;
+
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {
-    scoredMove = findMoveHelper(plyR, -10100, 10100);
+    scoredMove = findMoveHelper(plyR, -maxScore, maxScore);
     totalNodes = nodeCounter + quiesceCounter;
-    if (abs(scoredMove.first) >= 10000 || totalNodes > minNodes) {
+    if (abs(scoredMove.first) >= SCORE_WIN || totalNodes > minNodes) {
       break;
     }
     plyR += 1;
   }
 
-  if (abs(scoredMove.first) < 10100) {
-    assert( scoredMove.second != Board::NULL_MOVE );
-  }
-
-  // scoredMove.first == NAN when it's a forced move otherwise in search window.
-  assert (-10100 <= scoredMove.first && scoredMove.first <= 10100);
+  // scoredMove.first == NAN when it's a forced move, otherwise the in search window.
+  assert (-maxScore <= scoredMove.first && scoredMove.first <= maxScore);
 
   string name = algebraicNotation_slow(scoredMove.second);
   string ttableDebug = !FLAGS_use_ttable ?
@@ -1216,6 +1216,7 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
          << ttableDebug
          << " => " << name << " (@ " << scoredMove.first << ")" << endl;
   }
+
   // TODO add some code for PV.
 
   return scoredMove;
@@ -1254,16 +1255,12 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   }
 
   vector<Board> children = getLegalChildren();
-
   if (children.empty()) {
     // Node is end of game!
     board_s status = getGameResult_slow();
-    int score = 0;
-    if        (status == RESULT_BLACK_WIN) {
-      score = -10000;
-    } else if (status == RESULT_WHITE_WIN) {
-      score = 10000;
-    }
+
+    // TODO adjust this score for how many moves later it hapens.
+    int score = getGameResultScore(status);
 
     // This might be possible if they load from FEN
     assert( lastMove != NULL_MOVE );
@@ -1403,6 +1400,22 @@ board_s Board::getGameResult_slow(void) {
   }
 
   assert(false);
+}
+
+int Board::getGameResultScore(board_s gameResult) {
+  // Note: Maybe heuristic() would be a good return value but for now disallow.
+  assert( gameResult != RESULT_IN_PROGRESS );
+
+  if (gameResult == RESULT_TIE) {
+    return 0;
+  }
+  if (gameResult == RESULT_BLACK_WIN) {
+    return -SCORE_WIN;
+  }
+  if (gameResult == RESULT_WHITE_WIN) {
+    return SCORE_WIN;
+  }
+
 }
 
 
