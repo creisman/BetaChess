@@ -87,17 +87,18 @@ namespace board {
 
       Board copy(void);
 
-      string boardStr(void);
-      string generateFen_slow(void);
-      void printBoard(void);
+      string boardStr(void) const;
+      string generateFen_slow(void) const;
+      void printBoard(void) const;
 
-      bool getIsWhiteTurn(void);
-      board_hash_t getZobrist(void);
+      bool getIsWhiteTurn(void) const;
+      board_hash_t getZobrist(void) const;
       int  getEvaluation(void);
 
-      move_t getLastMove(void);
+      move_t getLastMove(void) const;
+      vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
-      vector<Board> getLegalChildren(bool onlyCaptures, bool fewAsPossible);
+      void orderChildren(vector<Board> children);
 
       void makeMove(move_t move);
       bool makeAlgebraicMove_slow(string move);
@@ -146,6 +147,7 @@ namespace board {
       void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       // Helper methods.
+      static int moveOrderingValue(const Board& a);
       static int getPieceValue(board_s piece);
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);

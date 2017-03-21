@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cctype>
@@ -183,7 +184,7 @@ Board Board::copy() {
 }
 
 
-string Board::boardStr(void) {
+string Board::boardStr(void) const {
   string rep = "";
   for (int row = 7; row >= 0; row--) {
     rep += "|";
@@ -202,7 +203,7 @@ string Board::boardStr(void) {
   return rep;
 }
 
-string Board::generateFen_slow(void) {
+string Board::generateFen_slow(void) const {
   string rep = "";
   for (int row = 7; row >= 0; row--) {
     int spaces = 0;
@@ -259,19 +260,19 @@ string Board::generateFen_slow(void) {
   return rep;
 }
 
-void Board::printBoard(void) {
+void Board::printBoard(void) const {
   cout << boardStr() << endl;
 }
 
-bool Board::getIsWhiteTurn(void) {
+bool Board::getIsWhiteTurn(void) const {
   return isWhiteTurn;
 }
 
-board_hash_t Board::getZobrist(void) {
+board_hash_t Board::getZobrist(void) const {
   return zobrist;
 }
 
-move_t Board::getLastMove(void) {
+move_t Board::getLastMove(void) const {
   return lastMove;
 }
 
@@ -521,7 +522,23 @@ vector<Board> Board::getLegalChildren(void) {
   return all_moves;
 }
 
-// inline
+void Board::orderChildren(vector<Board> children) {
+  if (IS_ANTICHESS) {
+    // TODO this is the simple version, could be partially moved into getChildren.
+    return;
+  }
+
+  // TODO see if joining precalculating pairs would be faster.
+  auto comparitor = [](const Board&a, const Board&b) { return Board::moveOrderingValue(a) > Board::moveOrderingValue(b); };
+  sort(children.begin(), children.end(), comparitor);
+
+  return;
+}
+
+
+
+
+
 void Board::promoHelper(
   vector<Board> *all_moves,
   board_s selfColor,
@@ -965,6 +982,45 @@ string Board::fileName(board_s b) {
 }
 
 
+int Board::moveOrderingValue(const Board& a) {
+  // 4. "Good" captures (taking higher value piece)
+  // 3. Equal captures  (taking piece of ~equal~ value)
+  // 2. Scary looking captures
+  // 1. Quiet moves     (move with no capture)
+
+  // TODO current move ordering doesn't seem to help.
+  //return 1;
+
+  const int MAJOR_ORDERING = 1000000;
+
+  board_s moving  = abs(get<4>(a.getLastMove()));
+  board_s capture = abs(get<5>(a.getLastMove()));
+
+  assert( moving != 0 );
+  int movingValue = Board::getPieceValue(moving);
+
+  if (capture != 0) {
+    int captureValue = Board::getPieceValue(capture);
+    // Ignoring bishop for knight.
+    if (movingValue + 50 < captureValue) {
+      return 4 * MAJOR_ORDERING + captureValue - movingValue;
+    }
+
+    // Knights ~ same as bishops.
+    if (abs(movingValue - captureValue) <= 50) {
+      return 3 * MAJOR_ORDERING + captureValue;
+    }
+
+    assert (captureValue < movingValue);
+    // These moves might be good but they are scary to evaluate.
+    return 2 * MAJOR_ORDERING + captureValue;
+  } else {
+
+    // Quiet Move (sorted by how heavy a piece we are moving).
+    return 1 * MAJOR_ORDERING + movingValue;
+  }
+}
+
 int Board::getPieceValue(board_s piece) {
   assert(piece != 0);
   board_s absPiece = abs(piece);
@@ -1265,6 +1321,11 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     // This might be possible if they load from FEN
     assert( lastMove != NULL_MOVE );
     return make_pair(score, lastMove);
+  }
+
+  if (plyR >= 2) {
+    // Take the time and try and order in some reasonable way.
+    orderChildren(children);
   }
 
   atomic<int>    bestIndex(-1);
