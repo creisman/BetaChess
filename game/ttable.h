@@ -21,11 +21,11 @@ namespace ttable {
     move_t suggested;
   };
 
-  void clear_tt(void);
-  int size_tt(void);
+  void clearTT(void);
+  int sizeTT(void);
 
-  void store_tt(board_hash_t position, TTableEntry* entry);
-  TTableEntry* lookup_tt(board_hash_t position);
+  void storeTT(board_hash_t position, TTableEntry* entry);
+  TTableEntry* lookupTT(board_hash_t position);
 }
 
 #endif // TTABLE_H
