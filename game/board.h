@@ -98,7 +98,7 @@ namespace board {
       move_t getLastMove(void) const;
       vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
-      void orderChildren(vector<Board> &children);
+      static void orderChildren(vector<Board> &children);
 
       void makeMove(move_t move);
       bool makeAlgebraicMove_slow(string move);
