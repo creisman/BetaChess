@@ -1217,7 +1217,7 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   Board::ttCounter = 0;
   Board::quiesceCounter = 0;
 
-  clear_tt();
+  clearTT();
 
   if (stats) {
     stats->plyR = 0;
@@ -1259,7 +1259,7 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
 
   string name = algebraicNotation_slow(scoredMove.second);
   string ttableDebug = !FLAGS_use_ttable ?
-    "" : ("(tt " + to_string(size_tt()) + ", " + to_string(Board::ttCounter) + ")");
+    "" : ("(tt " + to_string(sizeTT()) + ", " + to_string(Board::ttCounter) + ")");
 
   if (stats) {
     stats->plyR = plyR;
@@ -1283,7 +1283,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   Board::nodeCounter += 1;
 
   if (FLAGS_use_ttable) {
-    TTableEntry* lookup = lookup_tt(getZobrist());
+    TTableEntry* lookup = lookupTT(getZobrist());
     if (lookup != nullptr) {
       if (lookup->depth >= plyR) {
         Board::ttCounter += 1;
@@ -1387,7 +1387,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         (wasBetaCutoff ? LOWER_BOUND : EXACT_BOUND);
 
     TTableEntry *entry = new TTableEntry{ttType, plyR /* depth */, bestInGen, suggestion};
-    store_tt(getZobrist(), entry);
+    storeTT(getZobrist(), entry);
   }
 
   return make_pair(bestInGen, suggestion);
