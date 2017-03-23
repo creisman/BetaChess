@@ -26,6 +26,10 @@ namespace ttable {
 
   void storeTT(board_hash_t position, TTableEntry* entry);
   TTableEntry* lookupTT(board_hash_t position);
+
+  void clearHistory(void);
+  void updateHistory(bool isWhite, int from, int to, int delta);
+  int lookupHistory(bool isWhite, int from, int to);
 }
 
 #endif // TTABLE_H

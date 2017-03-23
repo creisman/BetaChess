@@ -522,7 +522,7 @@ vector<Board> Board::getLegalChildren(void) {
   return all_moves;
 }
 
-void Board::orderChildren(vector<Board> children) {
+void Board::orderChildren(vector<Board> &children) {
   if (IS_ANTICHESS) {
     // TODO this is the simple version, could be partially moved into getChildren.
     return;
@@ -999,25 +999,29 @@ int Board::moveOrderingValue(const Board& a) {
   assert( moving != 0 );
   int movingValue = Board::getPieceValue(moving);
 
+  int fromS = (get<0>(a.lastMove) << 3) + get<1>(a.lastMove);
+  int toS = (get<2>(a.lastMove) << 3) + get<3>(a.lastMove);
+  int historyHeuristic = lookupHistory(a.isWhiteTurn, fromS, toS);
+
   if (capture != 0) {
     int captureValue = Board::getPieceValue(capture);
     // Ignoring bishop for knight.
     if (movingValue + 50 < captureValue) {
-      return 4 * MAJOR_ORDERING + captureValue - movingValue;
+      return 4 * MAJOR_ORDERING + captureValue - movingValue + historyHeuristic;
     }
 
     // Knights ~ same as bishops.
     if (abs(movingValue - captureValue) <= 50) {
-      return 3 * MAJOR_ORDERING + captureValue;
+      return 3 * MAJOR_ORDERING + captureValue + historyHeuristic;
     }
 
     assert (captureValue < movingValue);
     // These moves might be good but they are scary to evaluate.
-    return 2 * MAJOR_ORDERING + captureValue;
+    return 2 * MAJOR_ORDERING + captureValue + historyHeuristic;
   } else {
 
     // Quiet Move (sorted by how heavy a piece we are moving).
-    return 1 * MAJOR_ORDERING + movingValue;
+    return 1 * MAJOR_ORDERING + movingValue + historyHeuristic;
   }
 }
 
@@ -1218,6 +1222,7 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   Board::quiesceCounter = 0;
 
   clearTT();
+  clearHistory();
 
   if (stats) {
     stats->plyR = 0;
@@ -1323,7 +1328,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     return make_pair(score, lastMove);
   }
 
-  if (plyR >= 2) {
+  if (plyR >= 0) {
     // Take the time and try and order in some reasonable way.
     orderChildren(children);
   }
@@ -1333,14 +1338,18 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  #pragma omp parallel for if (!FLAGS_use_ttable)
+  //#pragma omp parallel for if (!FLAGS_use_ttable)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
     }
 
-    auto suggest = children[ci].findMoveHelper(plyR - 1, atomic_alpha, atomic_beta);
+    Board *child = &children[ci];
+    auto suggest = child->findMoveHelper(plyR - 1, atomic_alpha, atomic_beta);
     int value = suggest.first;
+
+    int fromS = (get<0>(child->lastMove) << 3) + get<1>(child->lastMove);
+    int toS = (get<2>(child->lastMove) << 3) + get<3>(child->lastMove);
 
     if (isWhiteTurn) {
       if (value > atomic_alpha) {
@@ -1348,6 +1357,8 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         atomic_alpha = value;
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
+          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+
           shouldBreak = true;
           //break;
         }
@@ -1358,6 +1369,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         atomic_beta = value;
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
+          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
           shouldBreak = true;
           //break;
         }

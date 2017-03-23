@@ -578,8 +578,8 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (FLAGS_eval_test_custom_size > 0) {
     int flag = FLAGS_eval_test_custom_size;
-    testPlySize = flag <= 10 ? flag : 3;
-    testNodeSize = flag <= 10 ? 10000 : flag;
+    testPlySize = flag <= 10 ? flag : 2;
+    testNodeSize = flag <= 10 ? 1000 : flag;
   } else {
     testPlySize = predefinedPlySizes.at(FLAGS_eval_test_size);
     testNodeSize = predefinedNodeSizes.at(FLAGS_eval_test_size);
