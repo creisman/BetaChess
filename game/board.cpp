@@ -530,10 +530,26 @@ void Board::orderChildren(vector<Board> &children) {
     return;
   }
 
-  // TODO see if joining precalculating pairs would be faster.
-  auto comparitor = [](const Board&a, const Board&b) { return Board::moveOrderingValue(a) > Board::moveOrderingValue(b); };
-  sort(children.begin(), children.end(), comparitor);
+  //auto comparitor = [](const Board&a, const Board&b) { return Board::moveOrderingValue(a) > Board::moveOrderingValue(b); };
+  //sort(children.begin(), children.end(), comparitor);
+  //return;
 
+  int n = children.size();
+
+  pair<int, int> test[n];
+  for (int i = 0; i < n; i++) {
+    test[i] = make_pair(Board::moveOrderingValue(children[i]), i);
+  }
+
+  auto comparitor = [](const pair<int, int>&a, const pair<int, int>&b) { return get<0>(a) > get<0>(b); };
+  sort(test, test + n, comparitor);
+
+  vector<Board> result;
+  for (int i = 0; i < n; i++) {
+    result.push_back(children[get<1>(test[i])]);
+  }
+
+  swap(children, result);
   return;
 }
 
@@ -998,10 +1014,10 @@ int Board::moveOrderingValue(const Board& a) {
   int movingValue = Board::getPieceValue(moving);
 
   // TODO  this seems to break things not sure why
-  // int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
-  // int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
-  // int historyHeuristic = lookupHistory(a.isWhiteTurn, fromS, toS);
-  int historyHeuristic = 0;
+  int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
+  int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
+  int historyHeuristic = lookupHistory(a.isWhiteTurn, fromS, toS);
+  //int historyHeuristic = 0;
 
   if (capture != 0) {
     int captureValue = Board::getPieceValue(capture);
@@ -1328,7 +1344,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
     return make_pair(score, lastMove);
   }
 
-  if (plyR >= 2) {
+  if (plyR >= 1) {
     // Take the time and try and order in some reasonable way.
     orderChildren(children);
   }
@@ -1357,7 +1373,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         atomic_alpha = value;
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
-          //updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
 
           shouldBreak = true;
         }
@@ -1368,7 +1384,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
         atomic_beta = value;
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
-          //updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
 
           shouldBreak = true;
         }
