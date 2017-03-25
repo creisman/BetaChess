@@ -94,8 +94,8 @@ string update(string move) {
     cout << "Server updating, game result: " << (int) result << endl;
 
     // Update some of the book (let Book figure out how much).
-    bookT.updateResult(moves, result /* for white */);
-    bookT.write();
+    //bookT.updateResult(moves, result /* for white */);
+    //bookT.write();
   }
 
   string reply = foundMove ? "found" : "not found";

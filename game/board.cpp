@@ -1013,32 +1013,31 @@ int Board::moveOrderingValue(const Board& a) {
   assert( moving != 0 );
   int movingValue = Board::getPieceValue(moving);
 
-  // TODO  this seems to break things not sure why
   int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
   int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
   int historyHeuristic = lookupHistory(a.isWhiteTurn, fromS, toS);
-  //int historyHeuristic = 0;
+  // int historyHeuristic = 0;
 
+  int captureScore = 0;
   if (capture != 0) {
     int captureValue = Board::getPieceValue(capture);
-    // Ignoring bishop for knight.
-    if (movingValue + 50 < captureValue) {
-      return 4 * MAJOR_ORDERING + captureValue - movingValue + historyHeuristic;
+    if (captureValue > movingValue) {
+      // Good captures
+      captureScore = 4 * MAJOR_ORDERING + captureValue - movingValue;
+    } else if (captureValue >= (movingValue - 50)) {
+      // Equal Captures (including bishop for knight)
+      captureScore = 3 * MAJOR_ORDERING + captureValue;
+    } else {
+      assert (captureValue < movingValue);
+      // These moves might be good but they are scary to evaluate.
+      captureScore = 2 * MAJOR_ORDERING + captureValue;
     }
-
-    // Knights ~ same as bishops.
-    if (abs(movingValue - captureValue) <= 50) {
-      return 3 * MAJOR_ORDERING + captureValue + historyHeuristic;
-    }
-
-    assert (captureValue < movingValue);
-    // These moves might be good but they are scary to evaluate.
-    return 2 * MAJOR_ORDERING + captureValue + historyHeuristic;
   } else {
-
     // Quiet Move (sorted by how heavy a piece we are moving).
-    return 1 * MAJOR_ORDERING + movingValue + historyHeuristic;
+    captureScore = 1 * MAJOR_ORDERING + movingValue;
   }
+
+  return captureScore + historyHeuristic;
 }
 
 int Board::getPieceValue(board_s piece) {
