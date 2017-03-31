@@ -535,7 +535,7 @@ void Board::promoHelper(
     board_s movingPawn = state[y][x];
     // promotion && underpromotion
     board_s lastPromoPiece = IS_ANTICHESS ? KING : QUEEN;
-    for (board_s newPiece = KNIGHT; newPiece <= lastPromoPiece; newPiece++) {
+    for (board_s newPiece = lastPromoPiece; newPiece >= KNIGHT; newPiece--) {
       // "promote" then move piece (this means history shows Queen moving to back row not a pawn)
       Board c = copy();
 
