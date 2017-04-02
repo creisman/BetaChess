@@ -1353,7 +1353,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  #pragma omp parallel for if (!FLAGS_use_ttable)
+  //#pragma omp parallel for if (!FLAGS_use_ttable)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;

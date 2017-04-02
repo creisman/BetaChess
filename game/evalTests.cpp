@@ -22,6 +22,7 @@ int testNodeSize = 0;
 int success = 0;
 int missed = 0;
 
+int sumAbsEval = 0;
 int countPly = 0;
 long countNodes = 0;
 
@@ -49,6 +50,7 @@ bool verifyIsInLegal(Board &b, vector<string> moves);
 void printStats(string setName) {
   int total = success + missed;
   cout << success << " out of (" << total << ") for set \"" << setName << "\"" << endl
+       << "\t\tsum abs evals: " << sumAbsEval <<  "  (to verify no change)" << endl
        << "\t\tplys searched: " << countPly << endl
        << "\t\tnodes counted: " << countNodes << endl;
 }
@@ -76,9 +78,12 @@ bool eval(string epd) {
 
   // Step 3.
   FindMoveStats stats;
-  move_t move = get<1>(b.findMove(testPlySize, testNodeSize, &stats));
+  scored_move_t scoredMove = b.findMove(testPlySize, testNodeSize, &stats);
+
+  move_t move = scoredMove.second;
   string moveName = b.algebraicNotation_slow(move);
 
+  sumAbsEval += abs(scoredMove.first);
   countPly   += stats.plyR;
   countNodes += stats.nodes;
 
