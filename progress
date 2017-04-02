@@ -1,0 +1,16 @@
+3df6e96c605d9526871aa4db4d54da1a7016568e
+232 out of (300) for set "Win at Chess"
+    plys searched: 2400 (constant depth = 8)
+    nodes counted: 16838726723
+  (11351.21 seconds)
+
+169 out of (300) for set "Win at Chess"
+    plys searched: 1800
+    nodes counted: 406015233
+  (240.81 seconds)
+
+with test size: 4, 200000
+153 out of (300) for set "Win at Chess"
+    plys searched: 1666
+    nodes counted: 185296886
+  (106.66 seconds)

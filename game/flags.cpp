@@ -28,10 +28,9 @@ DEFINE_bool(test_endgame, false, "only test endgame handling");
 
 // Try to add a validator here.
 static bool ValidateEvalTestSize(const char* flagname, const string& flagvalue) {
-  return true;
-//  return flagvalue == "" ||
-//         flagvalue == "instant" || flagvalue == "small" ||
-//         flagvalue == "medium" || flagvalue == "large";
+  return flagvalue == "" ||
+         flagvalue == "instant" || flagvalue == "small" ||
+         flagvalue == "medium" || flagvalue == "large";
 }
 
 static bool ValidateEvalTestCustomSize(const char* flagname, int flagvalue) {

@@ -67,6 +67,10 @@ namespace board {
       static const board_s RESULT_WHITE_WIN   = 102;
       static const board_s RESULT_BLACK_WIN   = 103;
 
+      // Game result scores
+      static const int SCORE_WIN                 = 10000;
+      static const int SCORE_DRAW_WITH_CONTEMPT  =   -16;
+
       // Game status
       static const board_s STATUS_IS_CHECK  = 10;
       static const board_s STATUS_NOT_CHECK = 11;
@@ -83,17 +87,18 @@ namespace board {
 
       Board copy(void);
 
-      string boardStr_slow(void);
-      string generateFen_slow(void);
-      void printBoard(void);
+      string boardStr(void) const;
+      string generateFen_slow(void) const;
+      void printBoard(void) const;
 
-      bool getIsWhiteTurn(void);
-      board_hash_t getZobrist(void);
+      bool getIsWhiteTurn(void) const;
+      board_hash_t getZobrist(void) const;
       int  getEvaluation(void);
 
-      move_t getLastMove(void);
+      move_t getLastMove(void) const;
+      vector<Board> getChildren(void);
       vector<Board> getLegalChildren(void);
-      vector<Board> getLegalChildren(bool onlyCaptures, bool fewAsPossible);
+      static void orderChildren(vector<Board> &children);
 
       void makeMove(move_t move);
       bool makeAlgebraicMove_slow(string move);
@@ -120,6 +125,7 @@ namespace board {
 
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
       board_s getGameResult_slow(void);
+      int     getGameResultScore(board_s gameResult);
 
       void perft(
           int ply,
@@ -141,6 +147,7 @@ namespace board {
       void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       // Helper methods.
+      static int moveOrderingValue(const Board& a);
       static int getPieceValue(board_s piece);
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
