@@ -134,6 +134,9 @@ namespace board {
           atomic<int> *promotions,
           atomic<int> *mates) const;
 
+      // Should be private used in transition.
+      static int getPieceValue(board_s piece);
+
     private:
       vector<Board> getChildrenInternal_slow(void) const;
       board_s checkAttack_medium(bool byBlack, board_s a, board_s b) const;
@@ -146,7 +149,6 @@ namespace board {
 
       // Helper methods.
       static int moveOrderingValue(const Board& a);
-      static int getPieceValue(board_s piece);
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);

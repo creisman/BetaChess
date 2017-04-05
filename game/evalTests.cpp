@@ -9,9 +9,11 @@
 
 #include "board.h"
 #include "flags.h"
+#include "search.h"
 
 using namespace std;
 using namespace board;
+using namespace search;
 
 // The general idea is that these test tricky problems.
 
@@ -77,8 +79,9 @@ bool eval(string epd) {
   vector<string> bestMoves = getBestMoves(b, epd);
 
   // Step 3.
+  Search search(b);
   FindMoveStats stats;
-  scored_move_t scoredMove = b.findMove(testPlySize, testNodeSize, &stats);
+  scored_move_t scoredMove = search.findMove(testPlySize, testNodeSize, &stats);
 
   move_t move = scoredMove.second;
   string moveName = b.algebraicNotation_slow(move);

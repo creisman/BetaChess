@@ -10,10 +10,12 @@
 
 #include "board.h"
 #include "polyglot.h"
+#include "search.h"
 #include "flags.h"
 
 using namespace std;
 using namespace board;
+using namespace search;
 
 Board boardAfterMoves(string stringOfMoves) {
   Board b;
@@ -128,7 +130,7 @@ void perft(int ply, map<int, long> countToVerify, string fen) {
   atomic<int> castles(0);
   atomic<int> promotions(0);
   atomic<int> mates(0);
-  b.perft(ply, &count, &captures, &ep, &castles, &promotions, &mates);
+  Search::perft(b, ply, &count, &captures, &ep, &castles, &promotions, &mates);
 
   auto T1 = chrono::system_clock().now();
   chrono::duration<double> duration = T1 - T0;
@@ -164,8 +166,9 @@ void playGame(int numMoves, int nodes, string fen) {
   auto T0 = chrono::system_clock().now();
 
   for (int iter = 0; iter < numMoves; iter++) {
+    Search search(b);
     FindMoveStats stats;
-    scored_move_t suggest = b.findMove(3, nodes, &stats);
+    scored_move_t suggest = search.findMove(3, nodes, &stats);
     double score = get<0>(suggest);
     move_t move = get<1>(suggest);
     string alg = b.algebraicNotation_slow(move);

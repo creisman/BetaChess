@@ -997,7 +997,7 @@ string Board::fileName(board_s b) {
 }
 
 
-int Board::moveOrderingValue(const Board& a) {
+int Board::moveOrderingValue(const Board& b) {
   // 4. "Good" captures (taking higher value piece)
   // 3. Equal captures  (taking piece of ~equal~ value)
   // 2. Scary looking captures
@@ -1006,7 +1006,7 @@ int Board::moveOrderingValue(const Board& a) {
 
   const int MAJOR_ORDERING = 1000000;
 
-  move_t lastMove = a.getLastMove();
+  move_t lastMove = b.getLastMove();
   board_s moving  = abs(get<4>(lastMove));
   board_s capture = abs(get<5>(lastMove));
 
@@ -1015,7 +1015,7 @@ int Board::moveOrderingValue(const Board& a) {
 
   int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
   int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
-  int historyHeuristic = lookupHistory(a.isWhiteTurn, fromS, toS);
+  int historyHeuristic = lookupHistory(b.getIsWhiteTurn(), fromS, toS);
   // int historyHeuristic = 0;
 
   int captureScore = 0;
@@ -1040,6 +1040,7 @@ int Board::moveOrderingValue(const Board& a) {
   return captureScore + historyHeuristic;
 }
 
+
 int Board::getPieceValue(board_s piece) {
   assert(piece != 0);
   board_s absPiece = abs(piece);
@@ -1047,14 +1048,17 @@ int Board::getPieceValue(board_s piece) {
   return peaceSign(piece) * PST_PIECE_VALUE[absPiece];
 }
 
+
 bool Board::isWhitePiece(board_s piece) {
   return piece > 0;
 }
+
 
 board_s Board::peaceSign(board_s piece) {
 //  return (piece == 0) ? 0 : (piece > 0) ? WHITE : BLACK;
   return (0 < piece) - (piece < 0);
 }
+
 
 bool Board::onBoard(board_s a, board_s b) {
   return 0 <= a && a <= 7 && 0 <= b && b <= 7;

@@ -2,7 +2,7 @@
 # We have made a makefile and are sinful.
 
 CFLAGS=-std=c++11 -fopenmp -O2
-SRC = flags.cpp board.cpp book.cpp ttable.cpp
+SRC = flags.cpp board.cpp book.cpp search.cpp ttable.cpp
 HDR = ${SRC:.cpp=.h}
 OBJ = ${SRC:.cpp=.o}
 LIBS = -lgflags
@@ -37,6 +37,13 @@ run-eval-test: eval-tests
 
 run-gen-book: gen-book
 	./betachess-gen-book
+
+boo: $(OBJ)
+	g++ -o boo testing.cpp $(OBJ) $(CFLAGS) $(LIBS)
+
+run-boo: boo
+	./boo
+
 
 #time g++ -std=c++14 -fopenmp -O2 -o betachess board.h board.cpp main.cpp
 #  time ./betachess-server
