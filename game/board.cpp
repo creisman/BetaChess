@@ -177,7 +177,7 @@ void Board::resetBoard(void) {
 }
 
 
-Board Board::copy() {
+Board Board::copy() const {
   // Call "copy" constructor.
   Board copy = *this;
   return copy;
@@ -277,7 +277,7 @@ move_t Board::getLastMove(void) const {
   return lastMove;
 }
 
-vector<Board> Board::getChildrenInternal_slow(void) {
+vector<Board> Board::getChildrenInternal_slow(void) const {
   bool hasCapture = false;
   vector<Board> all_moves;
 
@@ -443,7 +443,7 @@ vector<Board> Board::getChildrenInternal_slow(void) {
   return all_moves;
 }
 
-vector<Board> Board::getLegalChildren(void) {
+vector<Board> Board::getLegalChildren(void) const {
   vector<Board> all_moves = getChildrenInternal_slow();
   if (all_moves.size() == 0) {
     return all_moves;
@@ -560,7 +560,7 @@ void Board::promoHelper(
   board_s x,
   board_s y,
   board_s x2,
-  board_s y2) {
+  board_s y2) const {
 
   assert(state[y][x] == selfColor * PAWN);
   if ((isWhiteTurn && y2 == 7) || (!isWhiteTurn && y2 == 0)) {
@@ -592,7 +592,7 @@ void Board::promoHelper(
 
 
 // TODO a duplicate version that returns location of attack, count of attack
-board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) {
+board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) const {
   // TODO consider pre calculating for each square in getChildrenMove of parent.
   // returns piece or 0 for no
 
@@ -676,7 +676,7 @@ board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) {
   return 0;
 }
 
-pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
+pair<bool, board_s> Board::attemptMove(board_s a, board_s b) const {
   // prep for moving piece to state[a][b]
   // returns on board, piece on [a][b]
 
@@ -690,7 +690,7 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) {
   return make_pair(false, 0);
 }
 
-board_s Board::getPiece(board_s a, board_s b) {
+board_s Board::getPiece(board_s a, board_s b) const {
   return onBoard(a, b) ? state[a][b] : 0;
 }
 
@@ -862,7 +862,7 @@ bool Board::makeAlgebraicMove_slow(string move) {
 }
 
 
-string Board::algebraicNotation_slow(move_t child_move) {
+string Board::algebraicNotation_slow(move_t child_move) const {
   // e4 = white king pawn double out.
   // e is file.
   // 4 is rank.
@@ -961,7 +961,7 @@ string Board::algebraicNotation_slow(move_t child_move) {
   return pieceName + disambiguate + capture + dest + check;
 }
 
-string Board::lastMoveName_slow(void) {
+string Board::lastMoveName_slow(void) const {
   return coordinateNotation(lastMove);
 }
 
@@ -1061,7 +1061,7 @@ bool Board::onBoard(board_s a, board_s b) {
 }
 
 
-int Board::getPSTValue(board_s a, board_s b, board_s piece) {
+int Board::getPSTValue(board_s a, board_s b, board_s piece) const {
   char index;
   if (peaceSign(piece) == WHITE) {
     index = 8 * a     + b; // a = rank, b = file
@@ -1201,7 +1201,7 @@ void Board::recalculateZobrist_slow(void) {
 }
 
 
-int Board::heuristic() {
+int Board::heuristic() const {
   // NOTE: Used to test that updatePiece is doing incremental updates correctly.
   // tuple<short, short> marco = make_tuple(material, position);
   // getPiecesValue_slow();
@@ -1299,7 +1299,7 @@ scored_move_t Board::findMove(int minPly, int minNodes, FindMoveStats *stats) {
 }
 
 
-scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
+scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) const {
   Board::nodeCounter += 1;
 
   if (FLAGS_use_ttable) {
@@ -1420,7 +1420,7 @@ scored_move_t Board::findMoveHelper(char plyR, int alpha, int beta) {
 }
 
 
-int Board::quiesce(int alpha, int beta) {
+int Board::quiesce(int alpha, int beta) const {
   //quiesceCounter += 1;
   // TODO more implementations here eventually.
 
@@ -1430,7 +1430,7 @@ int Board::quiesce(int alpha, int beta) {
 }
 
 
-pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
+pair<board_s, board_s> Board::findPiece_slow(board_s piece) const {
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
       if (state[y][x] == piece) {
@@ -1442,7 +1442,7 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) {
 }
 
 
-board_s Board::getGameResult_slow(void) {
+board_s Board::getGameResult_slow(void) const {
   // TODO: Add 50 move rule and repeated position.
   // TODO: cache gameresult from heuristic and here.
 
@@ -1513,7 +1513,7 @@ void Board::perft(
     atomic<int> *ep,
     atomic<int> *castles,
     atomic<int> *promotions,
-    atomic<int> *mates) {
+    atomic<int> *mates) const {
   if (ply == 0) {
     move_t move = getLastMove();
     board_s moveSpecial = get<6>(move);

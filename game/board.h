@@ -85,7 +85,7 @@ namespace board {
 
       void resetBoard(void);
 
-      Board copy(void);
+      Board copy(void) const;
 
       string boardStr(void) const;
       string generateFen_slow(void) const;
@@ -93,19 +93,17 @@ namespace board {
 
       bool getIsWhiteTurn(void) const;
       board_hash_t getZobrist(void) const;
-      int  getEvaluation(void);
 
       move_t getLastMove(void) const;
-      vector<Board> getChildren(void);
-      vector<Board> getLegalChildren(void);
+      vector<Board> getLegalChildren(void) const;
       static void orderChildren(vector<Board> &children);
 
       void makeMove(move_t move);
       bool makeAlgebraicMove_slow(string move);
 
       // Algebraic notation of legal move from this board.
-      string algebraicNotation_slow(move_t child_move);
-      string lastMoveName_slow();
+      string algebraicNotation_slow(move_t child_move) const;
+      string lastMoveName_slow() const;
 
       // ~Coordinate notation.
       static string coordinateNotation(move_t move);
@@ -119,13 +117,13 @@ namespace board {
       void recalculateEvaluations_slow(void);
       void recalculateZobrist_slow(void);
 
-      int heuristic(void);
+      int heuristic(void) const;
 
       scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
 
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
-      board_s getGameResult_slow(void);
-      int     getGameResultScore(board_s gameResult);
+      board_s getGameResult_slow(void) const;
+      static int     getGameResultScore(board_s gameResult);
 
       void perft(
           int ply,
@@ -134,14 +132,14 @@ namespace board {
           atomic<int> *ep,
           atomic<int> *castles,
           atomic<int> *promotions,
-          atomic<int> *mates);
+          atomic<int> *mates) const;
 
     private:
-      vector<Board> getChildrenInternal_slow(void);
-      board_s checkAttack_medium(bool byBlack, board_s a, board_s b);
+      vector<Board> getChildrenInternal_slow(void) const;
+      board_s checkAttack_medium(bool byBlack, board_s a, board_s b) const;
 
-      pair<bool, board_s> attemptMove(board_s a, board_s b);
-      board_s getPiece(board_s a, board_s b);
+      pair<bool, board_s> attemptMove(board_s a, board_s b) const;
+      board_s getPiece(board_s a, board_s b) const;
 
       void makeMove(board_s a, board_s b, board_s c, board_s d);
       void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
@@ -152,7 +150,7 @@ namespace board {
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
-      int getPSTValue(board_s a, board_s b, board_s piece);
+      int getPSTValue(board_s a, board_s b, board_s piece) const;
 
       void updatePiece(board_s a, board_s b, board_s piece, bool movingTo);
 
@@ -167,18 +165,17 @@ namespace board {
           board_s pawnDirection,
           board_s x,
           board_s y,
-          board_s x2);
+          board_s x2) const;
 
       // 1-arg version is public.
-      scored_move_t findMoveHelper(char ply, int alpha, int beta);
+      scored_move_t findMoveHelper(char ply, int alpha, int beta) const;
 
       // Quiesce is a search at a leaf node which tries to avoid the horizon effect
       //   (if Queen just captured pawn make sure the queen can't be recaptured)
-      int quiesce(int alpha, int beta);
-      int evalCaptures(int alpha, int beta, int depth);
+      int quiesce(int alpha, int beta) const;
 
       // Behavior is not defined if multiple pieces exist.
-      pair<board_s, board_s> findPiece_slow(board_s piece);
+      pair<board_s, board_s> findPiece_slow(board_s piece) const;
 
       // Used for counting moves in findMove
       static atomic<int> nodeCounter;
