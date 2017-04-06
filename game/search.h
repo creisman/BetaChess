@@ -38,10 +38,10 @@ namespace search {
       // Helper methods.
       static void orderChildren(vector<Board> &children);
       static int moveOrderingValue(const Board& b);
-      static int getGameResultScore(board_s gameResult);
+      static int getGameResultScore(board_s gameResult, int depth);
 
       // 1-arg version is public.
-      static scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta);
+      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta);
 
       // Quiesce is a search at a leaf node which tries to avoid the horizon effect
       //   (if Queen just captured pawn make sure the queen can't be recaptured)
@@ -53,6 +53,8 @@ namespace search {
       static atomic<int> nodeCounter;
       static atomic<int> quiesceCounter;
       static atomic<int> ttCounter;
+
+      int plySearchDepth;
   };
 }
 #endif // SEARCH_H

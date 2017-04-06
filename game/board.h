@@ -121,7 +121,6 @@ namespace board {
 
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
       board_s getGameResult_slow(void) const;
-      static int     getGameResultScore(board_s gameResult);
 
       // Should be private used in transition.
       static int getPieceValue(board_s piece);

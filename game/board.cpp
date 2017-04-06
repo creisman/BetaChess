@@ -1310,19 +1310,3 @@ board_s Board::getGameResult_slow(void) const {
 
   assert(false);
 }
-
-int Board::getGameResultScore(board_s gameResult) {
-  // Note: Maybe heuristic() would be a good return value but for now disallow.
-  assert( gameResult != RESULT_IN_PROGRESS );
-
-  if (gameResult == RESULT_TIE) {
-    return 0;
-  }
-  if (gameResult == RESULT_BLACK_WIN) {
-    return -SCORE_WIN;
-  }
-  if (gameResult == RESULT_WHITE_WIN) {
-    return SCORE_WIN;
-  }
-
-}

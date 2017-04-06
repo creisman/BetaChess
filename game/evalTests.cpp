@@ -79,9 +79,9 @@ bool eval(string epd) {
   vector<string> bestMoves = getBestMoves(b, epd);
 
   // Step 3.
-  Search search(b);
+  Search s;
   FindMoveStats stats;
-  scored_move_t scoredMove = search.findMove(testPlySize, testNodeSize, &stats);
+  scored_move_t scoredMove = s.findMove(b, testPlySize, testNodeSize, &stats);
 
   move_t move = scoredMove.second;
   string moveName = b.algebraicNotation_slow(move);

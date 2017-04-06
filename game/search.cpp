@@ -20,8 +20,9 @@ using namespace search;
 using namespace ttable;
 
 
-Search::Search() {}
-
+Search::Search() {
+  plySearchDepth = 0;
+}
 
 void Search::orderChildren(vector<Board> &children) {
   if (IS_ANTICHESS) {
@@ -60,7 +61,6 @@ int Search::moveOrderingValue(const Board& b) {
   // 3. Equal captures  (taking piece of ~equal~ value)
   // 2. Scary looking captures
   // 1. Quiet moves     (move with no capture)
-
 
   const int MAJOR_ORDERING = 1000000;
 
@@ -119,7 +119,7 @@ scored_move_t Search::findMove(const Board& root, int minPly, int minNodes, Find
   // Check if game has a result
   board_s result = root.getGameResult_slow();
   if (result != Board::RESULT_IN_PROGRESS) {
-    int score = root.getGameResultScore(result);
+    int score = Search::getGameResultScore(result, 0);
     return make_pair(score, Board::NULL_MOVE);
   }
 
@@ -130,7 +130,8 @@ scored_move_t Search::findMove(const Board& root, int minPly, int minNodes, Find
     return make_pair(NAN, c[0].getLastMove());
   }
 
-  int plyR = max(2, minPly);
+  // Update the global state.
+  plySearchDepth = max(2, minPly);
 
   // Checkmate this turn
   int maxScore = Board::SCORE_WIN + 100;
@@ -138,12 +139,12 @@ scored_move_t Search::findMove(const Board& root, int minPly, int minNodes, Find
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {
-    scoredMove = findMoveHelper(root, plyR, -maxScore, maxScore);
+    scoredMove = findMoveHelper(root, plySearchDepth, -maxScore, maxScore);
     totalNodes = nodeCounter + quiesceCounter;
     if (abs(scoredMove.first) >= Board::SCORE_WIN || totalNodes > minNodes) {
       break;
     }
-    plyR += 1;
+    plySearchDepth += 1;
   }
 
   // scoredMove.first == NAN when it's a forced move, otherwise the in search window.
@@ -154,12 +155,12 @@ scored_move_t Search::findMove(const Board& root, int minPly, int minNodes, Find
     "" : ("(tt " + to_string(sizeTT()) + ", " + to_string(Search::ttCounter) + ")");
 
   if (stats) {
-    stats->plyR = plyR;
+    stats->plyR = plySearchDepth;
     stats->nodes = totalNodes;
   }
 
   if (FLAGS_verbosity >= 2) {
-    cout << "\t\tplyR " << plyR << "=> "
+    cout << "\t\tplyR " << plySearchDepth << "=> "
          << nodeCounter << " + " << quiesceCounter << " nodes "
          << ttableDebug
          << " => " << name << " (@ " << scoredMove.first << ")" << endl;
@@ -206,9 +207,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
   if (children.empty()) {
     // Node is end of game!
     board_s status = b.getGameResult_slow();
-
-    // TODO adjust this score for how many moves later it hapens.
-    int score = b.getGameResultScore(status);
+    int score = getGameResultScore(status, plySearchDepth - plyR);
 
     // This might be possible if they load from FEN
     assert( b.getLastMove() != Board::NULL_MOVE );
@@ -305,7 +304,7 @@ int Search::quiesce(const Board& b, int alpha, int beta) {
 }
 
 
-int Search::getGameResultScore(board_s gameResult) {
+int Search::getGameResultScore(board_s gameResult, int depth) {
   // Note: Maybe heuristic() would be a good return value but for now disallow.
   assert( gameResult != Board::RESULT_IN_PROGRESS );
 
@@ -313,10 +312,10 @@ int Search::getGameResultScore(board_s gameResult) {
     return 0;
   }
   if (gameResult == Board::RESULT_BLACK_WIN) {
-    return -Board::SCORE_WIN;
+    return -Board::SCORE_WIN - (100 - depth);
   }
   if (gameResult == Board::RESULT_WHITE_WIN) {
-    return Board::SCORE_WIN;
+    return Board::SCORE_WIN + (100 - depth);
   }
 
 }
