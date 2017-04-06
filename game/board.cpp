@@ -36,9 +36,11 @@ const map<board_s, movements_t> Board::MOVEMENTS = {
   {KING, {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1, -1}}},
 };
 
+
 Board::Board(void) {
   resetBoard();
 }
+
 
 Board::Board(string fen) {
   // Fen is "easy" they said
@@ -204,6 +206,8 @@ string Board::boardStr(void) const {
   return rep;
 }
 
+
+
 string Board::generateFen_slow(void) const {
   string rep = "";
   for (int row = 7; row >= 0; row--) {
@@ -261,21 +265,26 @@ string Board::generateFen_slow(void) const {
   return rep;
 }
 
+
 void Board::printBoard(void) const {
   cout << boardStr() << endl;
 }
+
 
 bool Board::getIsWhiteTurn(void) const {
   return isWhiteTurn;
 }
 
+
 board_hash_t Board::getZobrist(void) const {
   return zobrist;
 }
 
+
 move_t Board::getLastMove(void) const {
   return lastMove;
 }
+
 
 vector<Board> Board::getChildrenInternal_slow(void) const {
   bool hasCapture = false;
@@ -442,6 +451,7 @@ vector<Board> Board::getChildrenInternal_slow(void) const {
   }
   return all_moves;
 }
+
 
 vector<Board> Board::getLegalChildren(void) const {
   vector<Board> all_moves = getChildrenInternal_slow();
@@ -676,6 +686,7 @@ board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) const {
   return 0;
 }
 
+
 pair<bool, board_s> Board::attemptMove(board_s a, board_s b) const {
   // prep for moving piece to state[a][b]
   // returns on board, piece on [a][b]
@@ -690,9 +701,11 @@ pair<bool, board_s> Board::attemptMove(board_s a, board_s b) const {
   return make_pair(false, 0);
 }
 
+
 board_s Board::getPiece(board_s a, board_s b) const {
   return onBoard(a, b) ? state[a][b] : 0;
 }
+
 
 void Board::makeMove(move_t move) {
   board_s a = get<0>(move);
@@ -720,6 +733,7 @@ void Board::makeMove(move_t move) {
 
   assert(getLastMove() == move);
 }
+
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special) {
   if (special == SPECIAL_CASTLE) {
@@ -759,6 +773,7 @@ void Board::makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char s
     halfMoves = 0;
   }
 }
+
 
 void Board::makeMove(board_s a, board_s b, board_s c, board_s d) {
   board_s moving = state[a][b];
@@ -961,9 +976,11 @@ string Board::algebraicNotation_slow(move_t child_move) const {
   return pieceName + disambiguate + capture + dest + check;
 }
 
+
 string Board::lastMoveName_slow(void) const {
   return coordinateNotation(lastMove);
 }
+
 
 string Board::coordinateNotation(move_t move) {
   // This partially (via inference) supports castling, ep
@@ -1164,9 +1181,11 @@ void Board::updateZobristPiece(board_s a, board_s b, board_s piece) {
   zobrist ^= POLYGLOT_RANDOM[index];
 }
 
+
 void Board::updateZobristTurn(bool isWTurn) {
   zobrist ^= (isWTurn == true) * POLYGLOT_RANDOM[780];
 }
+
 
 void Board::updateZobristCastle(char castleStatus) {
   zobrist ^= ((castleStatus & WHITE_OO)  > 0) * POLYGLOT_RANDOM[768 + 0];
@@ -1175,6 +1194,7 @@ void Board::updateZobristCastle(char castleStatus) {
   zobrist ^= ((castleStatus & BLACK_OOO) > 0) * POLYGLOT_RANDOM[768 + 3];
 }
 
+
 void Board::updateZobristEnPassant(move_t &move) {
   // We don't follow the Polyglot standard and choose to always include the
   // enpassant after a double pawn push.
@@ -1182,6 +1202,7 @@ void Board::updateZobristEnPassant(move_t &move) {
     zobrist ^= POLYGLOT_RANDOM[772 + get<1>(move)];
   }
 }
+
 
 void Board::recalculateZobrist_slow(void) {
   board_hash_t oldZobrist = zobrist;
