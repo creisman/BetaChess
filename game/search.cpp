@@ -20,9 +20,7 @@ using namespace search;
 using namespace ttable;
 
 
-Search::Search(Board toSearch) {
- root = toSearch;
-}
+Search::Search() {}
 
 
 void Search::orderChildren(vector<Board> &children) {
@@ -105,7 +103,7 @@ int Search::moveOrderingValue(const Board& b) {
 atomic<int> Search::nodeCounter(0);
 atomic<int> Search::ttCounter(0);
 atomic<int> Search::quiesceCounter(0);
-scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
+scored_move_t Search::findMove(const Board& root, int minPly, int minNodes, FindMoveStats *stats) {
   Search::nodeCounter = 0;
   Search::ttCounter = 0;
   Search::quiesceCounter = 0;

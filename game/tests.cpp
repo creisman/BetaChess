@@ -166,9 +166,9 @@ void playGame(int numMoves, int nodes, string fen) {
   auto T0 = chrono::system_clock().now();
 
   for (int iter = 0; iter < numMoves; iter++) {
-    Search search(b);
+    Search s;
     FindMoveStats stats;
-    scored_move_t suggest = search.findMove(3, nodes, &stats);
+    scored_move_t suggest = s.findMove(b, 3, nodes, &stats);
     double score = get<0>(suggest);
     move_t move = get<1>(suggest);
     string alg = b.algebraicNotation_slow(move);

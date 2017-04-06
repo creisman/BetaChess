@@ -20,9 +20,9 @@ namespace search {
   class Search {
     public:
       // Constructors
-      Search(Board toSearch);
+      Search();
 
-      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
+      scored_move_t findMove(const Board& root, int minPly, int minNodes, FindMoveStats *info);
 
       static void perft(
           const Board&b,
@@ -53,8 +53,6 @@ namespace search {
       static atomic<int> nodeCounter;
       static atomic<int> quiesceCounter;
       static atomic<int> ttCounter;
-
-      Board root;
   };
 }
 #endif // SEARCH_H

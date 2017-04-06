@@ -119,20 +119,9 @@ namespace board {
 
       int heuristic(void) const;
 
-      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
-
       // see RESULT_{BLACK_WIN,WHITE_WIN,TIE,IN_PROGRESS}
       board_s getGameResult_slow(void) const;
       static int     getGameResultScore(board_s gameResult);
-
-      void perft(
-          int ply,
-          atomic<long> *count,
-          atomic<long> *captures,
-          atomic<int> *ep,
-          atomic<int> *castles,
-          atomic<int> *promotions,
-          atomic<int> *mates) const;
 
       // Should be private used in transition.
       static int getPieceValue(board_s piece);
@@ -169,20 +158,8 @@ namespace board {
           board_s y,
           board_s x2) const;
 
-      // 1-arg version is public.
-      scored_move_t findMoveHelper(char ply, int alpha, int beta) const;
-
-      // Quiesce is a search at a leaf node which tries to avoid the horizon effect
-      //   (if Queen just captured pawn make sure the queen can't be recaptured)
-      int quiesce(int alpha, int beta) const;
-
       // Behavior is not defined if multiple pieces exist.
       pair<board_s, board_s> findPiece_slow(board_s piece) const;
-
-      // Used for counting moves in findMove
-      static atomic<int> nodeCounter;
-      static atomic<int> quiesceCounter;
-      static atomic<int> ttCounter;
 
       // Size per instance ~= 2 + 2 + 7 + 1 + 64 + 4 + 4 + 4 + 1 + 1 + 8 = 98 bytes.
 
