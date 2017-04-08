@@ -2,8 +2,7 @@
 #define SERCH_H
 
 #include <atomic>
-#include <map>
-#include <tuple>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -22,6 +21,9 @@ namespace search {
       // Constructors
       Search();
       Search(Board root);
+
+      Board const getRoot();
+      static string scoreString(int score);
 
       scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
       bool makeAlgebraicMove(string move);
@@ -44,7 +46,7 @@ namespace search {
       static int getGameResultScore(board_s gameResult, int depth);
 
       // 1-arg version is public.
-      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta);
+      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta) const;
 
       // Quiesce is a search at a leaf node which tries to avoid the horizon effect
       //   (if Queen just captured pawn make sure the queen can't be recaptured)

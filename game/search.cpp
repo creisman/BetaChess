@@ -30,6 +30,9 @@ Search::Search(Board root) {
   this->root = root;
 }
 
+Board const Search::getRoot() {
+  return root;
+}
 
 bool Search::makeAlgebraicMove(string move) {
   bool valid = root.makeAlgebraicMove_slow(move);
@@ -37,6 +40,7 @@ bool Search::makeAlgebraicMove(string move) {
     moveNames.push_back(move);
     moves.push_back(root.getLastMove());
   }
+
   return valid;
 }
 
@@ -160,7 +164,7 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   plySearchDepth = max(2, minPly);
 
   // Checkmate this turn
-  int maxScore = Board::SCORE_WIN + 100;
+  int maxScore = Board::SCORE_WIN + 101;
 
   scored_move_t scoredMove;
   int totalNodes = 0;
@@ -189,7 +193,7 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
     cout << "\t\tplyR " << plySearchDepth << "=> "
          << nodeCounter << " + " << quiesceCounter << " nodes "
          << ttableDebug
-         << " => " << name << " (@ " << scoredMove.first << ")" << endl;
+         << " => " << name << " (@ " << scoreString(scoredMove.first) << ")" << endl;
   }
 
   // TODO add some code for PV.
@@ -198,7 +202,7 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
 }
 
 
-scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) {
+scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) const {
   Search::nodeCounter += 1;
 
   if (FLAGS_use_ttable) {
@@ -344,6 +348,15 @@ int Search::getGameResultScore(board_s gameResult, int depth) {
     return Board::SCORE_WIN + (100 - depth);
   }
 
+}
+
+
+string Search::scoreString(int score) {
+  if (abs(score) > Board::SCORE_WIN) {
+    int depth = Board::SCORE_WIN + 100 - abs(score);
+    return (score > 0 ? "#" : "#-") + to_string( (depth + 1) / 2);
+  }
+  return to_string(score / 100.0);
 }
 
 

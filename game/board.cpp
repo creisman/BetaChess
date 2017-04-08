@@ -534,36 +534,6 @@ vector<Board> Board::getLegalChildren(void) const {
 }
 
 
-void Board::orderChildren(vector<Board> &children) {
-  if (IS_ANTICHESS) {
-    // TODO this is the simple version, could be partially moved into getChildren.
-    return;
-  }
-
-  //auto comparitor = [](const Board&a, const Board&b) { return Board::moveOrderingValue(a) > Board::moveOrderingValue(b); };
-  //sort(children.begin(), children.end(), comparitor);
-  //return;
-
-  int n = children.size();
-
-  pair<int, int> test[n];
-  for (int i = 0; i < n; i++) {
-    test[i] = make_pair(Board::moveOrderingValue(children[i]), i);
-  }
-
-  auto comparitor = [](const pair<int, int>&a, const pair<int, int>&b) { return get<0>(a) > get<0>(b); };
-  sort(test, test + n, comparitor);
-
-  vector<Board> result;
-  for (int i = 0; i < n; i++) {
-    result.push_back(children[get<1>(test[i])]);
-  }
-
-  swap(children, result);
-  return;
-}
-
-
 void Board::promoHelper(
   vector<Board> *all_moves,
   board_s selfColor,
@@ -1011,50 +981,6 @@ string Board::rankName(board_s a) {
 string Board::fileName(board_s b) {
   char file = 'a' + b;
   return string(1, file);
-}
-
-
-int Board::moveOrderingValue(const Board& b) {
-  // 4. "Good" captures (taking higher value piece)
-  // 3. Equal captures  (taking piece of ~equal~ value)
-  // 2. Scary looking captures
-  // 1. Quiet moves     (move with no capture)
-
-
-  const int MAJOR_ORDERING = 1000000;
-
-  move_t lastMove = b.getLastMove();
-  board_s moving  = abs(get<4>(lastMove));
-  board_s capture = abs(get<5>(lastMove));
-
-  assert( moving != 0 );
-  int movingValue = Board::getPieceValue(moving);
-
-  int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
-  int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
-  int historyHeuristic = lookupHistory(b.getIsWhiteTurn(), fromS, toS);
-  // int historyHeuristic = 0;
-
-  int captureScore = 0;
-  if (capture != 0) {
-    int captureValue = Board::getPieceValue(capture);
-    if (captureValue > movingValue) {
-      // Good captures
-      captureScore = 4 * MAJOR_ORDERING + captureValue - movingValue;
-    } else if (captureValue >= (movingValue - 50)) {
-      // Equal Captures (including bishop for knight)
-      captureScore = 3 * MAJOR_ORDERING + captureValue;
-    } else {
-      assert (captureValue < movingValue);
-      // These moves might be good but they are scary to evaluate.
-      captureScore = 2 * MAJOR_ORDERING + captureValue;
-    }
-  } else {
-    // Quiet Move (sorted by how heavy a piece we are moving).
-    captureScore = 1 * MAJOR_ORDERING + movingValue;
-  }
-
-  return captureScore + historyHeuristic;
 }
 
 

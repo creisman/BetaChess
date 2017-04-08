@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <map>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -96,7 +97,6 @@ namespace board {
 
       move_t getLastMove(void) const;
       vector<Board> getLegalChildren(void) const;
-      static void orderChildren(vector<Board> &children);
 
       void makeMove(move_t move);
       bool makeAlgebraicMove_slow(string move);
@@ -136,7 +136,6 @@ namespace board {
       void makeMove(board_s a, board_s b, board_s c, board_s d, unsigned char special);
 
       // Helper methods.
-      static int moveOrderingValue(const Board& a);
       static bool isWhitePiece(board_s piece);
       static board_s peaceSign(board_s piece);
       static bool onBoard(board_s a, board_s b);
