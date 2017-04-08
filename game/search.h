@@ -25,6 +25,7 @@ namespace search {
 
       scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
       bool makeAlgebraicMove(string move);
+      void updateTime(string wTime, string bTime);
 
       static void perft(
           const Board&b,

@@ -72,13 +72,14 @@ string repLoop() {
   return coords;
 }
 
-string update(string move) {
+string update(string move, string wTime, string bTime) {
   // TODO fix this (not sure who does it.)
   //if (!move.empty() && move.back() == '+' || move.back() == '#') {
   //  move.pop_back();
   //}
 
   bool foundMove = searchT.makeAlgebraicMove(move);
+  searchT.updateTime(wTime, bTime);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
     for (Board c : boardT.getLegalChildren()) {
@@ -124,8 +125,11 @@ void genericHandler(evhttp_request * req, void *args) {
   struct evkeyvalq uriParams;
   evhttp_parse_query_str(evhttp_uri_get_query(uriParsed), &uriParams);
 
-  string startHeader = null2Empty( evhttp_find_header(&uriParams, "start") );
-  string moveHeader  = null2Empty( evhttp_find_header(&uriParams, "move") );
+  string startHeader   = null2Empty( evhttp_find_header(&uriParams, "start") );
+  string moveHeader    = null2Empty( evhttp_find_header(&uriParams, "move") );
+  string wTimeHeader    = null2Empty( evhttp_find_header(&uriParams, "wTime") );
+  string bTimeHeader  = null2Empty( evhttp_find_header(&uriParams, "bTime") );
+
   cout << "request: \"" << uri << "\"\t"
        << "( start: \"" << startHeader << "\" ) "
        << "( move: \"" << moveHeader << "\" )" << endl;
@@ -141,7 +145,7 @@ void genericHandler(evhttp_request * req, void *args) {
   } else if (moveHeader == "suggest") {
     reply = repLoop();
   } else if (!moveHeader.empty()) {
-    reply = update(moveHeader);
+    reply = update(moveHeader, wTimeHeader, bTimeHeader);
   } else {
     reply = "Don't know what you want?";
   }

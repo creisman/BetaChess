@@ -41,6 +41,15 @@ bool Search::makeAlgebraicMove(string move) {
 }
 
 
+void Search::updateTime(string wTime, string bTime) {
+  // TODO implementation.
+  return;
+}
+
+/*****************************************************************************/
+/* Code below is algorithmic, above is status                                */
+/*****************************************************************************/
+
 void Search::orderChildren(vector<Board> &children) {
   if (IS_ANTICHESS) {
     // TODO this is the simple version, could be partially moved into getChildren.
