@@ -17,54 +17,26 @@ using namespace board;
 using namespace book;
 using namespace search;
 
-Book bookT;
-Board boardT;
 Search searchT;
-vector<string> moves;
 
 // Read-Evaluate-Play loop.
 string repLoop() {
-  cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
-  cout << "fen: " << boardT.generateFen_slow() << endl;
-  boardT.printBoard();
-
-  // Some Book stuff here.
-  scored_move_t suggest;
-
-  string bookMove = bookT.multiArmBandit(boardT);
-  bool foundBookResponse = false;
-  if (bookMove != "") {
-    cout << "Got move(" << bookMove << ") from book" << endl;
-
-    // Verify it's a real move
-    for (Board c : boardT.getLegalChildren()) {
-      if (bookMove == boardT.algebraicNotation_slow(c.getLastMove())) {
-        suggest = make_pair(NAN, c.getLastMove());
-        foundBookResponse = true;
-        break;
-      }
-    }
-    if (!foundBookResponse) {
-      cout << "Got bad suggestion from book after: " << endl;
-      for (string moveName : moves) {
-        cout << "\t" << moveName << endl;
-      }
-    }
-  }
+  // TODO move book and this to search.
+  //cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
+  //cout << "fen: " << boardT.generateFen_slow() << endl;
+  //boardT.printBoard();
 
   FindMoveStats stats = {0, 0};
-  if (!foundBookResponse) {
-    // Number of nodes that can be evaled quickly.
-    suggest = searchT.findMove(
-        FLAGS_server_min_ply,
-        FLAGS_server_min_nodes,
-        &stats);
-  }
+  // Number of nodes that can be evaled quickly.
+  scored_move_t suggest = searchT.findMove(
+      FLAGS_server_min_ply,
+      FLAGS_server_min_nodes,
+      &stats);
 
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
-  string coords = boardT.coordinateNotation(move);
-  string alg = boardT.algebraicNotation_slow(move);
+  string coords = Board::coordinateNotation(move);
+  string alg = searchT.getRoot().algebraicNotation_slow(move);
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
        << " score: " << score / 100.00
@@ -82,22 +54,17 @@ string update(string move, string wTime, string bTime) {
   searchT.updateTime(wTime, bTime);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
-    for (Board c : boardT.getLegalChildren()) {
-      string moveToGetC = boardT.algebraicNotation_slow(c.getLastMove());
+    for (Board c : searchT.getRoot().getLegalChildren()) {
+      string moveToGetC = searchT.getRoot().algebraicNotation_slow(c.getLastMove());
       cout << "\twasn't \"" << moveToGetC << "\"" << endl;
     }
     assert(false);
   }
-  moves.push_back(move);
 
   // Check if game is over
-  board_s result = boardT.getGameResult_slow();
+  board_s result = searchT.getRoot().getGameResult_slow();
   if (result != Board::RESULT_IN_PROGRESS) {
     cout << "Server updating, game result: " << (int) result << endl;
-
-    // Update some of the book (let Book figure out how much).
-    //bookT.updateResult(moves, result /* for white */);
-    //bookT.write();
   }
 
   string reply = foundMove ? "found" : "not found";
@@ -136,9 +103,7 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string reply;
   if (!startHeader.empty()) {
-    boardT = Board();
     searchT = Search();
-    moves.clear();
 
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
@@ -180,10 +145,9 @@ int main(int argc, char** argv) {
 
   cout << "Launching Server"
        << "\t(Search with depth = "
-         << FLAGS_server_min_ply << ", "
-         << FLAGS_server_min_nodes << ")"
+       << FLAGS_server_min_ply << ", "
+       << FLAGS_server_min_nodes << ")"
        << endl << endl;
-  bookT.load();
 
   evhttp_set_gencb(server.get(), genericHandler, nullptr);
   if (event_dispatch() == -1) {

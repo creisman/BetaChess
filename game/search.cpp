@@ -30,6 +30,9 @@ Search::Search(Board root) {
   this->root = root;
 }
 
+Board const Search::getRoot() {
+  return root;
+}
 
 bool Search::makeAlgebraicMove(string move) {
   bool valid = root.makeAlgebraicMove_slow(move);
@@ -37,6 +40,7 @@ bool Search::makeAlgebraicMove(string move) {
     moveNames.push_back(move);
     moves.push_back(root.getLastMove());
   }
+
   return valid;
 }
 
@@ -198,7 +202,7 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
 }
 
 
-scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) {
+scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) const {
   Search::nodeCounter += 1;
 
   if (FLAGS_use_ttable) {
@@ -338,10 +342,10 @@ int Search::getGameResultScore(board_s gameResult, int depth) {
     return 0;
   }
   if (gameResult == Board::RESULT_BLACK_WIN) {
-    return -Board::SCORE_WIN - (100 - depth);
+    return -Board::SCORE_WIN - 100 * (50 - depth);
   }
   if (gameResult == Board::RESULT_WHITE_WIN) {
-    return Board::SCORE_WIN + (100 - depth);
+    return Board::SCORE_WIN + 100 * (50 - depth);
   }
 
 }
