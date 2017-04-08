@@ -21,8 +21,10 @@ namespace search {
     public:
       // Constructors
       Search();
+      Search(Board root);
 
-      scored_move_t findMove(const Board& root, int minPly, int minNodes, FindMoveStats *info);
+      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
+      bool makeAlgebraicMove(string move);
 
       static void perft(
           const Board&b,
@@ -54,6 +56,9 @@ namespace search {
       static atomic<int> quiesceCounter;
       static atomic<int> ttCounter;
 
+      vector<string> moveNames;
+      vector<move_t> moves;
+      Board root;
       int plySearchDepth;
   };
 }

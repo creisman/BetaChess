@@ -22,7 +22,24 @@ using namespace ttable;
 
 Search::Search() {
   plySearchDepth = 0;
+  root = Board();
 }
+
+Search::Search(Board root) {
+  plySearchDepth = 0;
+  this->root = root;
+}
+
+
+bool Search::makeAlgebraicMove(string move) {
+  bool valid = root.makeAlgebraicMove_slow(move);
+  if (valid) {
+    moveNames.push_back(move);
+    moves.push_back(root.getLastMove());
+  }
+  return valid;
+}
+
 
 void Search::orderChildren(vector<Board> &children) {
   if (IS_ANTICHESS) {
@@ -103,7 +120,7 @@ int Search::moveOrderingValue(const Board& b) {
 atomic<int> Search::nodeCounter(0);
 atomic<int> Search::ttCounter(0);
 atomic<int> Search::quiesceCounter(0);
-scored_move_t Search::findMove(const Board& root, int minPly, int minNodes, FindMoveStats *stats) {
+scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   Search::nodeCounter = 0;
   Search::ttCounter = 0;
   Search::quiesceCounter = 0;
@@ -226,7 +243,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  //#pragma omp parallel for if (!FLAGS_use_ttable)
+  #pragma omp parallel for if (!FLAGS_use_ttable)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;

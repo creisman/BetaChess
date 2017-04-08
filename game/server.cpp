@@ -10,13 +10,16 @@
 #include "board.h"
 #include "book.h"
 #include "flags.h"
+#include "search.h"
 
 using namespace std;
 using namespace board;
 using namespace book;
+using namespace search;
 
 Book bookT;
 Board boardT;
+Search searchT;
 vector<string> moves;
 
 // Read-Evaluate-Play loop.
@@ -52,7 +55,7 @@ string repLoop() {
   FindMoveStats stats = {0, 0};
   if (!foundBookResponse) {
     // Number of nodes that can be evaled quickly.
-    suggest = boardT.findMove(
+    suggest = searchT.findMove(
         FLAGS_server_min_ply,
         FLAGS_server_min_nodes,
         &stats);
@@ -75,7 +78,7 @@ string update(string move) {
   //  move.pop_back();
   //}
 
-  bool foundMove = boardT.makeAlgebraicMove_slow(move);
+  bool foundMove = searchT.makeAlgebraicMove(move);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
     for (Board c : boardT.getLegalChildren()) {
@@ -130,6 +133,7 @@ void genericHandler(evhttp_request * req, void *args) {
   string reply;
   if (!startHeader.empty()) {
     boardT = Board();
+    searchT = Search();
     moves.clear();
 
     cout << "Reloaded board" << endl;;
