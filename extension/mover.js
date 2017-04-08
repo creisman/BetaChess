@@ -27,7 +27,7 @@
       console.log("doesn't make sense to request suggest with mismatched move numbers");
     }
 
-    let isOurAccount = /peace-call|betachess/i.test($('#user_tag').text())
+    let isOurAccount = /peace-call|betachess|kingvash/i.test($('#user_tag').text())
     let isGameOver = $('.moves .result').length != 0;
     let isWhite = $('.cg-board-wrap').hasClass('orientation-white');
     let isWhiteTurn = $('.moves move:not(.empty)').length % 2 == 0;
@@ -107,7 +107,7 @@
   
   checkForStart() {
     // TODO update with all supported variants or something
-    let isGame = $('.lichess_game.variant_antichess');
+    let isGame = $('.lichess_game.variant_standard');
     let isActive = $('.clock.running').length != 0;
 
     // TODO re add isActive

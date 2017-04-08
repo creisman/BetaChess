@@ -6,11 +6,12 @@ chrome.browserAction.onClicked.addListener(function() {
 
 // On getting a move (or generally message from the mover script.  
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  var encodedRequest = encodeURIComponent(request);
   var url;
   if (request.startsWith('start-game')) {
-    url = baseUrl + 'test?start=' + request;
+    url = baseUrl + 'test?start=' + encodedRequest;
   } else {
-    url = baseUrl + 'test?move=' + request;
+    url = baseUrl + 'test?move=' + encodedRequest;
   }
 
   console.log('ask for move with: ' + url);
