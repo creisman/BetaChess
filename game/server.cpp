@@ -92,25 +92,25 @@ void genericHandler(evhttp_request * req, void *args) {
   struct evkeyvalq uriParams;
   evhttp_parse_query_str(evhttp_uri_get_query(uriParsed), &uriParams);
 
-  string startHeader   = null2Empty( evhttp_find_header(&uriParams, "start") );
-  string moveHeader    = null2Empty( evhttp_find_header(&uriParams, "move") );
-  string wTimeHeader    = null2Empty( evhttp_find_header(&uriParams, "wTime") );
-  string bTimeHeader  = null2Empty( evhttp_find_header(&uriParams, "bTime") );
+  string status = null2Empty( evhttp_find_header(&uriParams, "status") );
+  string move   = null2Empty( evhttp_find_header(&uriParams, "move") );
+  string wTime  = null2Empty( evhttp_find_header(&uriParams, "white-clock") );
+  string bTime  = null2Empty( evhttp_find_header(&uriParams, "black-clock") );
 
-  cout << "request: \"" << uri << "\"\t"
-       << "( start: \"" << startHeader << "\" ) "
-       << "( move: \"" << moveHeader << "\" )" << endl;
+  cout << "request: \""  << uri    << "\"\t"
+       << "( status: \"" << status << "\" ) "
+       << "( move: \""   << move   << "\" )"
+       << "( time: \""   << wTime  << "\", \"" << bTime << "\" )" << endl;
 
   string reply;
-  if (!startHeader.empty()) {
+  if (status == "start-game") {
     searchT = Search();
-
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
-  } else if (moveHeader == "suggest") {
+  } else if (status == "suggest") {
     reply = repLoop();
-  } else if (!moveHeader.empty()) {
-    reply = update(moveHeader, wTimeHeader, bTimeHeader);
+  } else if (!move.empty()) {
+    reply = update(move, "", "");
   } else {
     reply = "Don't know what you want?";
   }

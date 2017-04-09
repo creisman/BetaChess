@@ -1,20 +1,13 @@
-var baseUrl = 'http://192.168.0.13:5094/'
+var baseUrl = 'http://192.168.0.13:5094/test'
 
 chrome.browserAction.onClicked.addListener(function() {
   console.log('Action');
 });
 
 // On getting a move (or generally message from the mover script.  
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  var encodedRequest = encodeURIComponent(request);
-  var url;
-  if (request.startsWith('start-game')) {
-    url = baseUrl + 'test?start=' + encodedRequest;
-  } else {
-    url = baseUrl + 'test?move=' + encodedRequest;
-  }
-
-  console.log('ask for move with: ' + url);
+chrome.runtime.onMessage.addListener(function(data, sender, sendResponse) {
+  var url = baseUrl + '?' + jQuery.param(data)
+  console.log('query:', url);
   
   var responseCb = function(data, status) {
     if (status != 'success') {
