@@ -23,11 +23,14 @@ namespace search {
       Search();
       Search(Board root);
 
+      // Gets and Setters
       Board const getRoot();
-
-      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
       bool makeAlgebraicMove(string move);
-      void updateTime(string wTime, string bTime);
+      void updateTime(long wTime, long bTime);
+      long getTimeForMove_millis();
+
+      // Expensive calls
+      scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
 
       static void perft(
           const Board&b,
@@ -44,8 +47,10 @@ namespace search {
       static void orderChildren(vector<Board> &children);
       static int moveOrderingValue(const Board& b);
       static int getGameResultScore(board_s gameResult, int depth);
+      static long getCurrentTime_millis();
 
       // 1-arg version is public.
+      scored_move_t findMoveInner(int minPly, int minNodes, FindMoveStats *info);
       scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta) const;
 
       // Quiesce is a search at a leaf node which tries to avoid the horizon effect
@@ -63,6 +68,13 @@ namespace search {
       vector<move_t> moves;
       Board root;
       int plySearchDepth;
+
+      // Timing related vars
+      long wMaxTime, bMaxTime;
+      long wCurrentTime, bCurrentTime;
+      long searchStartTime;
+      long timeToStop;
+
   };
 }
 #endif // SEARCH_H

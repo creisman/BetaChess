@@ -2,7 +2,9 @@
 #include <atomic>
 #include <cassert>
 #include <cctype>
+#include <chrono>
 #include <iostream>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -19,6 +21,10 @@ using namespace board;
 using namespace search;
 using namespace ttable;
 
+//  Have to declare static variable here or something;
+atomic<int> Search::nodeCounter(0);
+atomic<int> Search::ttCounter(0);
+atomic<int> Search::quiesceCounter(0);
 
 Search::Search() {
   plySearchDepth = 0;
@@ -45,10 +51,29 @@ bool Search::makeAlgebraicMove(string move) {
 }
 
 
-void Search::updateTime(string wTime, string bTime) {
-  // TODO implementation.
-  return;
+void Search::updateTime(long wTime, long bTime) {
+  wMaxTime = max(wMaxTime, wTime);
+  bMaxTime = max(bMaxTime, bTime);
+
+  wCurrentTime = wTime;
+  bCurrentTime = bTime;
 }
+
+
+long Search::getTimeForMove_millis() {
+  long currentTime = root.getIsWhiteTurn() ? wCurrentTime : bCurrentTime;
+  long remainingMoves = max((int) (60 - moves.size()), 30);
+
+  long maxOkayTime = currentTime / remainingMoves;
+  return min(60L, max(maxOkayTime, 0L));
+}
+
+
+long Search::getCurrentTime_millis() {
+  return chrono::duration_cast<chrono::milliseconds>(
+      chrono::system_clock::now().time_since_epoch()).count();
+}
+
 
 /*****************************************************************************/
 /* Code below is algorithmic, above is status                                */
@@ -130,10 +155,34 @@ int Search::moveOrderingValue(const Board& b) {
 
 
 // Public method that setups and calls helper method.
-atomic<int> Search::nodeCounter(0);
-atomic<int> Search::ttCounter(0);
-atomic<int> Search::quiesceCounter(0);
 scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
+  searchStartTime = getCurrentTime_millis();
+  long allocatedTime = getTimeForMove_millis();
+  timeToStop = searchStartTime + allocatedTime;
+
+  if (FLAGS_verbosity >= 1) {
+    cout << endl << searchStartTime << "\t" << allocatedTime << " = " << timeToStop << endl;
+    cout << "findingAMove(" << moves.size() << ") moves in" << endl;
+    cout << "\tfen: " << root.generateFen_slow() << endl;
+    root.printBoard();
+  }
+
+  // TODO: Retrieve book lookup and stuff from old server code.
+  scored_move_t result = findMoveInner(minPly, minNodes, stats);
+
+  long searchEndTime = getCurrentTime_millis();
+  long duration = searchEndTime - searchStartTime;
+
+  if (FLAGS_verbosity >= 1) {
+    cout << "\tsearch took " << duration << "  (allocated " << allocatedTime << ")" << endl;
+  }
+
+  return result;
+}
+
+
+// Takes care of calling iterative deepening till outer thread
+scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *stats) {
   Search::nodeCounter = 0;
   Search::ttCounter = 0;
   Search::quiesceCounter = 0;

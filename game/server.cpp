@@ -1,11 +1,12 @@
-#include <cmath>
 #include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <evhttp.h>
 #include <iostream>
-#include <cstring>
-#include <string>
 #include <memory>
+#include <string>
 
 #include "board.h"
 #include "book.h"
@@ -21,11 +22,6 @@ Search searchT;
 
 // Read-Evaluate-Play loop.
 string repLoop() {
-  // TODO move book and this to search.
-  //cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
-  //cout << "fen: " << boardT.generateFen_slow() << endl;
-  //boardT.printBoard();
-
   FindMoveStats stats = {0, 0};
   // Number of nodes that can be evaled quickly.
   scored_move_t suggest = searchT.findMove(
@@ -44,7 +40,7 @@ string repLoop() {
   return coords;
 }
 
-string update(string move, string wTime, string bTime) {
+string update(string move, float wTime, float bTime) {
   // TODO fix this (not sure who does it.)
   //if (!move.empty() && move.back() == '+' || move.back() == '#') {
   //  move.pop_back();
@@ -77,6 +73,23 @@ string null2Empty(const char * cStr) {
 }
 
 
+long clockStrToMillis(string display) {
+  // HH:MM:SS.MM
+  float time = 0;
+  while (!display.empty()) {
+    size_t sz = 0;
+    float part = stof(display.substr(sz), &sz);
+    bool isLast = sz == display.size();
+
+    // Skip all consumed characters + delimitor (if not at end)
+    display = display.substr(sz + (isLast ? 0 : 1));
+
+    time = (60 * time) + part;
+  }
+  return time * 1000L;
+}
+
+
 void genericHandler(evhttp_request * req, void *args) {
   auto uri = evhttp_request_get_uri(req);
   auto uriParsed = evhttp_request_get_evhttp_uri(req);
@@ -94,8 +107,11 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string status = null2Empty( evhttp_find_header(&uriParams, "status") );
   string move   = null2Empty( evhttp_find_header(&uriParams, "move") );
-  string wTime  = null2Empty( evhttp_find_header(&uriParams, "white-clock") );
-  string bTime  = null2Empty( evhttp_find_header(&uriParams, "black-clock") );
+  string wClock = null2Empty( evhttp_find_header(&uriParams, "white-clock") );
+  string bClock = null2Empty( evhttp_find_header(&uriParams, "black-clock") );
+
+  long wTime = clockStrToMillis(wClock);
+  long bTime = clockStrToMillis(bClock);
 
   cout << "request: \""  << uri    << "\"\t"
        << "( status: \"" << status << "\" ) "
@@ -110,7 +126,7 @@ void genericHandler(evhttp_request * req, void *args) {
   } else if (status == "suggest") {
     reply = repLoop();
   } else if (!move.empty()) {
-    reply = update(move, "", "");
+    reply = update(move, wTime, bTime);
   } else {
     reply = "Don't know what you want?";
   }
@@ -155,6 +171,5 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  // Happens on server shutdown.
   return 0;
 }
