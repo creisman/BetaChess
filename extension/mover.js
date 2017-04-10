@@ -79,7 +79,7 @@
   getMove() {
 		let data = {
 			"status": "suggest",
-			"white-clock": $('.lichess_game .clock_black').text(),
+			"white-clock": $('.lichess_game .clock_white').text(),
 			"black-clock": $('.lichess_game .clock_black').text(),
 		}
 
