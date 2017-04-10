@@ -20,10 +20,10 @@ using namespace search;
 
 Search searchT;
 
-// Read-Evaluate-Play loop.
-string repLoop() {
+string suggest(long wTime, long bTime) {
+  searchT.updateTime(wTime, bTime);
+
   FindMoveStats stats = {0, 0};
-  // Number of nodes that can be evaled quickly.
   scored_move_t suggest = searchT.findMove(
       FLAGS_server_min_ply,
       FLAGS_server_min_nodes,
@@ -40,14 +40,13 @@ string repLoop() {
   return coords;
 }
 
-string update(string move, float wTime, float bTime) {
+string update(string move) {
   // TODO fix this (not sure who does it.)
   //if (!move.empty() && move.back() == '+' || move.back() == '#') {
   //  move.pop_back();
   //}
 
   bool foundMove = searchT.makeAlgebraicMove(move);
-  searchT.updateTime(wTime, bTime);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
     for (Board c : searchT.getRoot().getLegalChildren()) {
@@ -124,9 +123,9 @@ void genericHandler(evhttp_request * req, void *args) {
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (status == "suggest") {
-    reply = repLoop();
+    reply = suggest(wTime, bTime);
   } else if (!move.empty()) {
-    reply = update(move, wTime, bTime);
+    reply = update(move);
   } else {
     reply = "Don't know what you want?";
   }

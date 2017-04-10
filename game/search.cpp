@@ -6,6 +6,7 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "board.h"
@@ -65,7 +66,7 @@ long Search::getTimeForMove_millis() {
   long remainingMoves = max((int) (60 - moves.size()), 30);
 
   long maxOkayTime = currentTime / remainingMoves;
-  return min(60L, max(maxOkayTime, 0L));
+  return min(60000L, max(maxOkayTime, 0L));
 }
 
 
@@ -153,21 +154,34 @@ int Search::moveOrderingValue(const Board& b) {
   return captureScore + historyHeuristic;
 }
 
+void Search::stopAfterAllocatedTime(int searchEndTime) {
+  while (!globalStop && getCurrentTime_millis() < searchEndTime) {
+    this_thread::sleep_for(chrono::milliseconds(10));
+  }
+
+  // TODO: Figure out how to prevent breaking before plyR = 2 finishes.
+  globalStop = true;
+}
+
 
 // Public method that setups and calls helper method.
 scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   searchStartTime = getCurrentTime_millis();
   long allocatedTime = getTimeForMove_millis();
-  timeToStop = searchStartTime + allocatedTime;
+  long timeToStop = searchStartTime + allocatedTime;
 
   if (FLAGS_verbosity >= 1) {
-    cout << endl << searchStartTime << "\t" << allocatedTime << " = " << timeToStop << endl;
-    cout << "findingAMove(" << moves.size() << ") moves in" << endl;
-    cout << "\tfen: " << root.generateFen_slow() << endl;
+    cout << "findingAMove " << moves.size() << " moves in" << endl;
+    cout << "\tcurrent fen: " << root.generateFen_slow() << endl;
     root.printBoard();
+    cout << endl;
   }
 
   // TODO: Retrieve book lookup and stuff from old server code.
+  // TODO: pull out simple cases?
+
+  globalStop = false;
+  thread t1(&Search::stopAfterAllocatedTime, this, timeToStop);
   scored_move_t result = findMoveInner(minPly, minNodes, stats);
 
   long searchEndTime = getCurrentTime_millis();
@@ -177,6 +191,9 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
     cout << "\tsearch took " << duration << "  (allocated " << allocatedTime << ")" << endl;
   }
 
+  // if stopAfterAllocatedTime hasn't finished clue it to stop.
+  globalStop = true;
+  t1.join();
   return result;
 }
 
@@ -210,19 +227,31 @@ scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *sta
   }
 
   // Update the global state.
-  plySearchDepth = max(2, minPly);
+  plySearchDepth = 2;
 
   // Checkmate this turn
-  int maxScore = Board::SCORE_WIN + 100;
+  int maxScore = Search::SCORE_WIN + 100;
 
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {
-    scoredMove = findMoveHelper(root, plySearchDepth, -maxScore, maxScore);
-    totalNodes = nodeCounter + quiesceCounter;
-    if (abs(scoredMove.first) >= Board::SCORE_WIN || totalNodes > minNodes) {
+    scored_move_t test = findMoveHelper(root, plySearchDepth, -maxScore, maxScore);
+    if (globalStop || test.first == SCORE_INTERRUPT) {
       break;
     }
+
+    scoredMove = test;
+    totalNodes = nodeCounter + quiesceCounter;
+
+    if (FLAGS_verbosity >= 2) {
+      cout << "\tply: " << plySearchDepth << ", score: " << scoredMove.first
+           << " (" << totalNodes << " nodes)" << endl;
+    }
+
+    if (abs(scoredMove.first) >= Search::SCORE_WIN || totalNodes > minNodes) {
+      break;
+    }
+
     plySearchDepth += 1;
   }
 
@@ -245,14 +274,18 @@ scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *sta
          << " => " << name << " (@ " << scoredMove.first << ")" << endl;
   }
 
-  // TODO add some code for PV.
-
   return scoredMove;
 }
 
 
 scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) const {
+  // TODO except at ROOT this doesn't need to return a move.
+  // Figure out how to collect PV and change return.
   Search::nodeCounter += 1;
+
+  if (globalStop) {
+    return make_pair(SCORE_INTERRUPT, Board::NULL_MOVE);
+  }
 
   if (FLAGS_use_ttable) {
     TTableEntry* lookup = lookupTT(b.getZobrist());
@@ -315,9 +348,14 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
     auto suggest = findMoveHelper(child, plyR - 1, atomic_alpha, atomic_beta);
     int value = suggest.first;
 
-    auto lastMove = child.getLastMove();
-    int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
-    int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
+    if (value == SCORE_INTERRUPT) {
+      shouldBreak = true;
+    }
+
+    // History Heuristic not sure if it adds value.
+    //auto lastMove = child.getLastMove();
+    //int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
+    //int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
 
     if (isWhiteTurn) {
       if (value > atomic_alpha) {
@@ -325,7 +363,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
         atomic_alpha = value;
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
-          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+          //updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
 
           shouldBreak = true;
         }
@@ -336,12 +374,16 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
         atomic_beta = value;
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
-          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+          //updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
 
           shouldBreak = true;
         }
       }
     }
+  }
+
+  if (globalStop) {
+    return make_pair(SCORE_INTERRUPT, Board::NULL_MOVE);
   }
 
   // Black found a position with score < alpha (strong position for black with black to move).
@@ -391,10 +433,10 @@ int Search::getGameResultScore(board_s gameResult, int depth) {
     return 0;
   }
   if (gameResult == Board::RESULT_BLACK_WIN) {
-    return -Board::SCORE_WIN - 100 * (50 - depth);
+    return -Search::SCORE_WIN - 100 * (50 - depth);
   }
   if (gameResult == Board::RESULT_WHITE_WIN) {
-    return Board::SCORE_WIN + 100 * (50 - depth);
+    return Search::SCORE_WIN + 100 * (50 - depth);
   }
 
 }

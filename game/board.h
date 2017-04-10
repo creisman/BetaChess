@@ -67,10 +67,6 @@ namespace board {
       static const board_s RESULT_WHITE_WIN   = 102;
       static const board_s RESULT_BLACK_WIN   = 103;
 
-      // Game result scores
-      static const int SCORE_WIN                 = 10000;
-      static const int SCORE_DRAW_WITH_CONTEMPT  =   -16;
-
       // Game status
       static const board_s STATUS_IS_CHECK  = 10;
       static const board_s STATUS_NOT_CHECK = 11;

@@ -18,6 +18,10 @@ namespace search {
 
   // Search Class
   class Search {
+    // Game result scores
+    static const int SCORE_WIN          = 10000;
+    static const int SCORE_INTERRUPT    = 22222; // Importantly outside search window.
+
     public:
       // Constructors
       Search();
@@ -49,6 +53,8 @@ namespace search {
       static int getGameResultScore(board_s gameResult, int depth);
       static long getCurrentTime_millis();
 
+      void stopAfterAllocatedTime(int searchEndTime);
+
       // 1-arg version is public.
       scored_move_t findMoveInner(int minPly, int minNodes, FindMoveStats *info);
       scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta) const;
@@ -73,7 +79,7 @@ namespace search {
       long wMaxTime, bMaxTime;
       long wCurrentTime, bCurrentTime;
       long searchStartTime;
-      long timeToStop;
+      bool globalStop;
 
   };
 }
