@@ -24,11 +24,12 @@ namespace search {
 
     public:
       // Constructors
-      Search();
-      Search(Board root);
+      Search(bool useTimeControl);
+      Search(Board root, bool useTimeContol);
 
       // Gets and Setters
       Board const getRoot();
+      void makeMove(move_t move);
       bool makeAlgebraicMove(string move);
       void updateTime(long wTime, long bTime);
       long getTimeForMove_millis();
@@ -76,6 +77,7 @@ namespace search {
       int plySearchDepth;
 
       // Timing related vars
+      bool useTimeControl;
       long wMaxTime, bMaxTime;
       long wCurrentTime, bCurrentTime;
       long searchStartTime;

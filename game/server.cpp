@@ -109,6 +109,8 @@ void genericHandler(evhttp_request * req, void *args) {
   string wClock = null2Empty( evhttp_find_header(&uriParams, "white-clock") );
   string bClock = null2Empty( evhttp_find_header(&uriParams, "black-clock") );
 
+  // TODO a replay function to test again would be nice.
+
   long wTime = clockStrToMillis(wClock);
   long bTime = clockStrToMillis(bClock);
 
@@ -119,7 +121,7 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string reply;
   if (status == "start-game") {
-    searchT = Search();
+    searchT = Search(true /* useTimeControl */);
     cout << "Reloaded board" << endl;;
     reply = "ack on start-game";
   } else if (status == "suggest") {

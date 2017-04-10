@@ -27,19 +27,34 @@ atomic<int> Search::nodeCounter(0);
 atomic<int> Search::ttCounter(0);
 atomic<int> Search::quiesceCounter(0);
 
-Search::Search() {
+
+Search::Search(bool useTimeControl) {
   plySearchDepth = 0;
+  useTimeControl = true;
   root = Board();
 }
 
-Search::Search(Board root) {
+
+Search::Search(Board root, bool useTimeControl) {
   plySearchDepth = 0;
+  this->useTimeControl = useTimeControl;
   this->root = root;
 }
+
 
 Board const Search::getRoot() {
   return root;
 }
+
+
+void Search::makeMove(move_t move) {
+  string alg = root.algebraicNotation_slow(move);
+  root.makeMove(move);
+
+  moveNames.push_back(alg);
+  moves.push_back(move);
+}
+
 
 bool Search::makeAlgebraicMove(string move) {
   bool valid = root.makeAlgebraicMove_slow(move);
@@ -47,7 +62,6 @@ bool Search::makeAlgebraicMove(string move) {
     moveNames.push_back(move);
     moves.push_back(root.getLastMove());
   }
-
   return valid;
 }
 
@@ -166,34 +180,41 @@ void Search::stopAfterAllocatedTime(int searchEndTime) {
 
 // Public method that setups and calls helper method.
 scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
+  globalStop = false;
   searchStartTime = getCurrentTime_millis();
-  long allocatedTime = getTimeForMove_millis();
-  long timeToStop = searchStartTime + allocatedTime;
+  thread t1;
+  if (useTimeControl) {
+    long allocatedTime = useTimeControl ? getTimeForMove_millis() : 0;
+    long timeToStop = searchStartTime + allocatedTime;
 
-  if (FLAGS_verbosity >= 1) {
-    cout << "findingAMove " << moves.size() << " moves in" << endl;
-    cout << "\tcurrent fen: " << root.generateFen_slow() << endl;
-    root.printBoard();
-    cout << endl;
+    if (FLAGS_verbosity >= 1) {
+      cout << "findingAMove " << moves.size() << " moves in" << endl;
+      cout << "\tcurrent fen: " << root.generateFen_slow() << endl;
+      root.printBoard();
+      cout << endl;
+    }
+
+    // TODO: Retrieve book lookup and stuff from old server code.
+    // TODO: pull out simple cases?
+
+    t1 = thread(&Search::stopAfterAllocatedTime, this, timeToStop);
   }
 
-  // TODO: Retrieve book lookup and stuff from old server code.
-  // TODO: pull out simple cases?
-
-  globalStop = false;
-  thread t1(&Search::stopAfterAllocatedTime, this, timeToStop);
   scored_move_t result = findMoveInner(minPly, minNodes, stats);
 
   long searchEndTime = getCurrentTime_millis();
   long duration = searchEndTime - searchStartTime;
 
-  if (FLAGS_verbosity >= 1) {
-    cout << "\tsearch took " << duration << "  (allocated " << allocatedTime << ")" << endl;
+  if (FLAGS_verbosity >= 2) {
+    cout << "\tsearch took " << duration << endl;
   }
 
-  // if stopAfterAllocatedTime hasn't finished clue it to stop.
-  globalStop = true;
-  t1.join();
+  if (useTimeControl) {
+    // if stopAfterAllocatedTime hasn't finished clue it to stop.
+    globalStop = true;
+    t1.join();
+  }
+
   return result;
 }
 

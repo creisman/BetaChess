@@ -79,7 +79,7 @@ bool eval(string epd) {
   vector<string> bestMoves = getBestMoves(b, epd);
 
   // Step 3.
-  Search s(b);
+  Search s(b, false /* useTimeControl */);
   FindMoveStats stats;
   scored_move_t scoredMove = s.findMove(testPlySize, testNodeSize, &stats);
 
