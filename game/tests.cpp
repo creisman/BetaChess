@@ -165,7 +165,7 @@ void playGame(int numMoves, int nodes, string fen) {
 
   auto T0 = chrono::system_clock().now();
 
-  Search s(b, false /* useTimeControl */);
+  Search s(true /* useTimeControl */);
   for (int iter = 0; iter < numMoves; iter++) {
     FindMoveStats stats;
     scored_move_t suggest = s.findMove(3, nodes, &stats);

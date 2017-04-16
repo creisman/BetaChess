@@ -3,8 +3,9 @@
 #include <cassert>
 #include <cctype>
 #include <chrono>
-#include <iostream>
 #include <cmath>
+#include <iostream>
+#include <random>
 #include <string>
 #include <thread>
 #include <vector>
@@ -28,17 +29,22 @@ atomic<int> Search::ttCounter(0);
 atomic<int> Search::quiesceCounter(0);
 
 
-Search::Search(bool useTimeControl) {
-  plySearchDepth = 0;
-  useTimeControl = true;
+Search::Search(bool withTimeControl) {
+  useTimeControl = withTimeControl;
   root = Board();
 }
 
 
-Search::Search(Board root, bool useTimeControl) {
+Search::Search(Board rootB, bool withTimeControl) {
+  useTimeControl = withTimeControl;
+  root = rootB;
+}
+
+
+void Search::setup() {
   plySearchDepth = 0;
-  this->useTimeControl = useTimeControl;
-  this->root = root;
+  // Has the right shape :)
+  move_time_dist = gamma_distribution<double>(8.0, 0.2);
 }
 
 
@@ -78,9 +84,11 @@ void Search::updateTime(long wTime, long bTime) {
 long Search::getTimeForMove_millis() {
   long currentTime = root.getIsWhiteTurn() ? wCurrentTime : bCurrentTime;
   long remainingMoves = max((int) (60 - moves.size()), 30);
-
   long maxOkayTime = currentTime / remainingMoves;
-  return min(60000L, max(maxOkayTime, 0L));
+
+  double tRand = move_time_dist(generator);
+  long finalTime = tRand * maxOkayTime;
+  return min(20000L, max(finalTime, 100L));
 }
 
 
@@ -182,9 +190,10 @@ void Search::stopAfterAllocatedTime(int searchEndTime) {
 scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   globalStop = false;
   searchStartTime = getCurrentTime_millis();
+  long allocatedTime = useTimeControl ? getTimeForMove_millis() : 0;
   thread t1;
+
   if (useTimeControl) {
-    long allocatedTime = useTimeControl ? getTimeForMove_millis() : 0;
     long timeToStop = searchStartTime + allocatedTime;
 
     if (FLAGS_verbosity >= 1) {
@@ -206,7 +215,8 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   long duration = searchEndTime - searchStartTime;
 
   if (FLAGS_verbosity >= 2) {
-    cout << "\tsearch took " << duration << endl;
+    cout << "\tsearch took " << duration <<
+            " (allocated " << allocatedTime << ")" << endl;
   }
 
   if (useTimeControl) {

@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <map>
+#include <random>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -24,8 +25,8 @@ namespace search {
 
     public:
       // Constructors
-      Search(bool useTimeControl);
-      Search(Board root, bool useTimeContol);
+      Search(bool withTimeControl);
+      Search(Board root, bool withTimeContol);
 
       // Gets and Setters
       Board const getRoot();
@@ -48,6 +49,8 @@ namespace search {
           atomic<int> *mates);
 
     private:
+      void setup();
+
       // Helper methods.
       static void orderChildren(vector<Board> &children);
       static int moveOrderingValue(const Board& b);
@@ -66,15 +69,16 @@ namespace search {
       static int evalCaptures(const Board& b, int alpha, int beta, int depth);
 
       // Variables
-      // Used for counting moves in findMove
-      static atomic<int> nodeCounter;
-      static atomic<int> quiesceCounter;
-      static atomic<int> ttCounter;
-
+      // State variables
       vector<string> moveNames;
       vector<move_t> moves;
       Board root;
       int plySearchDepth;
+
+      // Used for counting moves in findMove
+      static atomic<int> nodeCounter;
+      static atomic<int> quiesceCounter;
+      static atomic<int> ttCounter;
 
       // Timing related vars
       bool useTimeControl;
@@ -83,6 +87,11 @@ namespace search {
       long searchStartTime;
       bool globalStop;
 
+      // Extra stuff!
+      default_random_engine generator;
+
+      // Seems to have the right shape.
+      gamma_distribution<double> move_time_dist;
   };
 }
 #endif // SEARCH_H

@@ -18,7 +18,7 @@ using namespace board;
 using namespace book;
 using namespace search;
 
-Search searchT;
+Search searchT(true /* useTimeControl */);
 
 string suggest(long wTime, long bTime) {
   searchT.updateTime(wTime, bTime);
@@ -121,8 +121,8 @@ void genericHandler(evhttp_request * req, void *args) {
 
   string reply;
   if (status == "start-game") {
-    searchT = Search(true /* useTimeControl */);
     cout << "Reloaded board" << endl;;
+    searchT = Search(true /* useTimeControl */);
     reply = "ack on start-game";
   } else if (status == "suggest") {
     reply = suggest(wTime, bTime);
