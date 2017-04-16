@@ -1,5 +1,7 @@
-﻿class BetaChess {
+﻿"use strict";
+class BetaChess {
   constructor() {
+
     this.SQUARE_SIZE = 64;
     this.PROMO_MAP = {"Q": "queen", "N": "knight", "R": "rook", "B": "bishop", "K": "king"};
 
@@ -27,18 +29,24 @@
       console.log("doesn't make sense to request suggest with mismatched move numbers");
     }
 
-    let isOurAccount = /peace-call|betachess|kingvash/i.test($('#user_tag').text())
+    let isOurAccount = /peace-call|betachess|kingvash|onenightoneday/i.test($('#user_tag').text())
     let areWeWhite = $('.cg-board-wrap').hasClass('orientation-white');
     let isWhiteTurn = $('.moves move:not(.empty)').length % 2 == 0;
     let isGameOver = $('.moves .result').length != 0;
 
     let isOurTurn = isOurAccount && areWeWhite == isWhiteTurn && !isGameOver;
-    //console.log(requestedSuggest, isOurAccount, areWeWhite, isWhiteTurn, isGameOver);
+    //console.log(this.requestedSuggest, isOurAccount, areWeWhite, isWhiteTurn, isGameOver);
     if (isOurTurn && !this.requestedSuggest) {
       // consider looking at the square.last-move and calculating with division of translate.
       console.log('requesting suggestion');
       this.requestedSuggest = true;
       this.getMove();
+    }
+
+    let followUpButton = $('.follow_up .text.glowed');
+    if (isGameOver && followUpButton.length == 1) {
+      console.log("back to tournament!");
+      followUpButton[0].click();
     }
   }
 
@@ -79,8 +87,8 @@
   getMove() {
 		let data = {
 			"status": "suggest",
-			"white-clock": $('.lichess_game .clock_white').text(),
-			"black-clock": $('.lichess_game .clock_black').text(),
+			"white-clock": $('.lichess_game .clock_white .time').text(),
+			"black-clock": $('.lichess_game .clock_black .time').text(),
 		}
 
     chrome.runtime.sendMessage(data, function(response) {
