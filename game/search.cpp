@@ -342,7 +342,6 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
   // TODO except at ROOT this doesn't need to return a move.
   // Figure out how to collect PV and change return.
 
-  // TODO FIXME += 1
   nodeCounter += 1;
 
   if (globalStop) {
@@ -494,13 +493,15 @@ int Search::getGameResultScore(board_s gameResult, int depth) {
   if (gameResult == Board::RESULT_TIE) {
     return 0;
   }
+
+  int dTM = 50 - depth;
+  int result = Search::SCORE_WIN + dTM;
   if (gameResult == Board::RESULT_BLACK_WIN) {
-    return -Search::SCORE_WIN - 100 * (50 - depth);
+    return -result;
   }
   if (gameResult == Board::RESULT_WHITE_WIN) {
-    return Search::SCORE_WIN + 100 * (50 - depth);
+    return result;
   }
-
 }
 
 
