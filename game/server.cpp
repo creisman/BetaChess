@@ -39,11 +39,6 @@ string suggest(long wTime, long bTime) {
 }
 
 string update(string move) {
-  // TODO fix this (not sure who does it.)
-  //if (!move.empty() && move.back() == '+' || move.back() == '#') {
-  //  move.pop_back();
-  //}
-
   bool foundMove = searchT.makeAlgebraicMove(move);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
@@ -106,8 +101,6 @@ void moveHandler(evhttp_request * req, void *args) {
   string move   = null2Empty( evhttp_find_header(&uriParams, "move") );
   string wClock = null2Empty( evhttp_find_header(&uriParams, "white-clock") );
   string bClock = null2Empty( evhttp_find_header(&uriParams, "black-clock") );
-
-  // TODO a replay function to test again would be nice.
 
   long wTime = clockStrToMillis(wClock);
   long bTime = clockStrToMillis(bClock);
