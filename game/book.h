@@ -24,6 +24,7 @@ namespace book {
     public:
       static const size_t MAX_DEPTH;
       static const string ANTICHESS_FILE;
+      static const string SAVE_FILE_PREFIX;
 
       Book();
 
@@ -37,6 +38,9 @@ namespace book {
 
       void printBook(void);
 
+      // These helper methods just ended up here organically.
+      static int saveMoves(vector<string> moves);
+      static void loadMoves(int number, vector<string> *moves);
     private:
       // Book is great because it allows for transpositions (but not path).
       map<board_hash_t, BetaChessBookEntry*> bookMap;

@@ -9,13 +9,11 @@
 #include <string>
 
 #include "board.h"
-#include "book.h"
 #include "flags.h"
 #include "search.h"
 
 using namespace std;
 using namespace board;
-using namespace book;
 using namespace search;
 
 Search searchT(true /* useTimeControl */);
@@ -89,7 +87,7 @@ long clockStrToMillis(string display) {
 }
 
 
-void genericHandler(evhttp_request * req, void *args) {
+void moveHandler(evhttp_request * req, void *args) {
   auto uri = evhttp_request_get_uri(req);
   auto uriParsed = evhttp_request_get_evhttp_uri(req);
 
@@ -122,7 +120,7 @@ void genericHandler(evhttp_request * req, void *args) {
   string reply;
   if (status == "start-game") {
     cout << "Reloaded board" << endl;;
-    searchT = Search(true /* useTimeControl */);
+    //searchT = Search(true /* useTimeControl */);
     reply = "ack on start-game";
   } else if (status == "suggest") {
     reply = suggest(wTime, bTime);
@@ -139,6 +137,21 @@ void genericHandler(evhttp_request * req, void *args) {
   evhttp_add_header(req->output_headers, "Content-Type", "application/json");
 
   evhttp_send_reply(req, HTTP_OK, "", outBuffer);
+}
+
+
+void tryCatchSaveHandler(evhttp_request * req, void *args) {
+  try {
+    moveHandler(req, args);
+
+  } catch (...) {
+    // Ask search to save current state for potentially debugging.
+    cout << endl << endl;
+    cout << "ERROR from:" << endl;
+    cout << "\t" << evhttp_request_get_uri(req) << endl;
+
+    searchT.save();
+  }
 }
 
 
@@ -166,7 +179,7 @@ int main(int argc, char** argv) {
        << FLAGS_server_min_nodes << ")"
        << endl << endl;
 
-  evhttp_set_gencb(server.get(), genericHandler, nullptr);
+  evhttp_set_gencb(server.get(), tryCatchSaveHandler, nullptr);
   if (event_dispatch() == -1) {
     cout << "Failed in message loop" << endl;
     return -1;

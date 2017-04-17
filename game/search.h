@@ -35,6 +35,10 @@ namespace search {
       void updateTime(long wTime, long bTime);
       long getTimeForMove_millis();
 
+      // Misc.
+      void save();
+      void load(int number);
+
       // Expensive calls
       scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
 
@@ -61,7 +65,7 @@ namespace search {
 
       // 1-arg version is public.
       scored_move_t findMoveInner(int minPly, int minNodes, FindMoveStats *info);
-      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta) const;
+      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta);
 
       // Quiesce is a search at a leaf node which tries to avoid the horizon effect
       //   (if Queen just captured pawn make sure the queen can't be recaptured)
@@ -69,16 +73,16 @@ namespace search {
       static int evalCaptures(const Board& b, int alpha, int beta, int depth);
 
       // Variables
-      // State variables
+      // Board state
       vector<string> moveNames;
       vector<move_t> moves;
       Board root;
-      int plySearchDepth;
 
-      // Used for counting moves in findMove
-      static atomic<int> nodeCounter;
-      static atomic<int> quiesceCounter;
-      static atomic<int> ttCounter;
+      // Global search state
+      int plySearchDepth;
+      atomic<int> nodeCounter;
+      atomic<int> quiesceCounter;
+      atomic<int> ttCounter;
 
       // Timing related vars
       bool useTimeControl;

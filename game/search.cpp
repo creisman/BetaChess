@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "board.h"
+#include "book.h"
 #include "flags.h"
 #include "search.h"
 #include "ttable.h"
@@ -19,32 +20,60 @@
 //#include "pst.h"
 
 using namespace std;
+using namespace book;
 using namespace board;
 using namespace search;
 using namespace ttable;
 
 //  Have to declare static variable here or something;
-atomic<int> Search::nodeCounter(0);
-atomic<int> Search::ttCounter(0);
-atomic<int> Search::quiesceCounter(0);
-
-
 Search::Search(bool withTimeControl) {
   useTimeControl = withTimeControl;
   root = Board();
+
+  setup();
 }
 
 
 Search::Search(Board rootB, bool withTimeControl) {
   useTimeControl = withTimeControl;
   root = rootB;
+
+  setup();
 }
 
 
 void Search::setup() {
   plySearchDepth = 0;
+  nodeCounter = 0;
+  ttCounter = 0;
+  quiesceCounter = 0;
+
   // Has the right shape :)
   move_time_dist = gamma_distribution<double>(8.0, 0.2);
+}
+
+
+void Search::save() {
+  // TODO make this a proper PGN save.
+  int gameNumber = Book::saveMoves(moveNames);
+  cout << "\tsaved game as " << gameNumber << endl;
+}
+
+
+void Search::load(int number) {
+  moveNames.clear();
+  moves.clear();
+
+  vector<string> moveList;
+  Book::loadMoves(number, &moveList);
+
+  // Reset root board.
+  root = Board();
+
+  // Playback all the moves.
+  for (string move : moveList) {
+    makeAlgebraicMove(move);
+  }
 }
 
 
@@ -231,9 +260,9 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
 
 // Takes care of calling iterative deepening till outer thread
 scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *stats) {
-  Search::nodeCounter = 0;
-  Search::ttCounter = 0;
-  Search::quiesceCounter = 0;
+  nodeCounter = 0;
+  ttCounter = 0;
+  quiesceCounter = 0;
 
   clearTT();
   clearHistory();
@@ -309,10 +338,12 @@ scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *sta
 }
 
 
-scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) const {
+scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) {
   // TODO except at ROOT this doesn't need to return a move.
   // Figure out how to collect PV and change return.
-  Search::nodeCounter += 1;
+
+  // TODO FIXME += 1
+  nodeCounter += 1;
 
   if (globalStop) {
     return make_pair(SCORE_INTERRUPT, Board::NULL_MOVE);
@@ -322,7 +353,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
     TTableEntry* lookup = lookupTT(b.getZobrist());
     if (lookup != nullptr) {
       if (lookup->depth >= plyR) {
-        Search::ttCounter += 1;
+        ttCounter += 1;
 
         // TODO verify this is correct code cause I'm struggling at 3am.
         if (lookup->type == LOWER_BOUND) {
