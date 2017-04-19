@@ -1,33 +1,27 @@
-#include <cmath>
 #include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <evhttp.h>
 #include <iostream>
-#include <cstring>
-#include <string>
 #include <memory>
+#include <string>
 
 #include "board.h"
-#include "book.h"
 #include "flags.h"
 #include "search.h"
 
 using namespace std;
 using namespace board;
-using namespace book;
 using namespace search;
 
-Search searchT;
+Search searchT(true /* useTimeControl */);
 
-// Read-Evaluate-Play loop.
-string repLoop() {
-  // TODO move book and this to search.
-  //cout << endl << "looking for suggestion (" << moves.size() << ") moves in" << endl;
-  //cout << "fen: " << boardT.generateFen_slow() << endl;
-  //boardT.printBoard();
+string suggest(long wTime, long bTime) {
+  searchT.updateTime(wTime, bTime);
 
   FindMoveStats stats = {0, 0};
-  // Number of nodes that can be evaled quickly.
   scored_move_t suggest = searchT.findMove(
       FLAGS_server_min_ply,
       FLAGS_server_min_nodes,
@@ -44,14 +38,8 @@ string repLoop() {
   return coords;
 }
 
-string update(string move, string wTime, string bTime) {
-  // TODO fix this (not sure who does it.)
-  //if (!move.empty() && move.back() == '+' || move.back() == '#') {
-  //  move.pop_back();
-  //}
-
+string update(string move) {
   bool foundMove = searchT.makeAlgebraicMove(move);
-  searchT.updateTime(wTime, bTime);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
     for (Board c : searchT.getRoot().getLegalChildren()) {
@@ -77,7 +65,24 @@ string null2Empty(const char * cStr) {
 }
 
 
-void genericHandler(evhttp_request * req, void *args) {
+long clockStrToMillis(string display) {
+  // HH:MM:SS.MM
+  float time = 0;
+  while (!display.empty()) {
+    size_t sz = 0;
+    float part = stof(display.substr(sz), &sz);
+    bool isLast = sz == display.size();
+
+    // Skip all consumed characters + delimitor (if not at end)
+    display = display.substr(sz + (isLast ? 0 : 1));
+
+    time = (60 * time) + part;
+  }
+  return time * 1000L;
+}
+
+
+void moveHandler(evhttp_request * req, void *args) {
   auto uri = evhttp_request_get_uri(req);
   auto uriParsed = evhttp_request_get_evhttp_uri(req);
 
@@ -92,25 +97,28 @@ void genericHandler(evhttp_request * req, void *args) {
   struct evkeyvalq uriParams;
   evhttp_parse_query_str(evhttp_uri_get_query(uriParsed), &uriParams);
 
-  string startHeader   = null2Empty( evhttp_find_header(&uriParams, "start") );
-  string moveHeader    = null2Empty( evhttp_find_header(&uriParams, "move") );
-  string wTimeHeader    = null2Empty( evhttp_find_header(&uriParams, "wTime") );
-  string bTimeHeader  = null2Empty( evhttp_find_header(&uriParams, "bTime") );
+  string status = null2Empty( evhttp_find_header(&uriParams, "status") );
+  string move   = null2Empty( evhttp_find_header(&uriParams, "move") );
+  string wClock = null2Empty( evhttp_find_header(&uriParams, "white-clock") );
+  string bClock = null2Empty( evhttp_find_header(&uriParams, "black-clock") );
 
-  cout << "request: \"" << uri << "\"\t"
-       << "( start: \"" << startHeader << "\" ) "
-       << "( move: \"" << moveHeader << "\" )" << endl;
+  long wTime = clockStrToMillis(wClock);
+  long bTime = clockStrToMillis(bClock);
+
+  cout << "request: \""  << uri    << "\"\t"
+       << "( status: \"" << status << "\" ) "
+       << "( move: \""   << move   << "\" )"
+       << "( time: \""   << wTime  << "\", \"" << bTime << "\" )" << endl;
 
   string reply;
-  if (!startHeader.empty()) {
-    searchT = Search();
-
+  if (status == "start-game") {
     cout << "Reloaded board" << endl;;
+    //searchT = Search(true /* useTimeControl */);
     reply = "ack on start-game";
-  } else if (moveHeader == "suggest") {
-    reply = repLoop();
-  } else if (!moveHeader.empty()) {
-    reply = update(moveHeader, wTimeHeader, bTimeHeader);
+  } else if (status == "suggest") {
+    reply = suggest(wTime, bTime);
+  } else if (!move.empty()) {
+    reply = update(move);
   } else {
     reply = "Don't know what you want?";
   }
@@ -122,6 +130,21 @@ void genericHandler(evhttp_request * req, void *args) {
   evhttp_add_header(req->output_headers, "Content-Type", "application/json");
 
   evhttp_send_reply(req, HTTP_OK, "", outBuffer);
+}
+
+
+void tryCatchSaveHandler(evhttp_request * req, void *args) {
+  try {
+    moveHandler(req, args);
+
+  } catch (...) {
+    // Ask search to save current state for potentially debugging.
+    cout << endl << endl;
+    cout << "ERROR from:" << endl;
+    cout << "\t" << evhttp_request_get_uri(req) << endl;
+
+    searchT.save();
+  }
 }
 
 
@@ -149,12 +172,11 @@ int main(int argc, char** argv) {
        << FLAGS_server_min_nodes << ")"
        << endl << endl;
 
-  evhttp_set_gencb(server.get(), genericHandler, nullptr);
+  evhttp_set_gencb(server.get(), tryCatchSaveHandler, nullptr);
   if (event_dispatch() == -1) {
     cout << "Failed in message loop" << endl;
     return -1;
   }
 
-  // Happens on server shutdown.
   return 0;
 }

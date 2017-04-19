@@ -2,11 +2,16 @@
 #include <atomic>
 #include <cassert>
 #include <cctype>
+#include <chrono>
+#include <cmath>
 #include <iostream>
+#include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "board.h"
+#include "book.h"
 #include "flags.h"
 #include "search.h"
 #include "ttable.h"
@@ -15,19 +20,74 @@
 //#include "pst.h"
 
 using namespace std;
+using namespace book;
 using namespace board;
 using namespace search;
 using namespace ttable;
 
-
-Search::Search() {
-  plySearchDepth = 0;
+//  Have to declare static variable here or something;
+Search::Search(bool withTimeControl) {
+  useTimeControl = withTimeControl;
   root = Board();
+
+  setup();
 }
 
-Search::Search(Board root) {
+
+Search::Search(Board rootB, bool withTimeControl) {
+  useTimeControl = withTimeControl;
+  root = rootB;
+
+  setup();
+}
+
+
+void Search::setup() {
   plySearchDepth = 0;
-  this->root = root;
+  nodeCounter = 0;
+  ttCounter = 0;
+  quiesceCounter = 0;
+
+  // Has the right shape :)
+  move_time_dist = gamma_distribution<double>(8.0, 0.2);
+}
+
+
+void Search::save() {
+  // TODO make this a proper PGN save.
+  int gameNumber = Book::saveMoves(moveNames);
+  cout << "\tsaved game as " << gameNumber << endl;
+}
+
+
+void Search::load(int number) {
+  moveNames.clear();
+  moves.clear();
+
+  vector<string> moveList;
+  Book::loadMoves(number, &moveList);
+
+  // Reset root board.
+  root = Board();
+
+  // Playback all the moves.
+  for (string move : moveList) {
+    makeAlgebraicMove(move);
+  }
+}
+
+
+Board const Search::getRoot() {
+  return root;
+}
+
+
+void Search::makeMove(move_t move) {
+  string alg = root.algebraicNotation_slow(move);
+  root.makeMove(move);
+
+  moveNames.push_back(alg);
+  moves.push_back(move);
 }
 
 Board const Search::getRoot() {
@@ -45,10 +105,31 @@ bool Search::makeAlgebraicMove(string move) {
 }
 
 
-void Search::updateTime(string wTime, string bTime) {
-  // TODO implementation.
-  return;
+void Search::updateTime(long wTime, long bTime) {
+  wMaxTime = max(wMaxTime, wTime);
+  bMaxTime = max(bMaxTime, bTime);
+
+  wCurrentTime = wTime;
+  bCurrentTime = bTime;
 }
+
+
+long Search::getTimeForMove_millis() {
+  long currentTime = root.getIsWhiteTurn() ? wCurrentTime : bCurrentTime;
+  long remainingMoves = max((int) (60 - moves.size()), 30);
+  long maxOkayTime = currentTime / remainingMoves;
+
+  double tRand = move_time_dist(generator);
+  long finalTime = tRand * maxOkayTime;
+  return min(20000L, max(finalTime, 100L));
+}
+
+
+long Search::getCurrentTime_millis() {
+  return chrono::duration_cast<chrono::milliseconds>(
+      chrono::system_clock::now().time_since_epoch()).count();
+}
+
 
 /*****************************************************************************/
 /* Code below is algorithmic, above is status                                */
@@ -128,15 +209,64 @@ int Search::moveOrderingValue(const Board& b) {
   return captureScore + historyHeuristic;
 }
 
+void Search::stopAfterAllocatedTime(int searchEndTime) {
+  while (!globalStop && getCurrentTime_millis() < searchEndTime) {
+    this_thread::sleep_for(chrono::milliseconds(10));
+  }
+
+  // TODO: Figure out how to prevent breaking before plyR = 2 finishes.
+  globalStop = true;
+}
+
 
 // Public method that setups and calls helper method.
-atomic<int> Search::nodeCounter(0);
-atomic<int> Search::ttCounter(0);
-atomic<int> Search::quiesceCounter(0);
 scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
-  Search::nodeCounter = 0;
-  Search::ttCounter = 0;
-  Search::quiesceCounter = 0;
+  globalStop = false;
+  searchStartTime = getCurrentTime_millis();
+  long allocatedTime = useTimeControl ? getTimeForMove_millis() : 0;
+  thread t1;
+
+  if (useTimeControl) {
+    long timeToStop = searchStartTime + allocatedTime;
+
+    if (FLAGS_verbosity >= 1) {
+      cout << "findingAMove " << moves.size() << " moves in" << endl;
+      cout << "\tcurrent fen: " << root.generateFen_slow() << endl;
+      root.printBoard();
+      cout << endl;
+    }
+
+    // TODO: Retrieve book lookup and stuff from old server code.
+    // TODO: pull out simple cases?
+
+    t1 = thread(&Search::stopAfterAllocatedTime, this, timeToStop);
+  }
+
+  scored_move_t result = findMoveInner(minPly, minNodes, stats);
+
+  long searchEndTime = getCurrentTime_millis();
+  long duration = searchEndTime - searchStartTime;
+
+  if (FLAGS_verbosity >= 2) {
+    cout << "\tsearch took " << duration <<
+            " (allocated " << allocatedTime << ")" << endl;
+  }
+
+  if (useTimeControl) {
+    // if stopAfterAllocatedTime hasn't finished clue it to stop.
+    globalStop = true;
+    t1.join();
+  }
+
+  return result;
+}
+
+
+// Takes care of calling iterative deepening till outer thread
+scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *stats) {
+  nodeCounter = 0;
+  ttCounter = 0;
+  quiesceCounter = 0;
 
   clearTT();
   clearHistory();
@@ -161,7 +291,7 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   }
 
   // Update the global state.
-  plySearchDepth = max(2, minPly);
+  plySearchDepth = 2;
 
   // Checkmate this turn
   int maxScore = Board::SCORE_WIN + 101;
@@ -169,11 +299,23 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   scored_move_t scoredMove;
   int totalNodes = 0;
   while (true) {
-    scoredMove = findMoveHelper(root, plySearchDepth, -maxScore, maxScore);
-    totalNodes = nodeCounter + quiesceCounter;
-    if (abs(scoredMove.first) >= Board::SCORE_WIN || totalNodes > minNodes) {
+    scored_move_t test = findMoveHelper(root, plySearchDepth, -maxScore, maxScore);
+    if (globalStop || test.first == SCORE_INTERRUPT) {
       break;
     }
+
+    scoredMove = test;
+    totalNodes = nodeCounter + quiesceCounter;
+
+    if (FLAGS_verbosity >= 2) {
+      cout << "\tply: " << plySearchDepth << ", score: " << scoredMove.first
+           << " (" << totalNodes << " nodes)" << endl;
+    }
+
+    if (abs(scoredMove.first) >= Search::SCORE_WIN || totalNodes > minNodes) {
+      break;
+    }
+
     plySearchDepth += 1;
   }
 
@@ -196,20 +338,25 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
          << " => " << name << " (@ " << scoreString(scoredMove.first) << ")" << endl;
   }
 
-  // TODO add some code for PV.
-
   return scoredMove;
 }
 
 
-scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) const {
-  Search::nodeCounter += 1;
+scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int beta) {
+  // TODO except at ROOT this doesn't need to return a move.
+  // Figure out how to collect PV and change return.
+
+  nodeCounter += 1;
+
+  if (globalStop) {
+    return make_pair(SCORE_INTERRUPT, Board::NULL_MOVE);
+  }
 
   if (FLAGS_use_ttable) {
     TTableEntry* lookup = lookupTT(b.getZobrist());
     if (lookup != nullptr) {
       if (lookup->depth >= plyR) {
-        Search::ttCounter += 1;
+        ttCounter += 1;
 
         // TODO verify this is correct code cause I'm struggling at 3am.
         if (lookup->type == LOWER_BOUND) {
@@ -266,9 +413,14 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
     auto suggest = findMoveHelper(child, plyR - 1, atomic_alpha, atomic_beta);
     int value = suggest.first;
 
-    auto lastMove = child.getLastMove();
-    int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
-    int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
+    if (value == SCORE_INTERRUPT) {
+      shouldBreak = true;
+    }
+
+    // History Heuristic not sure if it adds value.
+    //auto lastMove = child.getLastMove();
+    //int fromS = (get<0>(lastMove) << 3) + get<1>(lastMove);
+    //int toS = (get<2>(lastMove) << 3) + get<3>(lastMove);
 
     if (isWhiteTurn) {
       if (value > atomic_alpha) {
@@ -276,7 +428,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
         atomic_alpha = value;
         if (atomic_alpha >= atomic_beta) {
           // Beta cut-off  (Opp won't pick this brach because we can do too well)
-          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+          //updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
 
           shouldBreak = true;
         }
@@ -287,12 +439,16 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
         atomic_beta = value;
         if (atomic_beta <= atomic_alpha) {
           // Alpha cut-off  (We have a strong defense so opp will play older better branch)
-          updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
+          //updateHistory(isWhiteTurn, fromS, toS, 1 << plyR);
 
           shouldBreak = true;
         }
       }
     }
+  }
+
+  if (globalStop) {
+    return make_pair(SCORE_INTERRUPT, Board::NULL_MOVE);
   }
 
   // Black found a position with score < alpha (strong position for black with black to move).
@@ -341,13 +497,15 @@ int Search::getGameResultScore(board_s gameResult, int depth) {
   if (gameResult == Board::RESULT_TIE) {
     return 0;
   }
+
+  int dTM = 50 - depth;
+  int result = Search::SCORE_WIN + dTM;
   if (gameResult == Board::RESULT_BLACK_WIN) {
-    return -Board::SCORE_WIN - (100 - depth);
+    return -result;
   }
   if (gameResult == Board::RESULT_WHITE_WIN) {
-    return Board::SCORE_WIN + (100 - depth);
+    return result;
   }
-
 }
 
 

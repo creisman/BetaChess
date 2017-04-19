@@ -4,11 +4,12 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <random>
 #include <sstream>
 #include <string>
 #include <utility>
-#include <map>
+#include <vector>
 
 #include "book.h"
 
@@ -17,6 +18,7 @@ using namespace book;
 
 const size_t Book::MAX_DEPTH = 5;
 const string Book::ANTICHESS_FILE = "antichess-book.txt";
+const string Book::SAVE_FILE_PREFIX = "logs/save-game-";
 
 Book::Book() {
   time_t t = time(NULL);
@@ -65,7 +67,6 @@ bool Book::load(void) {
 }
 
 
-
 bool writeHelper(ostream& fs, BetaChessBookEntry *entry) {
   assert (entry != nullptr);
   fs << hex << entry->hash << dec << ",";
@@ -81,6 +82,32 @@ bool Book::write(void) {
   fstream fs(outFile, fstream::out);
   for (auto entryPair : bookMap) {
     writeHelper(fs, entryPair.second);
+  }
+}
+
+
+int Book::saveMoves(vector<string> moves) {
+  int number = rand() % 100000;
+  string outFile = SAVE_FILE_PREFIX + to_string(number);
+  fstream fs(outFile, fstream::out);
+  for (auto move : moves) {
+    fs << move << endl;
+  }
+  return number;
+}
+
+
+void Book::loadMoves(int number, vector<string> *moves) {
+  string inFile = Book::SAVE_FILE_PREFIX + to_string(number);
+  fstream fs(inFile, fstream::in);
+
+  while (fs.good()) {
+    string line;
+    getline(fs, line);
+    if (line.empty()) {
+      continue;
+    }
+    //moves->push_back(line);
   }
 }
 

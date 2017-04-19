@@ -38,6 +38,11 @@ run-eval-test: eval-tests
 run-gen-book: gen-book
 	./betachess-gen-book
 
+manual-test: $(OBJ) manual-test.cpp
+	g++ -o betachess-manual-test manual-test.cpp $(OBJ) $(CFLAGS) $(LIBS)
+	./betachess-manual-test --verbosity 10
+
+
 
 #time g++ -std=c++14 -fopenmp -O2 -o betachess board.h board.cpp main.cpp
 #  time ./betachess-server

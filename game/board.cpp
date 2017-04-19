@@ -143,7 +143,6 @@ void Board::resetBoard(void) {
 
   memset(&state, '\0', sizeof(state));
 
-  // TODO figure out what this should be.
   lastMove = Board::NULL_MOVE;
 
   for (int i = 0; i < 8; i++) {
@@ -461,7 +460,6 @@ vector<Board> Board::getLegalChildren(void) const {
 
 
   if (IS_ANTICHESS) {
-    // TODO this is the simple version, could be partially moved into getChildren.
     bool hasCapture = get<5>(all_moves.back().getLastMove()) != 0;
     auto test = all_moves.begin();
     for (; test != all_moves.end(); test++) {
@@ -571,11 +569,7 @@ void Board::promoHelper(
 }
 
 
-// TODO a duplicate version that returns location of attack, count of attack
 board_s Board::checkAttack_medium(bool byBlack, board_s a, board_s b) const {
-  // TODO consider pre calculating for each square in getChildrenMove of parent.
-  // returns piece or 0 for no
-
   board_s selfColor = byBlack ? WHITE : BLACK;
   board_s oppKnight = byBlack ? -KNIGHT: KNIGHT;
   board_s selfPawnDirection = byBlack ? 1 : -1;
@@ -1056,7 +1050,6 @@ int Board::getPSTValue(board_s a, board_s b, board_s piece) const {
 void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
   assert(piece != 0);
 
-  // TODO test optimization (-1 + 2 * movingTo);
   int mult = (movingTo ? 1 : -1);
   int value = getPieceValue(piece);
 
@@ -1143,7 +1136,6 @@ void Board::recalculateZobrist_slow(void) {
     }
   }
 
-  // TODO enpassant.
   updateZobristTurn(isWhiteTurn);
   updateZobristCastle(castleStatus);
   updateZobristEnPassant(lastMove);
@@ -1163,8 +1155,6 @@ int Board::heuristic() const {
   int evaluation = material + position;
 
   if (IS_ANTICHESS) {
-    // TODO cache between boards.
-
     // Was lastmove a capture?
     int heuristicSign = isWhiteTurn ? 1 : -1;
     int haveTempo = heuristicSign * 600 * (get<5>(lastMove) != 0);

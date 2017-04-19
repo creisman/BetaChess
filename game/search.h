@@ -2,7 +2,10 @@
 #define SERCH_H
 
 #include <atomic>
+#include <map>
+#include <random>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -17,17 +20,29 @@ namespace search {
 
   // Search Class
   class Search {
+    // Game result scores
+    static const int SCORE_WIN          = 10000;
+    static const int SCORE_INTERRUPT    = 22222; // Importantly outside search window.
+
     public:
       // Constructors
-      Search();
-      Search(Board root);
+      Search(bool withTimeControl);
+      Search(Board root, bool withTimeContol);
 
+      // Gets and Setters
       Board const getRoot();
+      void makeMove(move_t move);
+      bool makeAlgebraicMove(string move);
+      void updateTime(long wTime, long bTime);
+      long getTimeForMove_millis();
       static string scoreString(int score);
 
+      // Misc.
+      void save();
+      void load(int number);
+
+      // Expensive calls
       scored_move_t findMove(int minPly, int minNodes, FindMoveStats *info);
-      bool makeAlgebraicMove(string move);
-      void updateTime(string wTime, string bTime);
 
       static void perft(
           const Board&b,
@@ -40,13 +55,19 @@ namespace search {
           atomic<int> *mates);
 
     private:
+      void setup();
+
       // Helper methods.
       static void orderChildren(vector<Board> &children);
       static int moveOrderingValue(const Board& b);
       static int getGameResultScore(board_s gameResult, int depth);
+      static long getCurrentTime_millis();
+
+      void stopAfterAllocatedTime(int searchEndTime);
 
       // 1-arg version is public.
-      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta) const;
+      scored_move_t findMoveInner(int minPly, int minNodes, FindMoveStats *info);
+      scored_move_t findMoveHelper(const Board& b, char ply, int alpha, int beta);
 
       // Quiesce is a search at a leaf node which tries to avoid the horizon effect
       //   (if Queen just captured pawn make sure the queen can't be recaptured)
@@ -54,15 +75,29 @@ namespace search {
       static int evalCaptures(const Board& b, int alpha, int beta, int depth);
 
       // Variables
-      // Used for counting moves in findMove
-      static atomic<int> nodeCounter;
-      static atomic<int> quiesceCounter;
-      static atomic<int> ttCounter;
-
+      // Board state
       vector<string> moveNames;
       vector<move_t> moves;
       Board root;
+
+      // Global search state
       int plySearchDepth;
+      atomic<int> nodeCounter;
+      atomic<int> quiesceCounter;
+      atomic<int> ttCounter;
+
+      // Timing related vars
+      bool useTimeControl;
+      long wMaxTime, bMaxTime;
+      long wCurrentTime, bCurrentTime;
+      long searchStartTime;
+      bool globalStop;
+
+      // Extra stuff!
+      default_random_engine generator;
+
+      // Seems to have the right shape.
+      gamma_distribution<double> move_time_dist;
   };
 }
 #endif // SEARCH_H
