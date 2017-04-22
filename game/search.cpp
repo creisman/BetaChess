@@ -43,7 +43,6 @@ Search::Search(Board rootB, bool withTimeControl) {
 
 
 void Search::setup() {
-  plySearchDepth = 0;
   nodeCounter = 0;
   ttCounter = 0;
   quiesceCounter = 0;
@@ -90,9 +89,6 @@ void Search::makeMove(move_t move) {
   moves.push_back(move);
 }
 
-Board const Search::getRoot() {
-  return root;
-}
 
 bool Search::makeAlgebraicMove(string move) {
   bool valid = root.makeAlgebraicMove_slow(move);
@@ -209,8 +205,9 @@ int Search::moveOrderingValue(const Board& b) {
   return captureScore + historyHeuristic;
 }
 
-void Search::stopAfterAllocatedTime(int searchEndTime) {
-  while (!globalStop && getCurrentTime_millis() < searchEndTime) {
+void Search::stopAfterAllocatedTime(int allocatedTime) {
+  long endTime = getCurrentTime_millis() + allocatedTime;
+  while (!globalStop && getCurrentTime_millis() < endTime) {
     this_thread::sleep_for(chrono::milliseconds(10));
   }
 
@@ -227,11 +224,10 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
   thread t1;
 
   if (useTimeControl) {
-    long timeToStop = searchStartTime + allocatedTime;
-
     if (FLAGS_verbosity >= 1) {
       cout << "findingAMove " << moves.size() << " moves in" << endl;
       cout << "\tcurrent fen: " << root.generateFen_slow() << endl;
+      cout << "\tallocated " << allocatedTime << " millis " << endl;
       root.printBoard();
       cout << endl;
     }
@@ -239,7 +235,7 @@ scored_move_t Search::findMove(int minPly, int minNodes, FindMoveStats *stats) {
     // TODO: Retrieve book lookup and stuff from old server code.
     // TODO: pull out simple cases?
 
-    t1 = thread(&Search::stopAfterAllocatedTime, this, timeToStop);
+    t1 = thread(&Search::stopAfterAllocatedTime, this, allocatedTime);
   }
 
   scored_move_t result = findMoveInner(minPly, minNodes, stats);
@@ -294,7 +290,7 @@ scored_move_t Search::findMoveInner(int minPly, int minNodes, FindMoveStats *sta
   plySearchDepth = 2;
 
   // Checkmate this turn
-  int maxScore = Board::SCORE_WIN + 101;
+  int maxScore = Search::SCORE_WIN + 101;
 
   scored_move_t scoredMove;
   int totalNodes = 0;
@@ -352,6 +348,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
     return make_pair(SCORE_INTERRUPT, Board::NULL_MOVE);
   }
 
+
   if (FLAGS_use_ttable) {
     TTableEntry* lookup = lookupTT(b.getZobrist());
     if (lookup != nullptr) {
@@ -403,7 +400,7 @@ scored_move_t Search::findMoveHelper(const Board& b, char plyR, int alpha, int b
   atomic<int>    atomic_beta(beta);
   atomic<bool>   shouldBreak(false);
 
-  #pragma omp parallel for if (!FLAGS_use_ttable)
+  //#pragma omp parallel for if (!FLAGS_use_ttable)
   for (int ci = 0; ci < children.size(); ci++) {
     if (shouldBreak) {
       continue;
@@ -510,8 +507,8 @@ int Search::getGameResultScore(board_s gameResult, int depth) {
 
 
 string Search::scoreString(int score) {
-  if (abs(score) > Board::SCORE_WIN) {
-    int depth = Board::SCORE_WIN + 100 - abs(score);
+  if (abs(score) > Search::SCORE_WIN) {
+    int depth = Search::SCORE_WIN + 100 - abs(score);
     return (score > 0 ? "#" : "#-") + to_string( (depth + 1) / 2);
   }
   return to_string(score / 100.0);
