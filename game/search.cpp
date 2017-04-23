@@ -132,11 +132,6 @@ long Search::getCurrentTime_millis() {
 /*****************************************************************************/
 
 void Search::orderChildren(vector<Board> &children) {
-  if (IS_ANTICHESS) {
-    // TODO this is the simple version, could be partially moved into getChildren.
-    return;
-  }
-
   //auto comparitor = [](const Board&a, const Board&b) {
   //  return Search::moveOrderingValue(a) > Search::moveOrderingValue(b);
   //};

@@ -23,7 +23,7 @@ namespace book {
   class Book {
     public:
       static const size_t MAX_DEPTH;
-      static const string ANTICHESS_FILE;
+      static const string BOOK_FILE;
       static const string SAVE_FILE_PREFIX;
 
       Book();

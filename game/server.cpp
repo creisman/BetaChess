@@ -150,7 +150,6 @@ void tryCatchSaveHandler(evhttp_request * req, void *args) {
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  //assert( IS_ANTICHESS ); // We don't really support playing other gametypes yet.
 
   if (!event_init()) {
     cerr << "Failed to init libevent." << endl;

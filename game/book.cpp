@@ -17,7 +17,7 @@ using namespace std;
 using namespace book;
 
 const size_t Book::MAX_DEPTH = 5;
-const string Book::ANTICHESS_FILE = "antichess-book.txt";
+const string Book::BOOK_FILE = "opening-book.txt";
 const string Book::SAVE_FILE_PREFIX = "logs/save-game-";
 
 Book::Book() {
@@ -33,7 +33,7 @@ bool Book::load(void) {
   bookMap.clear();
 
   // read some lines do some stuff build a map.
-  fstream fs(ANTICHESS_FILE, fstream::in);
+  fstream fs(BOOK_FILE, fstream::in);
 
   string line;
   while (fs.good()) {
@@ -78,7 +78,7 @@ bool writeHelper(ostream& fs, BetaChessBookEntry *entry) {
 
 bool Book::write(void) {
   // TODO sort by hash or something.
-  string outFile = ANTICHESS_FILE + ".tmp";
+  string outFile = BOOK_FILE + ".tmp";
   fstream fs(outFile, fstream::out);
   for (auto entryPair : bookMap) {
     writeHelper(fs, entryPair.second);

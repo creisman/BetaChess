@@ -313,10 +313,6 @@ vector<Board> Board::getChildrenInternal_slow(void) const {
           }
         }
 
-        if (IS_ANTICHESS && hasCapture) {
-          continue;
-        }
-
         moveTest = attemptMove(y + pawnDirection, x);
         // pawn move: if next space is empty.
         if (moveTest.first && moveTest.second == 0) {
@@ -342,9 +338,6 @@ vector<Board> Board::getChildrenInternal_slow(void) const {
           if (moveTest.first && moveTest.second != selfColor) {
             bool isCapture = moveTest.second != 0;
             hasCapture |= isCapture;
-            if (IS_ANTICHESS && !isCapture && hasCapture) {
-              continue;
-            }
 
             Board c = copy();
             c.makeMove(y,x,   y + iter->first, x + iter->second);
@@ -373,9 +366,6 @@ vector<Board> Board::getChildrenInternal_slow(void) const {
 
             bool isCapture = moveTest.second != 0;
             hasCapture |= isCapture;
-            if (IS_ANTICHESS && !isCapture && hasCapture) {
-              continue;
-            }
 
             Board c = copy();
             c.makeMove(y, x,   newY, newX);
@@ -390,41 +380,38 @@ vector<Board> Board::getChildrenInternal_slow(void) const {
     }
   }
 
-  // Castling (not allowed in ANTICHESS)
-  if (!IS_ANTICHESS) {
-    int y = isWhiteTurn ? 0 : 7;
-    int x = 4;
-    if (state[y][x] == selfColor * KING) {
-      bool canOO = castleStatus & (isWhiteTurn ? WHITE_OO : BLACK_OO);
-      bool canOOO = castleStatus & (isWhiteTurn ? WHITE_OOO : BLACK_OOO);
-      // OOO
-      if (canOOO && (state[y][0] == selfColor * ROOK)) {
-        // Check empty squares.
-        if (state[y][1] == 0 && state[y][2] == 0 && state[y][3] == 0) {
-          // chek for attack on [4] [3] and [2]
-          if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
-              (checkAttack_medium(isWhiteTurn, y, 3) == 0) &&
-              (checkAttack_medium(isWhiteTurn, y, 2) == 0)) {
-            Board c = copy();
-            c.makeMove(y, 4,   y, 2, SPECIAL_CASTLE); // Record king over two as the move.
-            all_moves.push_back( c );
-          }
+  int y = isWhiteTurn ? 0 : 7;
+  int x = 4;
+  if (state[y][x] == selfColor * KING) {
+    bool canOO = castleStatus & (isWhiteTurn ? WHITE_OO : BLACK_OO);
+    bool canOOO = castleStatus & (isWhiteTurn ? WHITE_OOO : BLACK_OOO);
+    // OOO
+    if (canOOO && (state[y][0] == selfColor * ROOK)) {
+      // Check empty squares.
+      if (state[y][1] == 0 && state[y][2] == 0 && state[y][3] == 0) {
+        // chek for attack on [4] [3] and [2]
+        if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
+            (checkAttack_medium(isWhiteTurn, y, 3) == 0) &&
+            (checkAttack_medium(isWhiteTurn, y, 2) == 0)) {
+          Board c = copy();
+          c.makeMove(y, 4,   y, 2, SPECIAL_CASTLE); // Record king over two as the move.
+          all_moves.push_back( c );
         }
       }
-      if (canOO && (state[y][7] == selfColor * ROOK)) {
-        // Check empty squares.
-        if (state[y][5] == 0 && state[y][6] == 0) {
-          // chek for attack on [4] [5] and [6]
-          if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
-              (checkAttack_medium(isWhiteTurn, y, 5) == 0) &&
-              (checkAttack_medium(isWhiteTurn, y, 6) == 0)) {
-            Board c = copy();
-            c.makeMove(y, 4,   y, 6, SPECIAL_CASTLE); // Record king over two as the move.
-            all_moves.push_back( c );
-          }
+    }
+    if (canOO && (state[y][7] == selfColor * ROOK)) {
+      // Check empty squares.
+      if (state[y][5] == 0 && state[y][6] == 0) {
+        // chek for attack on [4] [5] and [6]
+        if ((checkAttack_medium(isWhiteTurn, y, 4) == 0) &&
+            (checkAttack_medium(isWhiteTurn, y, 5) == 0) &&
+            (checkAttack_medium(isWhiteTurn, y, 6) == 0)) {
+          Board c = copy();
+          c.makeMove(y, 4,   y, 6, SPECIAL_CASTLE); // Record king over two as the move.
+          all_moves.push_back( c );
         }
-        // Have to check for attack and empty squares.
       }
+      // Have to check for attack and empty squares.
     }
   }
 
@@ -457,31 +444,6 @@ vector<Board> Board::getLegalChildren(void) const {
   if (all_moves.size() == 0) {
     return all_moves;
   }
-
-
-  if (IS_ANTICHESS) {
-    bool hasCapture = get<5>(all_moves.back().getLastMove()) != 0;
-    auto test = all_moves.begin();
-    for (; test != all_moves.end(); test++) {
-      bool isCapture = get<5>(test->getLastMove()) != 0;
-      if (isCapture) {
-        break;
-      }
-      if (hasCapture) {
-        all_moves.erase(test);
-        test--;
-      }
-    }
-
-    // Verify remaining items are all captures.
-    for (; test != all_moves.end(); test++) {
-      bool isCapture = get<5>(test->getLastMove()) != 0;
-      assert( isCapture );
-    }
-
-    return all_moves;
-  }
-
 
   board_s selfColor = isWhiteTurn ? WHITE : BLACK;
   board_s selfKing = selfColor * KING;
@@ -544,7 +506,7 @@ void Board::promoHelper(
   if ((isWhiteTurn && y2 == 7) || (!isWhiteTurn && y2 == 0)) {
     board_s movingPawn = state[y][x];
     // promotion && underpromotion
-    board_s lastPromoPiece = IS_ANTICHESS ? KING : QUEEN;
+    board_s lastPromoPiece = QUEEN;
     for (board_s newPiece = lastPromoPiece; newPiece >= KNIGHT; newPiece--) {
       // "promote" then move piece (this means history shows Queen moving to back row not a pawn)
       Board c = copy();
@@ -881,25 +843,22 @@ string Board::algebraicNotation_slow(move_t child_move) const {
 
 
   bool isCheck, isMate;
-  if (!IS_ANTICHESS) {
-    pair<board_s, board_s> oppKingPos =
-        child_board.findPiece_slow(isWhiteTurn ? -KING : KING);
-    assert( child_board.onBoard(get<0>(oppKingPos), get<1>(oppKingPos)) );
+  pair<board_s, board_s> oppKingPos =
+      child_board.findPiece_slow(isWhiteTurn ? -KING : KING);
+  assert( child_board.onBoard(get<0>(oppKingPos), get<1>(oppKingPos)) );
 
-    // Assume We are currently white.
-    // After our move check if blackKing is under attack by white (not byBlack).
-    isCheck = child_board.checkAttack_medium(
-        !isWhiteTurn /* byBlack */,
-        get<0>(oppKingPos),
-        get<1>(oppKingPos)) != 0;
-    // Note assumes self move can't result in mate.
-    isMate = isCheck &&
-        ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN)
-            == child_board.getGameResult_slow());
-  } else {
-    isCheck = false;
-    isMate = children.empty();
-  }
+  // Assume We are currently white.
+  // After our move check if blackKing is under attack by white (not byBlack).
+  isCheck = child_board.checkAttack_medium(
+      !isWhiteTurn /* byBlack */,
+      get<0>(oppKingPos),
+      get<1>(oppKingPos)) != 0;
+
+  // Note assumes self move can't result in mate.
+  isMate = isCheck &&
+      ((isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN)
+          == child_board.getGameResult_slow());
+
   string check = isMate ? "#" : (isCheck ? "+" : "");
 
   string capture = get<5>(child_move) == 0 ? "" : "x";
@@ -1056,10 +1015,8 @@ void Board::updatePiece(board_s a, board_s b, board_s piece, bool movingTo) {
   material += mult * value;
   totalMaterial += mult * abs(value);
 
-  if (!IS_ANTICHESS) {
-    int pst = getPSTValue(a, b, piece);
-    position += mult * pst;
-  }
+  int pst = getPSTValue(a, b, piece);
+  position += mult * pst;
 
   updateZobristPiece(a, b, piece);
 }
@@ -1153,17 +1110,6 @@ int Board::heuristic() const {
 
   // TODO testing ttable.
   int evaluation = material + position;
-
-  if (IS_ANTICHESS) {
-    // Was lastmove a capture?
-    int heuristicSign = isWhiteTurn ? 1 : -1;
-    int haveTempo = heuristicSign * 600 * (get<5>(lastMove) != 0);
-
-    // TODO check if we also have to capture.
-
-    return haveTempo + evaluation;
-  }
-
   return evaluation;
 }
 
@@ -1183,18 +1129,6 @@ pair<board_s, board_s> Board::findPiece_slow(board_s piece) const {
 board_s Board::getGameResult_slow(void) const {
   // TODO: Add 50 move rule and repeated position.
   // TODO: cache gameresult from heuristic and here.
-
-  if (IS_ANTICHESS) {
-    bool hasMove = !getLegalChildren().empty();
-
-    // To win, don't have a valid move.
-    if (hasMove) {
-      // TODO check for draw conditions (insufficent material, ...)
-      return RESULT_IN_PROGRESS;
-    }
-
-    return isWhiteTurn ? RESULT_WHITE_WIN : RESULT_BLACK_WIN;
-  }
 
   pair<board_s, board_s> kingPos =
       findPiece_slow(isWhiteTurn ? KING : -KING);
