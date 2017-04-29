@@ -16,13 +16,13 @@ using namespace std;
 using namespace board;
 using namespace search;
 
-Search searchT(true /* useTimeControl */);
+Search * searchT;
 
 string suggest(long wTime, long bTime) {
-  searchT.updateTime(wTime, bTime);
+  searchT->updateTime(wTime, bTime);
 
   FindMoveStats stats = {0, 0};
-  scored_move_t suggest = searchT.findMove(
+  scored_move_t suggest = searchT->findMove(
       FLAGS_server_min_ply,
       FLAGS_server_min_nodes,
       &stats);
@@ -30,7 +30,7 @@ string suggest(long wTime, long bTime) {
   double score = get<0>(suggest);
   move_t move = get<1>(suggest);
   string coords = Board::coordinateNotation(move);
-  string alg = searchT.getRoot().algebraicNotation_slow(move);
+  string alg = searchT->getRoot().algebraicNotation_slow(move);
 
   cout << "Got suggested Move: " << alg << " (raw: " << coords << ")"
        << " score: " << Search::scoreString(score)
@@ -39,18 +39,18 @@ string suggest(long wTime, long bTime) {
 }
 
 string update(string move) {
-  bool foundMove = searchT.makeAlgebraicMove(move);
+  bool foundMove = searchT->makeAlgebraicMove(move);
   if (!foundMove) {
     cout << "Didn't find move (" << (move.size() + 1) <<  "): \"" << move << "\"" << endl;
-    for (Board c : searchT.getRoot().getLegalChildren()) {
-      string moveToGetC = searchT.getRoot().algebraicNotation_slow(c.getLastMove());
+    for (Board c : searchT->getRoot().getLegalChildren()) {
+      string moveToGetC = searchT->getRoot().algebraicNotation_slow(c.getLastMove());
       cout << "\twasn't \"" << moveToGetC << "\"" << endl;
     }
     assert(false);
   }
 
   // Check if game is over
-  board_s result = searchT.getRoot().getGameResult_slow();
+  board_s result = searchT->getRoot().getGameResult_slow();
   if (result != Board::RESULT_IN_PROGRESS) {
     cout << "Server updating, game result: " << (int) result << endl;
   }
@@ -113,7 +113,10 @@ void moveHandler(evhttp_request * req, void *args) {
   string reply;
   if (status == "start-game") {
     cout << "Reloaded board" << endl;;
-    //searchT = Search(true /* useTimeControl */);
+    if (searchT != nullptr) {
+      delete searchT;
+    }
+    searchT = new Search(true /* useTimeControl */);
     reply = "ack on start-game";
   } else if (status == "suggest") {
     reply = suggest(wTime, bTime);
@@ -143,7 +146,7 @@ void tryCatchSaveHandler(evhttp_request * req, void *args) {
     cout << "ERROR from:" << endl;
     cout << "\t" << evhttp_request_get_uri(req) << endl;
 
-    searchT.save();
+    searchT->save();
   }
 }
 
