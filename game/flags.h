@@ -4,7 +4,7 @@
 #include <gflags/gflags.h>
 
 // Compile time flags here.
-#define IS_ANTICHESS false
+#define HAVING_FUN true
 
 
 // Declare runtime flags here.
